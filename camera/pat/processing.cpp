@@ -1,0 +1,317 @@
+// Image processing classes for beacon detector
+// Author: Ondrej Cierny
+#include "processing.h"
+#include <cmath>
+#include <functional>
+#include <algorithm>
+#include <memory>
+
+//-----------------------------------------------------------------------------
+Image::Image(Camera &camera, std::ofstream &fileStreamIn, int smoothing): fileStream(fileStreamIn)
+//-----------------------------------------------------------------------------
+{
+	// Copy properties
+	const Request *request = camera.getRequest();
+	binningMode = camera.config->binningMode.read();
+	size = request->imageSize.read();
+	area.w = request->imageWidth.read();
+	area.h = request->imageHeight.read();
+	area.x = request->imageOffsetX.read();
+	area.y = request->imageOffsetY.read();
+	data = new uint16_t[area.w*area.h];
+	memcpy(data, request->imageData.read(), size);
+
+	// Unlock camera request
+	camera.unlockRequest();
+
+	// Smoothing
+	applyFastBlur(smoothing);
+
+	// Basic histogram analysis, find peak and brightest pixel
+	int histogram[1024], maxCount = 0, sum = 0;
+	memset(histogram, 0, 1024*sizeof(int));
+	histBrightest = 0;
+	for(int i = 0; i < area.w*area.h; i++)
+	{
+		if(data[i] > 1023)
+		{
+			log(std::cerr, fileStream, "Brightness overflow detected in frame");
+			continue;
+		}
+		sum += data[i];
+		histogram[data[i]]++;
+		if(histogram[data[i]] > maxCount)
+		{
+			maxCount = histogram[data[i]];
+			histPeak = data[i];
+		}
+		if(data[i] > histBrightest) histBrightest = data[i];
+	}
+	histMean = sum / (area.w * area.h);
+}
+
+//-----------------------------------------------------------------------------
+Image::~Image()
+//-----------------------------------------------------------------------------
+{
+	delete data;
+}
+
+// Maps neighboring pixels to groups and performs group centroiding
+// TODO: seems to crash sometimes when camera is oversaturated, memory problem?!
+//-----------------------------------------------------------------------------
+int Image::performPixelGrouping(uint16_t threshold)
+//-----------------------------------------------------------------------------
+{
+	unsigned int currentGroup = 0;
+	set<int> groupedPixels;
+	groups.clear();
+
+	// Determine thresholding if not given
+	// if(threshold == 0) threshold = autoThresholdPeakToMax();
+	if(threshold == 0) threshold = histMean + THRESHOLD_SAFETY_OFFSET;
+
+	// Helper recursive group-propagation function
+	function<void(int,int)> propagateGroup;
+	propagateGroup = [this, threshold, &currentGroup, &groupedPixels, &propagateGroup](int i, int j)
+	{
+		// Acknowledge parent pixel in group
+		int index = i*area.w + j;
+		Group& g = groups[currentGroup];
+		g.pixelCount++;
+		g.valueSum += data[index];
+		g.x += j * data[index];
+		g.y += i * data[index];
+		if(data[index] > g.valueMax) g.valueMax = data[index];
+		groupedPixels.insert(index);
+
+		// Fail-safe
+		if(groupedPixels.size() > MAX_ACTIVE_PIXELS) return;
+
+		// Loop through neighbors
+		for(int8_t x = -1; x <= 1; x++)
+		{
+			for(int8_t y = -1; y <= 1; y++)
+			{
+				if((i+x) >= 0 && (i+x) < area.h && (j+y) >= 0 && (j+y) < area.w)
+				{
+					index = (i+x)*area.w + j + y;
+					if(groupedPixels.count(index) == 0 && data[index] > threshold)
+					{
+						propagateGroup(i+x, j+y);
+					}
+				}
+			}
+		}
+	};
+
+	// Scan all pixels
+	for(int i = 0; i < area.h; i++)
+	{
+		for(int j = 0; j < area.w; j++)
+		{
+			int index = i*area.w + j;
+			if(data[index] > threshold && groupedPixels.count(index) == 0)
+			{
+				// Ungrouped pixel found, propagate a new group
+				groups.emplace_back();
+				propagateGroup(i, j);
+
+				// Verify number of pixels in group after propagation
+				if(groups[currentGroup].pixelCount < MIN_PIXELS_PER_GROUP)
+				{
+					groups.pop_back();
+					continue;
+				}
+
+				// Too many active pixels, must be background, clear and return
+				if(groupedPixels.size() > MAX_ACTIVE_PIXELS)
+				{
+					log(std::cerr, fileStream, "Frame has too many active pixels!");
+					groups.clear();
+					return -1;
+				}
+
+				// Calculate centroid for group
+				groups[currentGroup].x /= groups[currentGroup].valueSum;
+				groups[currentGroup].y /= groups[currentGroup].valueSum;
+
+				// Increase and check group count
+				if(++currentGroup > MAX_GROUPS)
+				{
+					log(std::cerr, fileStream, "Frame has too many groups!");
+					sort(groups.begin(), groups.end());
+					return -1;
+				}
+			}
+		}
+	}
+
+	// Sort max-brightness-descending
+	if(groups.size() > 0) sort(groups.begin(), groups.end());
+	else log(std::cerr, fileStream, "Frame has no groups!");
+
+	return groups.size();
+}
+
+// Super-fast box blur algorithm, converges to Gaussian with more passes
+// Adapted from: http://blog.ivank.net/fastest-gaussian-blur.html
+//-----------------------------------------------------------------------------
+void Image::applyFastBlur(double radius, double passes)
+//-----------------------------------------------------------------------------
+{
+	if(radius < 1) return;
+	uint16_t *temp = new uint16_t[area.w*area.h];
+	memcpy(temp, data, size);
+
+	// Calculate boxes area.w
+	int wl = sqrt((12*radius*radius/passes)+1);
+	if(wl % 2 == 0) wl--;
+	int m = ((12*radius*radius - passes*wl*wl - 4*passes*wl - 3*passes)/(-4*wl - 4)) + 0.5f;
+
+	// Blur for n passes
+	for(int8_t n = 0; n < passes; n++)
+	{
+		int r = ((n < m ? wl : wl + 2) - 1) / 2;
+		float iarr = 1.0f / (r+r+1);
+
+		// Apply horizontal blur
+		for(int i = 0; i < area.h; i++)
+		{
+			int ti = i*area.w, li = ti, ri = ti + r;
+			int fv = data[ti], lv = data[ti+area.w-1], val = (r+1)*fv;
+			for(int j = 0; j < r; j++) val += data[ti+j];
+			for(int j = 0; j <= r; j++) { val += data[ri++] - fv; temp[ti++] = val*iarr + 0.5f; }
+			for(int j = r+1; j < area.w-r; j++) { val += data[ri++] - data[li++]; temp[ti++] = val*iarr + 0.5f; }
+			for(int j = area.w-r; j < area.w; j++) { val += lv - data[li++]; temp[ti++] = val*iarr + 0.5f; }
+		}
+		memcpy(data, temp, size);
+
+		// Apply total blur
+		for(int i = 0; i < area.w; i++)
+		{
+			int ti = i, li = ti, ri = ti + r*area.w;
+			int fv = data[ti], lv = data[ti + area.w*(area.h-1)], val = (r+1)*fv;
+			for(int j = 0; j < r; j++) val += data[ti + j*area.w];
+			for(int j = 0; j <= r; j++) { val += data[ri] - fv; temp[ti] = val*iarr + 0.5f; ri += area.w; ti += area.w; }
+			for(int j = r+1; j < area.h-r; j++) { val += data[ri] - data[li]; temp[ti] = val*iarr + 0.5f; li += area.w; ri += area.w; ti += area.w; }
+			for(int j = area.h-r; j < area.h; j++) { val += lv - data[li]; temp[ti] = val*iarr + 0.5f; li += area.w; ti += area.w; }
+		}
+		memcpy(data, temp, size);
+	}
+
+	delete temp;
+}
+
+// Threshold as a fraction of distance between histogram peak and max brightness
+//-----------------------------------------------------------------------------
+uint16_t Image::autoThresholdPeakToMax(float fraction)
+//-----------------------------------------------------------------------------
+{
+	int treshold = 1023;
+	if(histBrightest > histPeak)
+	{
+		treshold = histPeak + ((histBrightest - histPeak) / fraction);
+	}
+	return treshold;
+}
+
+//Image Saving Capability: save to BMP, adapted from: https://www.matrix-vision.com/manuals/SDK_CPP/SingleCaptureStorage_8cpp-example.html
+//-----------------------------------------------------------------------------
+void Image::saveBMP(const string& filename) //e.g. const string filename( "single.bmp" );
+//const char* pData, int XSize, int YSize, int pitch, int bitsPerPixel
+//------------------------------------------------------------------------------
+{
+	int newHeight = area.h, newWidth = area.w, ratio = 1;
+	shared_ptr<string> ImgData = make_shared<string>();
+
+	// Determine if resizing is needed
+	if(area.h > LINK_MAX_FRAME_HEIGHT)
+	{
+		ratio = area.h / LINK_MAX_FRAME_HEIGHT + 1;
+		if(ratio == 3 || ratio > 4) ratio = 4;
+		newHeight = area.h / ratio;
+		newWidth = area.w / ratio;
+	}
+
+	// Resize, downsample to 8-bit, flip vertically (ref. BMP format)
+	switch(ratio)
+	{
+		case 1:
+			for(int i = newHeight - 1; i >= 0; i--)
+			{
+				for(int j = 0; j < newWidth; j++)
+				{
+					ImgData->append(1, data[(i*area.w)+j] >> 2);
+				}
+			}
+			break;
+		case 2:
+			for(int i = newHeight - 1; i >= 0; i--)
+			{
+				int ii0 = i * area.w * 2;
+				int ii1 = ii0 + area.w;
+				for(int j = 0; j < newWidth; j++)
+				{
+					int jj0 = 2 * j;
+					int jj1 = jj0 + 1;
+					ImgData->append(1, (data[ii0 + jj0] + data[ii0 + jj1] +
+									 data[ii1 + jj0] + data[ii1 + jj1]) >> 4);
+				}
+			}
+			break;
+		default:
+			for(int i = newHeight - 1; i >= 0; i--)
+			{
+				int ii0 = i * area.w * 4;
+				int ii1 = ii0 + area.w;
+				int ii2 = ii1 + area.w;
+				int ii3 = ii2 + area.w;
+				for(int j = 0; j < newWidth; j++)
+				{
+					int jj0 = 4 * j;
+					int jj1 = jj0 + 1;
+					int jj2 = jj1 + 1;
+					int jj3 = jj2 + 1;
+					ImgData->append(1, (data[ii0 + jj0] + data[ii0 + jj1] +
+									 data[ii0 + jj2] + data[ii0 + jj3] +
+									 data[ii1 + jj0] + data[ii1 + jj1] +
+									 data[ii1 + jj2] + data[ii1 + jj3] +
+									 data[ii2 + jj0] + data[ii2 + jj1] +
+									 data[ii1 + jj2] + data[ii2 + jj3] +
+									 data[ii3 + jj0] + data[ii3 + jj1] +
+									 data[ii1 + jj2] + data[ii3 + jj3]) >> 6);
+				}
+			}
+	}
+
+	try{
+		BMP AnImage;
+		AnImage.SetSize(newWidth,newHeight);
+		// Set its color depth to 8-bits
+		AnImage.SetBitDepth(8);
+		log(std::cout, fileStream, "Image Set Up, Beginning Saving...");
+		int ImgDataSize = ImgData->length();
+		log(std::cout, fileStream, "Size: ", ImgDataSize, ", Width: ", newWidth, ", Height: ", newHeight);
+		for (int j = 0; j < newHeight; j++)
+			{
+				for (int i = 0; i < newWidth; i++)
+					{
+						 // Set one of the pixels
+						 unsigned int temporary = (unsigned int)(ImgData->at(j*newWidth + i));
+						 AnImage(i,j)->Red = temporary;
+						 AnImage(i,j)->Green = temporary;
+						 AnImage(i,j)->Blue = temporary;
+						 AnImage(i,j)->Alpha = 0; //always set to zero;
+					}
+			}
+		CreateGrayscaleColorTable(AnImage); //we're using 8-bit greyscale
+		AnImage.WriteToFile(filename.c_str());
+	}
+	catch(const std::exception& e){
+		log(std::cerr, fileStream, e.what()); // information from length_error printed
+	}
+	catch(...){
+		log(std::cerr, fileStream, "Error during image saving using EasyBMP functions.");
+	}
+}
