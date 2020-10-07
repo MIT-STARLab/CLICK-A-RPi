@@ -6,14 +6,30 @@ C++ implementation: cppzmq
 
 Main Python script creates multiple sockets to communicate to other processes.
 
+### Files
+
+- **chat.py** \
+  send manual commands \
+  interfaces with ``click-demo.py``
+
+- **click-demo.py** \
+  command handler process \
+  interfaces with ``click-py-demo.py`` and ``click-cpp-demo``
+  
+- **python-process/click-py-demo.py** \
+  example Python process
+
+- **cpp-process/build/click-cpp-demo** \
+  example C++ process
+
 # Build instructions
 ## Python
 
 1. Install Prerequisites
-   - ``pip3 install pyzmq``
+   - \# ``pip3 install pyzmq``
 
 2. Make scripts executable
-   - via ``chmod +x *.py``
+   - via \# ``chmod +x *.py``
 
 3. Force the Python 3
    - add ``#!/usr/bin/env python3`` as first line in your scripts
@@ -31,7 +47,7 @@ Main Python script creates multiple sockets to communicate to other processes.
 ####Build Steps
 
 1. Install Prerequisites
-   - ``sudo apt-get install libbsd-dev libsodium-dev asciidoc cmake libtool``
+   - \# ``sudo apt-get install libbsd-dev libsodium-dev asciidoc cmake libtool``
 
 2. Build [libzmq](https://github.com/zeromq/libzmq) via cmake. This does an out of source build and installs the build files
    - download and unzip the lib, cd to directory
@@ -51,7 +67,8 @@ Main Python script creates multiple sockets to communicate to other processes.
 
 Via CMake (configuration in CMakeLists.txt)
 
-```cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+```
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
    
    project(click-cpp-demo CXX)
    
@@ -76,16 +93,61 @@ Via CMake (configuration in CMakeLists.txt)
      )
 ```
 
-- ``mkdir build``
-- ``cd build/``
-- ``cmake ..``
-- ``make``
+- \# ``mkdir build``
+- \# ``cd build/``
+- \# ``cmake ..``
+- \# ``make``
 
 will create ``click-cpp-demo`` executable
 
 # Keep-alive
 
-Create systemd keep-alive scripts for each executable
+Configure executables as services
 
+1. Create a user-level systemd config folder
+   - \# ``mkdir ~/.config/systemd/user/``
+
+2. Create systemd scripts 
+   - for each executable (``click-cpp-demo.service``)
+    ```
+     [Unit]
+     Description=Manage Service click-cpp-demo
+     
+     [Service]
+     ExecStart=/home/pi/CLICK-A/github/IPC-demo/cpp-process/build/click-cpp-demo
+     Restart=always
+     RestartSec=3
+     
+     [Install]
+     WantedBy=default.target
+   ```
+      
+   - and each python script (``click-py-demo.service``)
+    ```
+     [Unit]
+     Description=Manage Service click-py-demo
+     
+     [Service]
+     ExecStart=/usr/bin/python3 /home/pi/CLICK-A/github/IPC-demo/python-process/click-py-demo.py
+     Restart=always
+     RestartSec=3
+     
+     [Install]
+     WantedBy=default.target
+   ```
+   
+   (please adjust folder structure accordingly)
+
+3. Auto-start services on boot
+   - enable lingering for user pi \
+   \# ``loginctl enable-linger pi``
+   - enable each service \
+   \# ``systemctl --user enable click-cpp-demo``, \# ``systemctl --user enable click-py-demo``, ...
+
+4. Start the services
+   - \# ``systemctl --user start click-cpp-demo``
+   - \# ``systemctl --user start click-py-demo``
+   - ...
+   
 # Inter-process Communication
 
