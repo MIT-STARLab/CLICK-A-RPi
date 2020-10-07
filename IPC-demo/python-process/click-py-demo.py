@@ -8,17 +8,26 @@
 import time
 import zmq
 
+PY_ENDPOINT = "tcp://*:5556"
+
 context = zmq.Context()
 socket = context.socket(zmq.REP)
-socket.bind("tcp://*:5555")
+socket.bind(PY_ENDPOINT)
+
+print("Starting ipc listener")
+context = zmq.Context()
+socket = context.socket(zmq.REP)
+print("")
+print("Listening to incoming commands…")
+print(PY_ENDPOINT)
+socket.bind(PY_ENDPOINT)
+print("")
 
 while True:
     #  Wait for next request from client
     message = socket.recv()
     print("Received request: %s" % message)
 
-    #  Do some 'work'
-    time.sleep(1)
+    #  Send timestamp back to client
+    socket.send_string(str(round(time.time())))
 
-    #  Send reply back to client
-    socket.send(b"World")
