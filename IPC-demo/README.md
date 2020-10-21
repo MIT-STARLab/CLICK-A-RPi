@@ -137,17 +137,34 @@ Configure executables as services
      WantedBy=default.target
    ```
    
+   - and click-demo.py script (``click-demo.service``)
+    ```
+     [Unit]
+     Description=Manage Service click-demo
+     
+     [Service]
+     ExecStart=/usr/bin/python3 /home/pi/CLICK-A/github/IPC-demo/click-demo.py
+     Restart=always
+     RestartSec=3
+     
+     [Install]
+     WantedBy=default.target
+   ```
+   
    (please adjust folder structure accordingly)
 
 3. Auto-start services on boot
    - enable lingering for user pi \
    \# ``loginctl enable-linger pi``
    - enable each service \
-   \# ``systemctl --user enable click-cpp-demo``, \# ``systemctl --user enable click-py-demo``, ...
+   \# ``systemctl --user enable click-cpp-demo``
+   \# ``systemctl --user enable click-py-demo``
+   \# ``systemctl --user enable click-demo``, ...
 
 4. Start the services
    - \# ``systemctl --user start click-cpp-demo``
    - \# ``systemctl --user start click-py-demo``
+   - \# ``systemctl --user start click-demo``
    - ...
    
 # Inter-process Communication
