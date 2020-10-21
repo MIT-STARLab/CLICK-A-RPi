@@ -24,5 +24,3 @@ if __name__ == '__main__':
     camera.start()
     fpga.start()
     bus.start()
-
-

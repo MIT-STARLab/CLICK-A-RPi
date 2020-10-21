@@ -1,0 +1,7 @@
+.idea/
+/IPC-demo/cpp-process/build/click-cpp-demo
+/IPC-demo/cpp-process/build/cmake_install.cmake
+/IPC-demo/cpp-process/build/CMakeCache.txt
+/IPC-demo/cpp-process/build/CTestTestfile.cmake
+/IPC-demo/cpp-process/build/Makefile
+/IPC-demo/cpp-process/build/CMakeFiles/
