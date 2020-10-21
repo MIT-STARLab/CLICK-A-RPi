@@ -1,13 +1,17 @@
 from multiprocessing import Process
 from time import sleep
 
+import sys
+import os
+sys.path.append(os.path.abspath('../fpga'))
+import fpga
+
 def Camera():
     print("Test camera process")
     sleep(20)
 
 def Fpga():
-    print("Test fpga process")
-    sleep(5)
+    fpga.main_loop()
 
 def Bus():
     print("Test bus process")

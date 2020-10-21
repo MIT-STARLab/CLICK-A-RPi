@@ -36,7 +36,7 @@ class Optimizer():
 
         # measure SER
         ser = self.measureSER()
-        print 'Begin Algorithm'
+        print('Begin Algorithm')
         ntemp = self.temp
         ncurrent = self.current
         retries = 0
@@ -48,7 +48,7 @@ class Optimizer():
         while tser > THtemp:
            #safety check
             if (ntemp >= 50):
-                print "temp exceeded"
+                print("temp exceeded")
                 break
             if down:
                 ntemp = ntemp - zzz
@@ -65,8 +65,8 @@ class Optimizer():
                     raise ValueError('Too many retries, possible infinite loop')
                 else:
                     retries += 1
-		    print "retry++"
-                    down = not down
+            print("retry++")
+            down = not down
             tser = nser  #keeps track of old SER each loop
 
         #optimize for current until below threshold
@@ -90,11 +90,11 @@ class Optimizer():
                     raise ValueError('Too many retries, possible infinite loop')
                 else:
                     retries += 1
-    		print "retry++"
-                down = not down
+            print("retry++")
+            down = not down
             cser = nser #keeps track of old ser each loop
 
-        print "Minimum SER reached, algorithm ending; ntemp: %f; ncurrent: %f"%(ntemp,ncurrent)
+        print("Minimum SER reached, algorithm ending; ntemp: %f; ncurrent: %f"%(ntemp,ncurrent))
 
     def measureSER(self):
         ser = 0
