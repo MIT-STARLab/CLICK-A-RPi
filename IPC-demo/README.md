@@ -60,7 +60,8 @@ Main Python script creates multiple sockets to communicate to other processes.
    - download and unzip the lib, cd to directory
    - mkdir build
    - cd build
-   - cmake ..
+   - cmake .. 
+   - if you get this error, "CMake Error at tests/CMakeLists.txt", try: cmake -DCPPZMQ_BUILD_TESTS=OFF ..
    - sudo make -j4 install
    
 ####Compilation
