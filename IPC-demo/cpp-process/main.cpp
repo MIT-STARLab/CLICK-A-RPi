@@ -41,7 +41,7 @@ int main()
 
         // send the reply to the client
         socket.send(zmq::buffer(data), zmq::send_flags::none);
-    }
+         }
 
     return 0;
 }
