@@ -4,7 +4,7 @@
 #ifndef __FSM
 #define __FSM
 #include <stdint.h>
-#include "defines.h"
+//#include "defines.h"
 #include "log.h"
 
 #define DAC_ADDR_XP						0x00

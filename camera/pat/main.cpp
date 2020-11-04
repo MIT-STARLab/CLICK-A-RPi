@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
 
 	// Synchronization
-	enum Phase { START, CALIBRATION, ACQUISITION, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
+	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 
 	// Connection to GUI, testing only
 	/*
@@ -132,10 +132,10 @@ int main(int argc, char** argv)
 	int centerOffsetY = 0; //findOffset()
 
 	// Open-loop vs. closed-loop run mode; currently controlled via giving any argument to run in open-loop
-	bool closedLoop = true;
+	bool openLoop = false;
 	if(argc != 1)
 	{
-		closedLoop = false;
+		openLoop = true;
 		log(std::cout, textFileOut,  "Running in OPEN-LOOP mode");
 	}
 
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
 					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 					track.controlOpenLoop(fsm, calib.x, calib.y);
 					// logAndConfirm("Start open-loop tracking with Enter...");
-					if(!closedLoop)
+					if(openLoop)
 					{
 						camera.requestFrame(); //queue frame, pg-comment
 						phase = OPEN_LOOP;
@@ -209,6 +209,78 @@ int main(int argc, char** argv)
 					{
 						phase = CL_INIT;
 					}
+				}
+				else
+				{
+					log(std::cout, textFileOut, "Beacon Acquisition Failed! Transitioning to Static Pointing Mode...");
+					phase = STATIC_POINT; 
+				}
+				break;
+
+			// Graceful failure mode for when beacon is not detected: command the FSM to point the laser straight & rely on bus pointing.
+			case STATIC_POINT:
+				if(camera.waitForFrame())
+				{
+					Image frame(camera, textFileOut, calibration.smoothing);
+					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
+					   frame.performPixelGrouping() > 0 && (
+					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
+					   frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
+					{
+						Group& spot = frame.groups[spotIndex];
+						// Check spot properties
+						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+						{
+							haveCalibKnowledge = true;
+							// Update values if confident
+							calib.x = frame.area.x + spot.x;
+							calib.y = frame.area.y + spot.y;
+							// calib.valueMax = spot.valueMax;
+							// calib.valueSum = spot.valueSum;
+							// calib.pixelCount = spot.pixelCount;
+							track.updateTrackingWindow(frame, spot, calibWindow);
+							// Set Point is defined as the center with any measured biases
+							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX);
+							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY);
+							track.control(fsm, calib.x, calib.y, setPointX, setPointY);
+							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+								// Save for CSV
+								time_point<steady_clock> now = steady_clock::now();
+								duration<double> diff = now - beginTime;
+								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
+									calib.x, calib.y, setPointX, setPointY, calibExposure)));
+								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							}
+						}
+						else
+						{
+							if(haveCalibKnowledge) log(std::cout, textFileOut,  "Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
+								calib.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
+							haveCalibKnowledge = false;
+						}
+					}
+					else
+					{
+						if(haveCalibKnowledge)
+						{
+							log(std::cout, textFileOut,  "Panic, calib spot vanished!");
+							// Try forced FSM SPI transfer? Maybe data corruption
+							fsm.forceTransfer();
+						}
+						haveCalibKnowledge = false;
+					}
+					// nonflight, Send image to GUI
+					//link.setCalib(frame);
+
+					// Request new frame
+					camera.setWindow(calibWindow);
+					//camera.config->gain_dB.write(calibGain);
+					camera.config->expose_us.write(calibExposure); //set frame exposure, pg
+					camera.requestFrame(); //queue calib frame, pg-comment
+				}
+				else
+				{
+					log(std::cout, textFileOut, "camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
 				}
 				break;
 
@@ -258,6 +330,10 @@ int main(int argc, char** argv)
 					camera.setWindow(beaconWindow);
 					camera.requestFrame(); //queue beacon frame, pg-comment
 				}
+				else
+				{
+					log(std::cout, textFileOut, "camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
+				}				
 				break;
 
 			// Initialize closed-loop double window tracking
@@ -312,7 +388,7 @@ int main(int argc, char** argv)
 							beacon.pixelCount = spot.pixelCount;
 							track.updateTrackingWindow(frame, spot, beaconWindow);
 							// If running open-loop
-							if(!closedLoop)
+							if(openLoop)
 							{
 								double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 								double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
@@ -365,7 +441,7 @@ int main(int argc, char** argv)
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "Out of sync, re-initializing!", camera.error);
+					log(std::cerr, textFileOut,  "camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
 					phase = CL_INIT;
 				}
 				break;
@@ -395,7 +471,7 @@ int main(int argc, char** argv)
 							// Control in closed loop!
 							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
-							if(closedLoop)
+							if(!openLoop)
 							{
 								track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 							}
@@ -438,14 +514,14 @@ int main(int argc, char** argv)
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "Out of sync, re-initializing!", camera.error);
+					log(std::cerr, textFileOut,  "camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
 					phase = CL_INIT;
 				}
 				break;
 
 			// Fail-safe
 			default:
-				log(std::cerr, textFileOut,  "Something went terribly wrong!");
+				log(std::cerr, textFileOut,  "Unknown phase encountered in switch structure. Resetting to START...");
 				phase = START;
 				break;
 		}
