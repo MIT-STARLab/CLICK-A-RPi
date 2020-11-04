@@ -1,7 +1,7 @@
 #ifndef FPGA_H
 #define FPGA_H
 
-#include <libfpgalink.h>
+//#include <libfpgalink.h>
 #include "log.h"
 
 #define CALIB_CH 0x16 //calib laser fpga channel
@@ -17,10 +17,12 @@
 class FPGA
 {
   //for initialization list
+  /*
   struct FLContext *handle;
   const char *error;
   const char *vp; //VID:PID
   FLStatus status;
+  */
   uint8_t flag;
   uint8_t byte;
   std::ofstream &fileStream;
