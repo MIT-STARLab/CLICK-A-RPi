@@ -40,9 +40,9 @@ class TxPacket:
         
     def __str__(self):
         if self.payload:
-            return 'IPC TX_PACKETS, APID:%02X, size:%d, payload:%X' % (self.APID, self.size, int.from_bytes(self.payload,''))
+            return 'IPC TX_PACKETS, APID:0x%02X, size:%d, payload:0x%X' % (self.APID, self.size, int.from_bytes(self.payload,'big'))
         else: 
-            return 'IPC TX_PACKETS, APID:%02X, size:%d' % (self.APID, self.size)
+            return 'IPC TX_PACKETS, APID:0x%02X, size:%d' % (self.APID, self.size)
  
 if __name__ == '__main__':
 
