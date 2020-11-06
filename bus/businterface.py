@@ -17,9 +17,9 @@ SPI_HZ = 12000000
 class BusInterface:
     context = zmq.Context()
 
-    rx_cmd_socket = context.socket(zmq.PUSH)
-    rx_pat_socket = context.socket(zmq.PUSH)
-    tx_socket = context.socket(zmq.PULL)
+    rx_cmd_socket = context.socket(zmq.PUB)
+    rx_pat_socket = context.socket(zmq.PUB)
+    tx_socket = context.socket(zmq.SUB)
 
     spi = spidev.SpiDev()
 
@@ -27,13 +27,13 @@ class BusInterface:
 
     def __init__(self):
 
-        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
-        self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
+        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+        self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
         self.tx_socket.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
-        self.spi.open(SPI_BUS, SPI_DEV)
+        #self.spi.open(SPI_BUS, SPI_DEV)
 
-        self.poller.register(tx_socket, POLLIN)
+        self.poller.register(self.tx_socket, zmq.POLLIN)
 
 
     def spi_read(self):
@@ -45,6 +45,7 @@ class BusInterface:
             sockets = dict(self.poller.poll())
             if socket_pull in sockets and sockets[socket_pull] == zmq.POLLIN:
                 message = socket_pull.recv()
+                print(message)
 
             
 
