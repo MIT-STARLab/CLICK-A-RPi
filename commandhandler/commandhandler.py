@@ -7,6 +7,11 @@ import os
 import time
 import json
 
+import sys #importing options and functions
+sys.path.append('../lib/')
+from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, MESSAGE_TIMEOUT
+
+
 ## JSON alternative
 # print struct.unpack("i", struct.pack("i",4))[0] ?
 
@@ -14,20 +19,18 @@ import json
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-port_FPGA_map_request = "5557" #FPGA_map_request port
 socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
-socket_FPGA_map_request.connect("tcp://localhost:%s" % port_FPGA_map_request) #connect to specific address (localhost)
+socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
 
-port_FPGA_map_answer = "5558" #receive FPGA_map_answer
 socket_FPGA_map_answer = context.socket(zmq.SUB)
-socket_FPGA_map_answer.connect ("tcp://localhost:%s" % port_FPGA_map_answer)
+socket_FPGA_map_answer.connect ("tcp://localhost:%s" % FPGA_MAP_ANSWER_PORT)
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
 print ("Subscribing to topic {}".format(topic))
-print ("on port {}".format(port_FPGA_map_answer))
+print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
 socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
-socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, 5000) # 5 second timeout on receive
+socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, MESSAGE_TIMEOUT) # 5 second timeout on receive
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
