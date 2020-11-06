@@ -26,7 +26,7 @@ socket_FPGA_map_answer.connect ("tcp://localhost:%s" % port_FPGA_map_answer)
 topic = str(os.getpid())
 print ("Subscribing to topic {}".format(topic))
 print ("on port {}".format(port_FPGA_map_answer))
-socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, b'')
+socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
 socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, 5000) # 5 second timeout on receive
 
 # socket needs some time to set up. give it a second - else the first message will be lost
