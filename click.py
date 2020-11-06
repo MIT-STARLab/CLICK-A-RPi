@@ -1,6 +1,8 @@
 from multiprocessing import Process
 from multiprocessing import Pipe
 
+from fpga import fpga
+
 def Camera(camera2fpga, camera2bus):
     print("Hi, I'm the camera")
 
