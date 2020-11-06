@@ -5,15 +5,13 @@ import zmq
 import json
 import time
 
-port = "5556"
-
 context = zmq.Context()
 
-port_FPGA_map_request = "5556" #receive FPGA_map_request
+port_FPGA_map_request = "5557" #receive FPGA_map_request
 socket_FPGA_map_request = context.socket(zmq.SUB)
 socket_FPGA_map_request.bind("tcp://*:%s" % port_FPGA_map_request)
 
-port_FPGA_map_answer = "5557" #send FPGA_map_answer
+port_FPGA_map_answer = "5558" #send FPGA_map_answer
 socket_FPGA_map_answer = context.socket(zmq.PUB)
 socket_FPGA_map_answer.bind ("tcp://*:%s" % port_FPGA_map_answer)
 

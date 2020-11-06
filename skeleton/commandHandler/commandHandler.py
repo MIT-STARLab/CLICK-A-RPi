@@ -14,11 +14,11 @@ import json
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-port_FPGA_map_request = "5556" #FPGA_map_request port
+port_FPGA_map_request = "5557" #FPGA_map_request port
 socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
 socket_FPGA_map_request.connect("tcp://localhost:%s" % port_FPGA_map_request) #connect to specific address (localhost)
 
-port_FPGA_map_answer = "5557" #receive FPGA_map_answer
+port_FPGA_map_answer = "5558" #receive FPGA_map_answer
 socket_FPGA_map_answer = context.socket(zmq.SUB)
 socket_FPGA_map_answer.connect ("tcp://localhost:%s" % port_FPGA_map_answer)
 
