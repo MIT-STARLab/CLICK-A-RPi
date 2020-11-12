@@ -40,26 +40,26 @@ Via CMake (configuration in CMakeLists.txt)
 ```
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
    
-   project(click-cpp-demo CXX)
+   project(camera-ipc CXX)
    
    find_package(cppzmq)
    
    enable_testing()
    add_executable(
-       click-cpp-demo
+       camera-ipc
        main.cpp
        )
    
    target_link_libraries(
-       click-cpp-demo
+       camera-ipc
        cppzmq
        )
    
    add_test(
      NAME
-       click-cpp-demo
+       camera-ipc
      COMMAND
-       ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}/click-cpp-demo
+       ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}/camera-ipc
      )
 ```
 
@@ -68,5 +68,5 @@ cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 - \# ``cmake ..``
 - \# ``make``
 
-will create ``click-cpp-demo`` executable
+will create ``camera-ipc`` executable
 
