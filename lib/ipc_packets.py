@@ -136,6 +136,79 @@ class HandlerHeartbeatPacket(IpcPacket):
         
     def __str__(self):
         return 'IPC HANDLER_HEARTBEAT_PACKET, PID:%d, time:%d s' % (self.origin, self.ts_txed_s)
+        
+class FPGAMapRequestPacket(IpcPacket):
+    def __init__(self): IpcPacket.__init__(self)
+    
+    def encode(self, return_addr, rq_number, rw_flag, start_addr, read_size=0, write_data=''):
+        '''Encode a request to the FPGA memory map
+        return_addr: unique identifier for return message, can be PID
+        request_number: will be sent back with the answer, can be used to identify individual requests
+        rw_flag: read=0, write=1
+        start_addr: first FPGA register to read or write
+        read_size: number of 32bit registers to read OR write_data: data to be written
+        returns
+        message bytes'''
+        
+        self.return_addr = return_addr
+        self.rq_number = rq_number
+        self.rw_flag = rw_flag
+        self.start_addr = start_addr
+        self.read_size = read_size
+        self.write_data = write_data
+        self.write_size = len(write_data)
+        
+        assert (read_size > 0) ^ (self.write_size > 0)
+        
+        if read_size > 0:
+            #Reading
+            self.raw = struct.pack('IBBHI',return_addr,rq_number,rw_flag,start_addr,read_size)
+            assert self.rw_flag == 0
+        else:
+            #Writing
+            assert (self.write_size % 4) == 0
+            assert self.rw_flag == 1
+            self.raw = struct.pack('IBBH%ds'%self.write_size,return_addr,rq_number,rw_flag,start_addr,write_data)
+            
+        return self.raw
+    
+    def decode(self, raw):
+        '''Decode a request to the FPGA memory map
+        raw: message bytes to decode
+        returns
+        return_addr: unique identifier for return message, can be PID
+        request_number: will be sent back with the answer, can be used to identify individual requests
+        rw_flag: read=0, write=1
+        start_addr: first FPGA register to read or write
+        read_size: number of 32bit registers to read OR write_data: data to be written'''
+        
+        self.raw = raw
+        raw_size = len(raw)-8
+        
+        self.return_addr, self.rq_number, self.rw_flag, self.start_addr, self.read_or_write_content = struct.unpack('IBBH%ds'%raw_size,raw)
+        
+        if self.rw_flag == 0:
+            #Reading
+            assert raw_size == 4
+            self.read_size = struct.unpack('I',self.read_or_write_content)[0]
+            
+            return self.return_addr, self.rq_number, self.rw_flag, self.start_addr, self.read_size
+            
+        elif self.rw_flag == 1:
+            #Writing
+            assert (raw_size % 4) == 0
+            self.write_data = self.read_or_write_content
+            
+            return self.return_addr, self.rq_number, self.rw_flag, self.start_addr, self.write_data
+            
+        else:
+            raise
+            
+    def __str__(self):
+        if self.rw_flag == 0:
+            return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Reading from address:0x%04X, size:%d' % (self.return_addr, self.rq_number, self.start_addr, self.read_size)
+        elif self.rw_flag == 1: 
+            return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Writing to address:0x%04X, data:0x%X' % (self.return_addr, self.rq_number, self.start_addr, int.from_bytes(self.write_data,'big'))
 
 if __name__ == '__main__':
 
@@ -165,7 +238,7 @@ if __name__ == '__main__':
     print(empty_ipc_rxpatpacket)
     
     not_empty_ipc_rxpatpacket = RxPATPacket()
-    raw = not_empty_ipc_rxpatpacket.encode(APID=0x06,ts_txed_s=567,ts_txed_ms=4,payload=b"Je s'appelle Groot!!")
+    raw = not_empty_ipc_rxpatpacket.encode(APID=0x06,ts_txed_s=567,ts_txed_ms=4,payload=b"Je s'appelle Groot...")
     not_empty_ipc_rxpatpacket.decode(raw)
     print(not_empty_ipc_rxpatpacket)
     
@@ -173,3 +246,13 @@ if __name__ == '__main__':
     raw = ips_heartbeatpacket.encode(origin=123,ts_txed_s=456)
     ips_heartbeatpacket.decode(raw)
     print(ips_heartbeatpacket)
+    
+    ipc_fpgarqpacket_read = FPGAMapRequestPacket()
+    raw = ipc_fpgarqpacket_read.encode(return_addr=456, rq_number=123, rw_flag=0, start_addr=0x1234, read_size=456)
+    ipc_fpgarqpacket_read.decode(raw)
+    print(ipc_fpgarqpacket_read)
+    
+    ipc_fpgarqpacket_write = FPGAMapRequestPacket()
+    raw = ipc_fpgarqpacket_write.encode(return_addr=456, rq_number=123, rw_flag=1, start_addr=0xABCD, write_data=b"Je s'appelle Groot!!")
+    ipc_fpgarqpacket_write.decode(raw)
+    print(ipc_fpgarqpacket_write)
