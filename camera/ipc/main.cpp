@@ -54,6 +54,14 @@ int main()
         pat_control_str.assign(static_cast<char *>(pat_control.data()), pat_control.size());
         std::cout << "Received: " << pat_control_str << std::endl;
 
+        // create a message
+        std::stringstream s;
+        s << '12345 {"command": "camera"} ' << i;
+        auto msg = s.str();
+        zmq::message_t tx_packets(msg.length());
+        memcpy(tx_packets.data(), msg.c_str(), msg.length());
+        publisher.send(tx_packets);
+
     }
 
     return 0;
