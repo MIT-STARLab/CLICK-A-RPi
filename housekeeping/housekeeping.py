@@ -75,8 +75,6 @@ def CommandHandler():
     tx_socket = context.socket(zmq.PUB)
     tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
-
-
     n = 0
     while True:
         pat_control_socket.send_string("Message from CH %s" % n)
@@ -93,9 +91,15 @@ def FpgaDriver():
     ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
     
     while True:
-        result = req_socket.recv() # this blocks
-        print("FPGA: received ", result) 
-        ans_socket.send_string("FPGA answer to request %s" % result.decode('ascii')[-1])
+        try:
+            result = req_socket.recv(flags=zmq.NOBLOCK) #this doesn't block
+            print("FPGA: received ", result) 
+            ans_socket.send_string("FPGA answer to request %s" % result.decode('ascii')[-1])
+        except:
+            pass
+            
+        sleep(1)
+        
 
 def BusInterface():
     print("Start Bus process")
