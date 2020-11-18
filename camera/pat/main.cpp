@@ -3,8 +3,7 @@
 #include <csignal>
 #include <chrono>
 #include <thread>
-//#include <pigpiod_if2.h> //nonflight
-#include <zmq.hpp>
+//#include <zmq.hpp>
 
 #include "log.h"
 #include "fsm.h"
@@ -12,9 +11,11 @@
 #include "processing.h"
 #include "tracking.h"
 #include "calibration.h"
-//#include "link.h" //nonflight
-#include "fpga.h"
-#include "zhelpers.hpp"
+//#include "zhelpers.hpp"
+
+#define CALIB_CH 0x16 //calib laser fpga channel
+#define CALIB_ON 0x55 //calib laser ON code
+#define CALIB_OFF 0x0F //calib laser OFF code
 
 using namespace std;
 using namespace std::chrono;
@@ -55,12 +56,27 @@ void logImage(string nameTag, Camera& cameraObj, ofstream& textFileIn)
 	}
 }
 
+//Turn on Calibration Laser
+void laserOn(){
+  //uint8_t byte = CALIB_ON;
+  //status = flWriteChannel(handle, CALIB_CH, sizeof(byte), &byte, &error);
+  //check();
+}
+
+//Turn Off Calibration Laser
+void laserOff(){
+  //uint8_t byte = CALIB_OFF;
+  //status = flWriteChannel(handle, CALIB_CH, sizeof(byte), &byte, &error);
+  //check();
+}
+
 atomic<bool> stop(false);
 
 //-----------------------------------------------------------------------------
 int main(int argc, char** argv)
 //-----------------------------------------------------------------------------
 {
+	/*
 	//zeromq init socket
 	zmq::context_t context(1); //zmq context
 	zmq::socket_t sender(context, ZMQ_PUSH);
@@ -75,34 +91,22 @@ int main(int argc, char** argv)
 	memcpy (dataFileMsg.data(), &dataFileName, sizeof(dataFileName));
 	sender.send(textFileMsg);
 	sender.send(dataFileMsg);
+	*/
+	
+	//telemetry file names
+	std::string textFileName = timeStamp() + string("_pat_logs.txt"); //used for text telemetry
+	std::string dataFileName = timeStamp() + string("_pat_data.csv"); //used by csv data file generation
 
-  //Generate text telemetry file, pg
+	//Generate text telemetry file, pg
 	ofstream textFileOut; //stream for text telemetry
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
 
 	// Synchronization
-	enum Phase { START, CALIBRATION, ACQUISITION, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
-
-	// Connection to GUI, testing only
-	/*
-	log(std::cout, textFileOut, "Connecting to GUI"); //testing only
-	Link link("http://10.0.5.1:3000"); //testing only
-	*/
-	/*
-	// not for flight, GPIO init
-	int gpioHandle = pigpio_start(0, 0);
-	if(gpioHandle < 0)
-	{
-		log(std::cerr, textFileOut,  "Failed to initialize GPIO!");
-		exit(1);
-	}
-	*/
+	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 
 	// Hardware init
 	Camera camera(textFileOut);
-	FPGA fpga(textFileOut);
-	FSM fsm(80, 129, 200, textFileOut, fgpa);
-	//nonflight args: (gpioHandle, SPI0_CE0, PWM0, GPIO6, 80, 129, 200, textFileOut, fgpa)
+	FSM fsm(80, 129, 200, textFileOut);
 	Calibration calibration(camera, fsm, textFileOut);
 	Tracking track(camera, calibration, textFileOut);
 
@@ -118,24 +122,14 @@ int main(int argc, char** argv)
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
 
-	// not for flight, Offset changes from GUI (user-input)
-	/*
-	atomic<int> centerOffsetX(5), centerOffsetY(32);
-	link.on("offsets", [&](sio::event& ev)
-	{
-		centerOffsetX = ev.get_message()->get_map()["x"]->get_int();
-		centerOffsetY = ev.get_message()->get_map()["y"]->get_int();
-		log(std::cout, textFileOut,  "Center offset updated to [", centerOffsetX, ",", centerOffsetY, "]");
-	});
-	*/
 	int centerOffsetX = 0; //will need an automatic function for generating these: they depend on mechanical alignment
 	int centerOffsetY = 0; //findOffset()
 
 	// Open-loop vs. closed-loop run mode; currently controlled via giving any argument to run in open-loop
-	bool closedLoop = true;
+	bool openLoop = false;
 	if(argc != 1)
 	{
-		closedLoop = false;
+		openLoop = true;
 		log(std::cout, textFileOut,  "Running in OPEN-LOOP mode");
 	}
 
@@ -153,10 +147,10 @@ int main(int argc, char** argv)
 		switch(phase)
 		{
 			case START:
-				fpga.laserOff(); //ensure calibration laser off
+				laserOff(); //ensure calibration laser off
 				//logAndConfirm("Start calibration with Enter..."); //testing only
 				log(std::cout, textFileOut, "Calibration Starting..."); //testing only
-				fpga.laserOn(); //turn calibration laser on
+				laserOn(); //turn calibration laser on
 				phase = CALIBRATION;
 				break;
 
@@ -168,7 +162,7 @@ int main(int argc, char** argv)
 					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
 					log(std::cout, textFileOut, "Calibration complete: ", calibExposure, " us");
 					logImage(string("CALIBRATION"), camera, textFileOut); //save image
-					fpga.laserOff(); //turn calibration laser off for acquistion
+					laserOff(); //turn calibration laser off for acquistion
 					phase = ACQUISITION;
 				}
 				else
@@ -200,7 +194,7 @@ int main(int argc, char** argv)
 					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 					track.controlOpenLoop(fsm, calib.x, calib.y);
 					// logAndConfirm("Start open-loop tracking with Enter...");
-					if(!closedLoop)
+					if(openLoop)
 					{
 						camera.requestFrame(); //queue frame, pg-comment
 						phase = OPEN_LOOP;
@@ -209,6 +203,78 @@ int main(int argc, char** argv)
 					{
 						phase = CL_INIT;
 					}
+				}
+				else
+				{
+					log(std::cout, textFileOut, "Beacon Acquisition Failed! Transitioning to Static Pointing Mode...");
+					phase = STATIC_POINT; 
+				}
+				break;
+
+			// Graceful failure mode for when beacon is not detected: command the FSM to point the laser straight & rely on bus pointing.
+			case STATIC_POINT:
+				if(camera.waitForFrame())
+				{
+					Image frame(camera, textFileOut, calibration.smoothing);
+					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
+					   frame.performPixelGrouping() > 0 && (
+					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
+					   frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
+					{
+						Group& spot = frame.groups[spotIndex];
+						// Check spot properties
+						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+						{
+							haveCalibKnowledge = true;
+							// Update values if confident
+							calib.x = frame.area.x + spot.x;
+							calib.y = frame.area.y + spot.y;
+							// calib.valueMax = spot.valueMax;
+							// calib.valueSum = spot.valueSum;
+							// calib.pixelCount = spot.pixelCount;
+							track.updateTrackingWindow(frame, spot, calibWindow);
+							// Set Point is defined as the center with any measured biases
+							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX);
+							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY);
+							track.control(fsm, calib.x, calib.y, setPointX, setPointY);
+							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+								// Save for CSV
+								time_point<steady_clock> now = steady_clock::now();
+								duration<double> diff = now - beginTime;
+								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
+									calib.x, calib.y, setPointX, setPointY, calibExposure)));
+								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							}
+						}
+						else
+						{
+							if(haveCalibKnowledge) log(std::cout, textFileOut,  "Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
+								calib.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
+							haveCalibKnowledge = false;
+						}
+					}
+					else
+					{
+						if(haveCalibKnowledge)
+						{
+							log(std::cout, textFileOut,  "Panic, calib spot vanished!");
+							// Try forced FSM SPI transfer? Maybe data corruption
+							fsm.forceTransfer();
+						}
+						haveCalibKnowledge = false;
+					}
+					// nonflight, Send image to GUI
+					//link.setCalib(frame);
+
+					// Request new frame
+					camera.setWindow(calibWindow);
+					//camera.config->gain_dB.write(calibGain);
+					camera.config->expose_us.write(calibExposure); //set frame exposure, pg
+					camera.requestFrame(); //queue calib frame, pg-comment
+				}
+				else
+				{
+					log(std::cout, textFileOut, "camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
 				}
 				break;
 
@@ -258,6 +324,10 @@ int main(int argc, char** argv)
 					camera.setWindow(beaconWindow);
 					camera.requestFrame(); //queue beacon frame, pg-comment
 				}
+				else
+				{
+					log(std::cout, textFileOut, "camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
+				}				
 				break;
 
 			// Initialize closed-loop double window tracking
@@ -281,7 +351,7 @@ int main(int argc, char** argv)
 				camera.requestFrame(); //queue calib frame, pg-comment
 				log(std::cout, textFileOut,  "Double window tracking set up! Queued", camera.queuedCount, "requests");
 				//logAndConfirm("Turn on calibration laser and begin tracking with Enter..."); //test only
-				fpga.laserOn(); //turn on calibration laser
+				laserOn(); //turn on calibration laser
 				log(std::cout, textFileOut, "Calibration Laser On and Tracking Beginning");
 				// Next up is beacon spot frame
 				phase = CL_BEACON;
@@ -312,7 +382,7 @@ int main(int argc, char** argv)
 							beacon.pixelCount = spot.pixelCount;
 							track.updateTrackingWindow(frame, spot, beaconWindow);
 							// If running open-loop
-							if(!closedLoop)
+							if(openLoop)
 							{
 								double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 								double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
@@ -365,7 +435,7 @@ int main(int argc, char** argv)
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "Out of sync, re-initializing!", camera.error);
+					log(std::cerr, textFileOut,  "camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
 					phase = CL_INIT;
 				}
 				break;
@@ -395,7 +465,7 @@ int main(int argc, char** argv)
 							// Control in closed loop!
 							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
-							if(closedLoop)
+							if(!openLoop)
 							{
 								track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 							}
@@ -438,14 +508,14 @@ int main(int argc, char** argv)
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "Out of sync, re-initializing!", camera.error);
+					log(std::cerr, textFileOut,  "camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
 					phase = CL_INIT;
 				}
 				break;
 
 			// Fail-safe
 			default:
-				log(std::cerr, textFileOut,  "Something went terribly wrong!");
+				log(std::cerr, textFileOut,  "Unknown phase encountered in switch structure. Resetting to START...");
 				phase = START;
 				break;
 		}
@@ -471,15 +541,11 @@ int main(int argc, char** argv)
 			i = 0;
 		}
 
-		//not for flight, GUI update (manages FPS itself)
-		//link.sendUpdate(haveBeaconKnowledge, haveCalibKnowledge, beacon.x, beacon.y, calib.x, calib.y, track.actionX, track.actionY);
-
 		// Allow exit with Ctrl-C
 		if(stop) break;
 	}
 
 	log(std::cout, textFileOut,  "\nFinishing...");
-	//fsm.disableAmp(); not for flight, zero reset in destructor
 
 	ofstream out(dataFileName);
 	for(const auto& x : csvData)
@@ -494,4 +560,32 @@ int main(int argc, char** argv)
 	textFileOut.close(); //close text file
 
 	return 0;
+	
+		// Connection to GUI, testing only
+	/*
+	log(std::cout, textFileOut, "Connecting to GUI"); //testing only
+	Link link("http://10.0.5.1:3000"); //testing only
+	*/
+	/*
+	// not for flight, GPIO init
+	int gpioHandle = pigpio_start(0, 0);
+	if(gpioHandle < 0)
+	{
+		log(std::cerr, textFileOut,  "Failed to initialize GPIO!");
+		exit(1);
+	}
+	*/
+		// not for flight, Offset changes from GUI (user-input)
+	/*
+	atomic<int> centerOffsetX(5), centerOffsetY(32);
+	link.on("offsets", [&](sio::event& ev)
+	{
+		centerOffsetX = ev.get_message()->get_map()["x"]->get_int();
+		centerOffsetY = ev.get_message()->get_map()["y"]->get_int();
+		log(std::cout, textFileOut,  "Center offset updated to [", centerOffsetX, ",", centerOffsetY, "]");
+	});
+	*/
+	//not for flight, GUI update (manages FPS itself)
+		//link.sendUpdate(haveBeaconKnowledge, haveCalibKnowledge, beacon.x, beacon.y, calib.x, calib.y, track.actionX, track.actionY);
+
 }
