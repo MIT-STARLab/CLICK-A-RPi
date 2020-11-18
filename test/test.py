@@ -7,6 +7,7 @@
 #   Sends "Ping" to server, expects current timestamp back
 #
 
+import _thread
 import zmq
 import time
 import os
@@ -16,15 +17,18 @@ import sys #importing options and functions
 sys.path.append('../lib/')
 sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, TEST_RESPONSE_PORT
+from ipc_packets import RxCommandPacket
+from zmqTxRx import recv_zmq, send_zmq, push_zmq
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
+pid = os.getpid()
 
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-socket_rx_command_packets = context.socket(zmq.PUB) #send messages on this port
-socket_rx_command_packets.bind("tcp://*:%s" % RX_CMD_PACKETS_PORT) #connect to specific address (localhost)
+socket_rx_command_packets = context.socket(zmq.PUSH) #send messages on this port (PUSH/PULL for load balancing!)
+socket_rx_command_packets.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT) #connect to specific address (localhost)
 
 print ("Subscribing to all TEST_RESPONSE topics")
 print ("on port {}".format(TEST_RESPONSE_PORT))
@@ -35,8 +39,25 @@ socket_test_response_packets.bind("tcp://*:%s" % TEST_RESPONSE_PORT)
 socket_test_response_packets.setsockopt(zmq.SUBSCRIBE, b'')
 socket_test_response_packets.setsockopt(zmq.RCVTIMEO, MESSAGE_TIMEOUT) # 5 second timeout on receive
 
-# socket needs some time to set up. give it a second - else the first message will be lost
-time.sleep(1)
+print ("Subscribing to all TX_PACKETS topics")
+print ("on port {}".format(TX_PACKETS_PORT))
+socket_tx_packets = context.socket(zmq.SUB)
+socket_tx_packets.bind("tcp://*:%s" % TX_PACKETS_PORT)
+socket_tx_packets.setsockopt(zmq.SUBSCRIBE, b'')
+
+# Listen for incoming TX_PACKETS in a parallel thread
+def listen_for_TX_packets( socket ):
+   print('Starting listen_for_TX_packets thread ...')
+   while 1:
+        message = recv_zmq(socket)
+        print(' ')
+        print(' ')
+        print('===')
+        print('INCOMING TX_PACKET:')
+        print(message)
+        print('===')
+        print(' ')
+        print(' ')
 
 # https://stackoverflow.com/questions/25188792/how-can-i-use-send-json-with-pyzmq-pub-sub
 # How can I use send_json with pyzmq PUB SUB
@@ -54,25 +75,23 @@ def demogrify(topicmsg):
 
 def evaluate_command(command):
     global topic, socket_rx_command_packets, test_response_packets
-    if command == "ping":
-        # send rx_command_packets with ping command
-        rx_command_packets  = dict()
-        rx_command_packets ['timestamp'] = time.time()
-        rx_command_packets ['command'] = 'ping'
-        print ("Sending rx_command_packets from process {}".format(topic))
-        print (rx_command_packets)
-        socket_rx_command_packets.send(mogrify(topic, rx_command_packets ))
-        # waiting
-        try:
-           print("Waiting for test_response_packets ...")
-           recv_topic, test_response_packets = demogrify(socket_test_response_packets.recv())
-           print (recv_topic, test_response_packets)
-        except zmq.ZMQError as e: #socket_rx_command_packets should never timeout - instead it just waits forever for a packet to come in
-           if e.errno == zmq.EAGAIN:
-               print ("TIMEOUT!!!")
-               pass
-           else:
-               raise
+    if command == "rx":
+        # send rx_command_packets with payload
+
+        print ("Payloads:")
+        print ("- getMap: tell Command Handler to tell FPGA Driver to send an FPGA_MAP")
+        print ("")
+
+        payload = input ("Payload: ")
+
+        ipc_rxcompacket = RxCommandPacket()
+        raw = ipc_rxcompacket.encode(APID=0x04,ts_txed_s=000,ts_txed_ms=0,payload=payload.encode('ascii'))
+
+        ipc_rxcompacket.decode(raw)
+        print('SENDING')
+        print(ipc_rxcompacket)
+
+        push_zmq(socket_rx_command_packets, raw)
 
     elif command == "start":
         print ("Starting services")
@@ -109,13 +128,18 @@ def evaluate_command(command):
         print ("ERROR: I have no idea what your monkey brain wants from me...")
         print ("")
 
-context = zmq.Context()
+_thread.start_new_thread( listen_for_TX_packets, (socket_tx_packets, ) )
 
+# socket needs some time to set up. give it a second - else the first message will be lost
+time.sleep(1)
+
+print('')
+print('')
 
 print ("Hello hairless monkey, how can my awesomeness assist you today?")
 print ("")
 print ("Available commands:")
-print ("- ping: ping the command handler")
+print ("- rx: send RX_CMD_PACKETS")
 print ("- start: start all services")
 print ("- stop: stop all services")
 print ("- exit: terminate this script")
