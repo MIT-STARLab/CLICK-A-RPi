@@ -298,7 +298,7 @@ class FPGAMapAnswerPacket(IpcPacket):
 
     def __str__(self):
         if self.error: status_str = 'Failed'
-        else: status_str = 'Succes'
+        else: status_str = 'Success'
         if self.rw_flag == 0:
             return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:0x%X, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int.from_bytes(self.read_data,'big'), status_str)
         elif self.rw_flag == 1:
@@ -425,3 +425,4 @@ if __name__ == '__main__':
     raw = not_empty_ipc_patcontrolpacket.encode(command=0x08,payload=b"Je s'appelle Groot")
     not_empty_ipc_patcontrolpacket.decode(raw)
     print(not_empty_ipc_patcontrolpacket)
+
