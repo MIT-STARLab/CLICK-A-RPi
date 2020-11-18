@@ -30,7 +30,6 @@ class BusInterface:
     rx_pat_socket = context.socket(zmq.PUB)
     tx_socket = context.socket(zmq.SUB)
 
-
     spi = spidev.SpiDev()
     spi.max_speed_hz = SPI_HZ
 
@@ -45,9 +44,9 @@ class BusInterface:
         self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
         self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
         self.tx_socket.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-        tx_socket.subscribe("")
+        self.tx_socket.subscribe("")
 
-        #self.spi.open(SPI_BUS, SPI_DEV)
+        self.spi.open(SPI_BUS, SPI_DEV)
 
 
     def spi_read_duplex(self):
@@ -85,51 +84,51 @@ class BusInterface:
     def bus_parse_bytes(self):
         ccsds_sync = [0x35, 0x2E, 0xF8, 0x53]
 
-        if (len(bus_rx_bytes_buffer) == 0):
+        if (len(self.bus_rx_bytes_buffer) == 0):
             # Nothing received, nothing to do
             return
 
         # Find sync marker
         b = 0
-        for b in range(len(bus_rx_bytes_buffer)-len(ccsds_sync)+1):
-            if (bus_rx_bytes_buffer[b:b+4] == ccsds_sync):
+        for b in range(len(self.bus_rx_bytes_buffer)-len(ccsds_sync)+1):
+            if (self.bus_rx_bytes_buffer[b:b+4] == ccsds_sync):
                 break
 
         start_index = b+len(ccsds_sync)
         pkt_len_index = start_index + 4
-        assert pkt_len_index + 1 < len(bus_rx_bytes_buffer)
+        assert pkt_len_index + 1 < len(self.bus_rx_bytes_buffer)
             # What if entire packet hasn't been received yet?
 
-        pkt_len = (bus_rx_bytes_buffer[pkt_len_index] << 8) | bus_rx_bytes_buffer[pkt_len_index + 1] + 1
+        pkt_len = (self.bus_rx_bytes_buffer[pkt_len_index] << 8) | self.bus_rx_bytes_buffer[pkt_len_index + 1] + 1
 
         crc_index = start_index + 6 + pkt_len - 2 
-        assert crc_index + 1 < len(bus_rx_bytes_buffer)
+        assert crc_index + 1 < len(self.bus_rx_bytes_buffer)
             # What if entire packet hasn't been received yet?
         
         # Check CRC
-        crc = (bus_rx_bytes_buffer[crc_index] << 8) | bus_rx_bytes_buffer[crc + 1]
+        crc = (self.bus_rx_bytes_buffer[crc_index] << 8) | self.bus_rx_bytes_buffer[crc + 1]
 
-        crc_check = crc16.calc(bus_rx_bytes_buffer[start_index:crc_index]) #confirm CRC calculated over entire packet
+        crc_check = crc16.calc(self.bus_rx_bytes_buffer[start_index:crc_index]) #confirm CRC calculated over entire packet
         
         if (crc == crc_check):
-            bus_rx_pkts_buffer.append(bus_rx_bytes_buffer[start_index:(crc_index+2)])
+            self.bus_rx_pkts_buffer.append(self.bus_rx_bytes_buffer[start_index:(crc_index+2)])
 
-        del bus_rx_bytes_buffer[:(crc_index+2)]
+        del self.bus_rx_bytes_buffer[:(crc_index+2)]
         
         return 
 
     def bus_parse_pkts(self):
-        pkt = bus_rx_pkts_buffer[0]
+        pkt = self.bus_rx_pkts_buffer[0]
         # Check if pkt is part of a sequence
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone 
         seq_flag = (pkt[2] & 0b11000000) >> 4
 
         # Assuming that packets are received in the correct sequence...
-        if (seq_flag == 0b11 || seq_flag == 0b01):
+        if (seq_flag == 0b11 or seq_flag == 0b01):
             # pkt is standalone or first of sequence
             seq_cnt = ((pkt[2] & 0b00111111) << 8) | pkt[3]
 
-            if (seq_cnt < len(bus_rx_pkts_buffer)):
+            if (seq_cnt < len(self.bus_rx_pkts_buffer)):
                 # Entire sequence is received
 
                 apid = ((pkt[0] & 0b00000011) << 8) | pkt[1]
@@ -144,7 +143,7 @@ class BusInterface:
                     data_len += ((pkt[19] << 8) | pkt[20])
                     data.extend(pkt[21:(21+data_len)])
 
-                ## make Ipc packet, add to outgoing buffer
+                # make Ipc packet, add to outgoing buffer
                 if (apid == 0x01):
                     ipc_pkt = RxCommmandPacket()
                 else: # assume this is PAT idk
@@ -152,21 +151,20 @@ class BusInterface:
 
                 ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
 
-                rx_ipc_pkts_buffer.append(ipc_pkt)
+                self.rx_ipc_pkts_buffer.append(ipc_pkt)
 
-                del bus_rx_pkts_buffer[:seq_cnt]
+                del self.bus_rx_pkts_buffer[:seq_cnt]
 
-            else:
-                # End of sequence not received yet
-        
+            #else: # End of sequence not received yet
+            
         else:
             # pkt is not standalone or first of sequence
-            bus_rx_pkts_buffer.pop(0) # Just remove it
+            self.bus_rx_pkts_buffer.pop(0) # Just remove it
 
         return
 
     def send_ipc_pkts(self):
-        ipc_pkt = rx_ipc_pkts_buffer.pop(0)
+        ipc_pkt = self.rx_ipc_pkts_buffer.pop(0)
 
         # If this needs a topic do it here
         if (ipc_pkt.APID == 0x01):
@@ -209,7 +207,7 @@ class BusInterface:
             seq_flag = 0b00
         
         #Last or only packet    
-        if (seq_flag = 0b01):
+        if (seq_flag == 0b01):
             seq_flag = 0b11
         else:
             seq_flag = 0b10
@@ -232,20 +230,21 @@ class BusInterface:
         while True:
 
             # Check for data from bus
+            # raw_bus_data = [0x35, 0x2E, 0xF8, 0x53, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]
             raw_bus_data = self.spi.readbytes(BUS_RX_DATA_LEN)
             assert raw_bus_data is not None
             # Add bus data to raw buffer
-            bus_rx_bytes_buffer.extend(raw_bus_data)
+            self.bus_rx_bytes_buffer.extend(raw_bus_data)
             # Parse packet from buffer
-            bus_parse_bytes()
+            self.bus_parse_bytes()
 
-            bus_parse_pkts()
+            self.bus_parse_pkts()
 
-            send_ipc_pkts()
+            self.send_ipc_pkts()
 
-            recv_ipc_pkts() 
+            self.recv_ipc_pkts() 
 
-            tx_parse_pkts()
+            self.tx_parse_pkts()
 
             self.spi.writebytes2(bus_tx_pkts_buffer.pop(0))
 
