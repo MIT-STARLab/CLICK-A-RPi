@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/pi/CLICK-A/github/IPC-demo/cpp-process
+CMAKE_SOURCE_DIR = /home/pi/CLICK-A/github/camera/ipc
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/pi/CLICK-A/github/IPC-demo/cpp-process/build
+CMAKE_BINARY_DIR = /home/pi/CLICK-A/github/camera/ipc/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -91,9 +91,9 @@ test/fast: test
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CLICK-A/github/IPC-demo/cpp-process/build/CMakeFiles /home/pi/CLICK-A/github/IPC-demo/cpp-process/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CLICK-A/github/camera/ipc/build/CMakeFiles /home/pi/CLICK-A/github/camera/ipc/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CLICK-A/github/IPC-demo/cpp-process/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CLICK-A/github/camera/ipc/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -122,17 +122,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named click-cpp-demo
+# Target rules for targets named camera-ipc
 
 # Build rule for target.
-click-cpp-demo: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 click-cpp-demo
-.PHONY : click-cpp-demo
+camera-ipc: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 camera-ipc
+.PHONY : camera-ipc
 
 # fast build rule for target.
-click-cpp-demo/fast:
-	$(MAKE) -f CMakeFiles/click-cpp-demo.dir/build.make CMakeFiles/click-cpp-demo.dir/build
-.PHONY : click-cpp-demo/fast
+camera-ipc/fast:
+	$(MAKE) -f CMakeFiles/camera-ipc.dir/build.make CMakeFiles/camera-ipc.dir/build
+.PHONY : camera-ipc/fast
 
 main.o: main.cpp.o
 
@@ -140,7 +140,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) -f CMakeFiles/click-cpp-demo.dir/build.make CMakeFiles/click-cpp-demo.dir/main.cpp.o
+	$(MAKE) -f CMakeFiles/camera-ipc.dir/build.make CMakeFiles/camera-ipc.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -149,7 +149,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) -f CMakeFiles/click-cpp-demo.dir/build.make CMakeFiles/click-cpp-demo.dir/main.cpp.i
+	$(MAKE) -f CMakeFiles/camera-ipc.dir/build.make CMakeFiles/camera-ipc.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -158,7 +158,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) -f CMakeFiles/click-cpp-demo.dir/build.make CMakeFiles/click-cpp-demo.dir/main.cpp.s
+	$(MAKE) -f CMakeFiles/camera-ipc.dir/build.make CMakeFiles/camera-ipc.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 # Help Target
@@ -169,7 +169,7 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... click-cpp-demo"
+	@echo "... camera-ipc"
 	@echo "... test"
 	@echo "... main.o"
 	@echo "... main.i"

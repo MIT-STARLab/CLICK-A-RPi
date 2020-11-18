@@ -24,22 +24,22 @@ RX_PAT_PACKETS_PORT = "5563"
 def PAT():
     print("Start PAT process")
     context = zmq.Context()
-    health_socket = context.socket(zmq.PUSH)
-    health_socket.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT)
+    health_socket = context.socket(zmq.PUB)
+    health_socket.connect("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT)
 
-    control_socket = context.socket(zmq.PULL)
+    control_socket = context.socket(zmq.SUB)
     control_socket.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
 
-    tx_socket = context.socket(zmq.PUSH)
+    tx_socket = context.socket(zmq.PUB)
     tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
-    rx_pat_socket = context.socket(zmq.PULL)
+    rx_pat_socket = context.socket(zmq.SUB)
     rx_pat_socket.connect("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
 
-    fpga_req_socket = context.socket(zmq.PUSH)
+    fpga_req_socket = context.socket(zmq.PUB)
     fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
 
-    fpga_ans_socket = context.socket(zmq.PULL)
+    fpga_ans_socket = context.socket(zmq.SUB)
     fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
 
     n = 0
@@ -54,28 +54,26 @@ def CommandHandler():
     print("Start CommandHandler process")
     context = zmq.Context()
 
-    hk_control_socket = context.socket(zmq.PUSH)
+    hk_control_socket = context.socket(zmq.PUB)
     hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
 
-    ch_heartbeat_socket = context.socket(zmq.PUSH)
+    ch_heartbeat_socket = context.socket(zmq.PUB)
     ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
 
-    fpga_req_socket = context.socket(zmq.PUSH)
+    fpga_req_socket = context.socket(zmq.PUB)
     fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
 
-    fpga_ans_socket = context.socket(zmq.PULL)
+    fpga_ans_socket = context.socket(zmq.SUB)
     fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
 
-    pat_control_socket = context.socket(zmq.PUSH)
+    pat_control_socket = context.socket(zmq.PUB)
     pat_control_socket.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
 
-    rx_cmd_socket = context.socket(zmq.PULL)
+    rx_cmd_socket = context.socket(zmq.SUB)
     rx_cmd_socket.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
 
-    tx_socket = context.socket(zmq.PUSH)
+    tx_socket = context.socket(zmq.PUB)
     tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-
-
 
     n = 0
     while True:
@@ -87,27 +85,32 @@ def CommandHandler():
 def FpgaDriver():
     print("Start FPGA Driver process")
     context = zmq.Context()
-    req_socket = context.socket(zmq.PULL)
-    req_socket.bind("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
-    ans_socket = context.socket(zmq.PUSH)
-    ans_socket.bind("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
+    req_socket = context.socket(zmq.SUB)
+    req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
+    ans_socket = context.socket(zmq.PUB)
+    ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
     
     while True:
-        result = req_socket.recv() # this blocks
-        print("FPGA: received ", result) 
-        ans_socket.send_string("FPGA answer to request %s" % result.decode('ascii')[-1])
+        try:
+            result = req_socket.recv(flags=zmq.NOBLOCK) #this doesn't block
+            print("FPGA: received ", result) 
+            ans_socket.send_string("FPGA answer to request %s" % result.decode('ascii')[-1])
+        except:
+            pass
+            
+        sleep(1)
+        
 
 def BusInterface():
     print("Start Bus process")
     context = zmq.Context()
-    tx_socket = context.socket(zmq.PULL)
-    tx_socket.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
+    tx_socket = context.socket(zmq.SUB)
+    tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
-    rx_cmd_socket = context.socket(zmq.PUSH)
-    rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-    rx_pat_socket = context.socket(zmq.PUSH)
-    rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
-
+    rx_cmd_socket = context.socket(zmq.PUB)
+    rx_cmd_socket.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+    rx_pat_socket = context.socket(zmq.PUB)
+    rx_pat_socket.connect("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
 
     while True:
         try:
@@ -121,12 +124,12 @@ class Housekeeping:
     processes = {}
     
     context = zmq.Context()
-    pat_health_socket = context.socket(zmq.PULL)
-    fpga_req_socket = context.socket(zmq.PUSH)
-    fpga_ans_socket = context.socket(zmq.PULL)
-    tx_socket = context.socket(zmq.PUSH)
-    hk_control_socket = context.socket(zmq.PULL)
-    ch_heartbeat_socket = context.socket(zmq.PULL)
+    pat_health_socket = context.socket(zmq.SUB)
+    fpga_req_socket = context.socket(zmq.PUB)
+    fpga_ans_socket = context.socket(zmq.SUB)
+    tx_socket = context.socket(zmq.PUB)
+    hk_control_socket = context.socket(zmq.SUB)
+    ch_heartbeat_socket = context.socket(zmq.SUB)
     
 
     def __init__(self):
@@ -135,8 +138,8 @@ class Housekeeping:
         self.fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
         self.fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
         self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-        self.hk_control_socket.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
-        self.ch_heartbeat_socket.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
+        self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
+        self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
 
         n = 0
         for task in self.tasks:
