@@ -1,4 +1,4 @@
-# Install script for directory: /home/pi/CLICK-A/github/camera/ipc
+# Install script for directory: /home/pi/Documents/CLICK-A-RPi/camera/ipc
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/pi/CLICK-A/github/camera/ipc/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/pi/Documents/CLICK-A-RPi/camera/ipc/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

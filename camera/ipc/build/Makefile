@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/pi/CLICK-A/github/camera/ipc
+CMAKE_SOURCE_DIR = /home/pi/Documents/CLICK-A-RPi/camera/ipc
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/pi/CLICK-A/github/camera/ipc/build
+CMAKE_BINARY_DIR = /home/pi/Documents/CLICK-A-RPi/camera/ipc/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -91,9 +91,9 @@ test/fast: test
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CLICK-A/github/camera/ipc/build/CMakeFiles /home/pi/CLICK-A/github/camera/ipc/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/Documents/CLICK-A-RPi/camera/ipc/build/CMakeFiles /home/pi/Documents/CLICK-A-RPi/camera/ipc/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CLICK-A/github/camera/ipc/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/Documents/CLICK-A-RPi/camera/ipc/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
