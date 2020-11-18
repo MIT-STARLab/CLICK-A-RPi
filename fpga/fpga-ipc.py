@@ -5,15 +5,18 @@ import zmq
 import json
 import time
 
+import sys #importing options and functions
+sys.path.append('../lib/')
+sys.path.append('/home/pi/CLICK-A/github/lib/')
+from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
+
 context = zmq.Context()
 
-port_FPGA_map_request = "5557" #receive FPGA_map_request
 socket_FPGA_map_request = context.socket(zmq.SUB)
-socket_FPGA_map_request.bind("tcp://*:%s" % port_FPGA_map_request)
+socket_FPGA_map_request.bind("tcp://*:%s" % FPGA_MAP_REQUEST_PORT)
 
-port_FPGA_map_answer = "5558" #send FPGA_map_answer
 socket_FPGA_map_answer = context.socket(zmq.PUB)
-socket_FPGA_map_answer.bind ("tcp://*:%s" % port_FPGA_map_answer)
+socket_FPGA_map_answer.bind("tcp://*:%s" % FPGA_MAP_ANSWER_PORT)
 
 # socket.setsockopt(zmq.SUBSCRIBE, topicfilter)
 # subscribe to ALL incoming FPGA_map_requests
@@ -55,3 +58,4 @@ while True:
     print (FPGA_map_answer)
     socket_FPGA_map_answer.send(mogrify(topic, FPGA_map_answer ))
     print ("\n=======\n")
+
