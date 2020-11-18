@@ -11,10 +11,22 @@
 // Initialize MEMS FSM control board over SPI; filter = cutoff in Hz
 //nonflight arguments: (int gpio, uint8_t spi, uint8_t pwmPin, uint8_t ePin, float vBias, float vMax, float filter, std::ofstream &fileStreamIn)
 //-----------------------------------------------------------------------------
-FSM::FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn, FPGA &fpgaIn) :
-fileStream(fileStreamIn), fpga(fgpaIn)
+FSM::FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn) :
+fileStream(fileStreamIn)
 //-----------------------------------------------------------------------------
 {
+	// Voltage setting (ref. PicoAmp datasheet)
+	voltageBias = (vBias/160)*65535;
+	voltageMax = (vMax/160)*32768;
+
+	// Initialize DAC - AD5664
+	oldX = 1; oldY = 1;
+	sendCommand(DAC_FULL_RESET);
+	sendCommand(DAC_ENABLE_INTERNAL_REFERENCE);
+	sendCommand(DAC_ENABLE_ALL_DAC_CHANNELS);
+	sendCommand(DAC_ENABLE_SOFTWARE_LDAC);
+	setNormalizedAngles(0, 0);
+	
 	/*//not for flight
 	uint8_t channel = 0;
 	uint32_t flags = 0;
@@ -45,39 +57,21 @@ fileStream(fileStreamIn), fpga(fgpaIn)
 			exit(1);
 			break;
 	}
-	*/
-
-	// Voltage setting (ref. PicoAmp datasheet)
-	voltageBias = (vBias/160)*65535;
-	voltageMax = (vMax/160)*32768;
-
-	/* //test only, not for flight
+	//test only, not for flight
 	set_mode(gpio, enablePin, PI_OUTPUT);
 	gpio_write(gpio, enablePin, 0);
-	*/
+
 
 	// Set up SPI communication, 7.8 MHz = reliable [http://www.bootc.net/archives/2012/05/19/spi-on-the-raspberry-pi-again/]
-/*
 	spiHandle = spi_open(gpio, channel, 1000000, flags);
 	if(spiHandle < 0)
 	{
 		log(std::cerr, fileStream,"Failed to set up SPI link!");
 		exit(-1);
 	}
-	*/ // not for flight
-
-
-	// Initialize DAC - AD5664
-	oldX = 1; oldY = 1;
-	sendCommand(DAC_FULL_RESET);
-	sendCommand(DAC_ENABLE_INTERNAL_REFERENCE);
-	sendCommand(DAC_ENABLE_ALL_DAC_CHANNELS);
-	sendCommand(DAC_ENABLE_SOFTWARE_LDAC);
-	setNormalizedAngles(0, 0);
-
-	//not for flight:
+// not for flight
+	
 	// Set up filter clock, output needs to be 60x cutoff
-/*
 	set_mode(gpio, pwmPin, PI_ALT0);
 	hardware_PWM(gpio, pwmPin, 60*filter, 500000);
 */
@@ -92,6 +86,14 @@ FSM::~FSM()
 	//not for flight:
 	//gpio_write(gpioHandle, enablePin, 0);
 	//pigpio_stop(gpioHandle);
+}
+
+//write to FSM
+void FSM::fsmWrite(uint8_t channel, uint8_t &data){
+	/* //update with zmq implementation
+	//status = flWriteChannel(handle, channel, sizeof(data), &error);
+	//check();
+	*/
 }
 
 //-----------------------------------------------------------------------------
@@ -122,26 +124,40 @@ void FSM::setNormalizedAngles(float x, float y)
 void FSM::sendCommand(uint8_t cmd, uint8_t addr, uint16_t value)
 //-----------------------------------------------------------------------------
 {
+  	/* //update with zmq implementation
   	spiBuffer[0] = cmd | addr; //a
   	spiBuffer[1] = (value >> 8) & 0xFF; //b
   	spiBuffer[2] = value & 0xFF; //c
-  	//spiTransfer(); //not for flight; replaced with write fsm buffer to fgpa below
-		fpga->fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
-		fpga->fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
-		fpga->fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
+  	spiTransfer(); //not for flight; replaced with write fsm buffer to fgpa below
+	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
+	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
+	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
+	*/
 }
 
 //-----------------------------------------------------------------------------
 void FSM::sendCommand(uint32_t cmd)
 //-----------------------------------------------------------------------------
 {
+	/* //update with zmq implementation
 	spiBuffer[0] = (cmd>>16) & 0xFF; //a
 	spiBuffer[1] = (cmd>>8) & 0xFF; //b
 	spiBuffer[2] = cmd & 0xFF; //c
 	//spiTransfer(); //not for flight; replaced with write fsm buffer to fpga below
-	fpga->fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
-	fpga->fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
-	fpga->fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
+	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
+	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
+	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
+	*/
+}
+
+//-----------------------------------------------------------------------------
+void FSM::forceTransfer()
+//-----------------------------------------------------------------------------
+{
+	sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XP, voltageBias + oldX);
+	sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XM, voltageBias - oldX);
+	sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_YP, voltageBias + oldY);
+	sendCommand(DAC_CMD_WRITE_INPUT_UPDATE_ALL, DAC_ADDR_YM, voltageBias - oldY);
 }
 
 /*
@@ -184,13 +200,3 @@ void FSM::disableAmp()
 	gpio_write(gpioHandle, enablePin, 0);
 }
 */
-
-//-----------------------------------------------------------------------------
-void FSM::forceTransfer()
-//-----------------------------------------------------------------------------
-{
-	sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XP, voltageBias + oldX);
-	sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XM, voltageBias - oldX);
-	sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_YP, voltageBias + oldY);
-	sendCommand(DAC_CMD_WRITE_INPUT_UPDATE_ALL, DAC_ADDR_YM, voltageBias - oldY);
-}

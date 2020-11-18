@@ -34,6 +34,6 @@ public:
   void laserOff();
   void fsmWrite(uint8_t channel, uint8_t data);
 
-}
+};
 
 #endif

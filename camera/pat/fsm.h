@@ -24,22 +24,16 @@
 
 class FSM
 {
-	//int gpioHandle, spiHandle; nonflight
 	char spiBuffer[3];
-	//uint8_t enablePin; nonflight
 	uint16_t voltageBias, voltageMax;
 	int16_t oldX, oldY;
 	void sendCommand(uint8_t cmd, uint8_t addr, uint16_t value);
 	void sendCommand(uint32_t cmd);
-	//void spiTransfer(); nonflight
 	std::ofstream &fileStream;
-	FPGA &fpga;
 public:
-	FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn, FPGA &fpgaIn);
-	//nonflight FSM args: (int gpioHandle, uint8_t spi, uint8_t pwmPin, uint8_t ePin, float vBias, float vMax, float filter, std::ofstream &fileStreamIn, FPGA &fpgaIn);
+	FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn);
 	~FSM();
-	//void enableAmp(); nonflight
-	//void disableAmp(); nonflight
+	void fsmWrite(uint8_t channel, uint8_t &data);
 	void setNormalizedAngles(float x, float y);
 	void forceTransfer();
 };

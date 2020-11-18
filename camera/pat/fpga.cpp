@@ -5,6 +5,10 @@
 //FPGA Constructor
 FPGA::FPGA(std::ofstream &fileStreamIn) :
 fileStream(fileStreamIn)
+//-----------------------------------------------------------------------------
+{
+    //initialize FPGA
+}
 /*
 handle(NULL), error(NULL), vp(NULL) //optional initialize vp to VID:PID, TBD
 {
@@ -29,11 +33,9 @@ handle(NULL), error(NULL), vp(NULL) //optional initialize vp to VID:PID, TBD
 */
 
 //FPGA Destructor
-/*
 FPGA::~FPGA(){
-  flClose(handle);
+  //flClose(handle);
 }
-*/
 
 //error handling
 /*
