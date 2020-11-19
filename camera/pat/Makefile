@@ -5,7 +5,7 @@ mvLIB = /opt/mvIMPACT_Acquire/lib/armhf/
 ## Compiler/Linker config
 CC = g++
 CFLAGS = -O2 -std=c++11 -Wall -W -fPIC -D_REENTRANT -pedantic -Wno-format -Wno-unused-parameter -fvisibility=hidden
-LIBS = -lmvPropHandling -lmvDeviceManager -lpthread #-lboost_system
+LIBS = -lmvPropHandling -lmvDeviceManager -lpthread -lzmq #-lboost_system
 ## Output
 ODIR = .
 POINTING_OUT = pat
