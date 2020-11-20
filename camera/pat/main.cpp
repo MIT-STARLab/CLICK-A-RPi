@@ -5,9 +5,9 @@
 #include <ctime>
 #include <thread>
 #include <sstream>
-#include <zmq.hpp>
 
 #include "log.h"
+#include "packetdef.h"
 #include "fsm.h"
 #include "camera.h"
 #include "processing.h"
@@ -59,97 +59,64 @@ void logImage(string nameTag, Camera& cameraObj, ofstream& textFileIn)
 }
 
 //Turn on Calibration Laser
-void laserOn(){
-  //uint8_t byte = CALIB_ON;
-  //status = flWriteChannel(handle, CALIB_CH, sizeof(byte), &byte, &error);
-  //check();
+void laserOn(zmq::socket_t& fpga_pub_port, uint8_t request_number){
+	char* packet_laserOn = create_packet_fpga_map_request_write(CALIB_CH, CALIB_ON, request_number);
+	send_packet(fpga_pub_port, packet_laserOn);
 }
 
 //Turn Off Calibration Laser
-void laserOff(){
-  //uint8_t byte = CALIB_OFF;
-  //status = flWriteChannel(handle, CALIB_CH, sizeof(byte), &byte, &error);
-  //check();
+void laserOff(zmq::socket_t& fpga_pub_port, uint8_t request_number){
+	char* packet_laserOff = create_packet_fpga_map_request_write(CALIB_CH, CALIB_OFF, request_number);
+	send_packet(fpga_pub_port, packet_laserOff);
 }
 
 atomic<bool> stop(false);
 
 //-----------------------------------------------------------------------------
-int main(int argc, char** argv)
+int main() //int argc, char** argv
 //-----------------------------------------------------------------------------
 {
 	// https://ogbe.net/blog/zmq_helloworld.html
 	// define ports for PUB/SUB (this process binds)
-    std::string TX_PACKETS_PORT = "tcp://*:5561";
-    std::string PAT_CONTROL_PORT = "tcp://*:5560";
+    std::string TX_PACKETS_PORT = "tcp://*:5561"; //PUB to Packetizer & Bus Interface
+    std::string RX_PAT_PACKETS_PORT = "tcp://*:5562";  //SUB to Packetizer & Bus Interface 
+	std::string PAT_HEALTH_PORT = "tcp://*:5559"; //PUB to Housekeeping
+    std::string PAT_CONTROL_PORT = "tcp://*:5560"; //SUB to Command Handler
+    std::string FPGA_MAP_REQUEST_PORT = "tcp://*:5558"; //PUB to FPGA Driver
+    std::string FPGA_MAP_ANSWER_PORT = "tcp://*:5567"; //SUB to FPGA Driver
     
-    // initialize the zmq context with a single IO thread
-    zmq::context_t context{1};
-
+    // initialize the zmq context with 1 (TBR) IO threads 
+    zmq::context_t context{1}; //TBR syntax w/ multiple pub/sub objects
+    
+    // Create the PUB/SUB Sockets: //TBR syntax w/ multiple threads...
+    /*
     // create the TX_PACKETS_PORT PUB socket
-    zmq::socket_t tx_packets_socket(context, ZMQ_PUB);
-    // we need to bind to the transport
-    tx_packets_socket.bind(TX_PACKETS_PORT);
-
-    // create the PAT_CONTROL SUB socket
-    zmq::socket_t pat_control_socket(context, ZMQ_SUB);
-    // we need to bind to the transport
-    pat_control_socket.bind(PAT_CONTROL_PORT);
-    // set the socket options such that we receive all messages. we can set
-    // filters here. this "filter" ("" and 0) subscribes to all messages.
-    // pat_control_socket.setsockopt(ZMQ_SUBSCRIBE, "", 0); // DEPRECIATED!
-    pat_control_socket.set(zmq::sockopt::subscribe, "");
-
-
-    // construct a REP (reply) socket and bind to interface
-    //zmq::socket_t socket{context, zmq::socket_type::rep};
-    //socket.bind("tcp://*:5557");
-
-
-    // std::string new_n;
-	/*
-    for (;;)
-    {
-
-        // incoming pat_control packets
-        zmq::message_t pat_control;
-
-        // receive something on the pat_control_socket
-        pat_control_socket.recv(pat_control, zmq::recv_flags::none);
-        std::string pat_control_str;
-        pat_control_str.assign(static_cast<char *>(pat_control.data()), pat_control.size());
-        std::cout << "Received: " << pat_control_str << std::endl;
-
-        // send message on the tx_packets_socket
-        std::stringstream s;
-        size_t nmsg = 0;
-        s << '12345 {"command": "camera"} ' << nmsg;
-        auto msg = s.str();
-        zmq::message_t tx_packets(msg.length());
-        memcpy(tx_packets.data(), msg.c_str(), msg.length());
-        tx_packets_socket.send(tx_packets);
-
-    }
-    */
- 
+    zmq::socket_t tx_packets_socket(context, ZMQ_PUB); 
+    tx_packets_socket.bind(TX_PACKETS_PORT); // bind to the transport
     
-	/*
-	//zeromq init socket
-	zmq::context_t context(1); //zmq context
-	zmq::socket_t sender(context, ZMQ_PUSH);
-	sender.bind("tcp://*5555");
-
-	std::string textFileName = timeStamp() + string("_logs.txt"); //used for text telemetry
-	std::string dataFileName = timeStamp() + string("_data.csv"); //used by csv data file generation
-
-	zmq::message_t textFileMsg(sizeof(textFileName));
-	zmq::message_t dataFileMsg(sizeof(dataFileName));
-	memcpy (textFileMsg.data(), &textFileName, sizeof(textFileName));
-	memcpy (dataFileMsg.data(), &dataFileName, sizeof(dataFileName));
-	sender.send(textFileMsg);
-	sender.send(dataFileMsg);
-	*/
+    // create the RX_PAT_PACKETS_PORT SUB socket
+    zmq::socket_t rx_pat_packets_socket(context, ZMQ_SUB); 
+    rx_pat_packets_socket.bind(RX_PAT_PACKETS_PORT); // bind to the transport
+    rx_pat_packets_socket.set(zmq::sockopt::subscribe, ""); // TBR filtering? - set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	
+	// create the PAT_HEALTH_PORT PUB socket
+	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
+    pat_health_port.bind(PAT_HEALTH_PORT); // bind to the transport
+    
+    // create the PAT_CONTROL_PORT SUB socket
+    zmq::socket_t pat_control_port(context, ZMQ_SUB); 
+    pat_control_port.bind(PAT_CONTROL_PORT); // bind to the transport
+    pat_control_port.set(zmq::sockopt::subscribe, ""); // TBR filtering? - set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+    */
+    
+    // create the FPGA_MAP_REQUEST_PORT PUB socket
+    zmq::socket_t fpga_map_request_port(context, ZMQ_PUB); 
+    fpga_map_request_port.bind(FPGA_MAP_REQUEST_PORT); // bind to the transport
+    
+    // create the FPGA_MAP_ANSWER_PORT SUB socket
+    zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
+    fpga_map_answer_port.bind(FPGA_MAP_ANSWER_PORT); // bind to the transport
+    fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // TBR filtering? - set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	
 	//telemetry file names
 	std::string textFileName = timeStamp() + string("_pat_logs.txt"); //used for text telemetry
@@ -164,7 +131,7 @@ int main(int argc, char** argv)
 
 	// Hardware init
 	Camera camera(textFileOut);
-	FSM fsm(80, 129, 200, textFileOut);
+	FSM fsm(80, 129, 200, textFileOut, fpga_map_request_port);
 	Calibration calibration(camera, fsm, textFileOut);
 	Tracking track(camera, calibration, textFileOut);
 
@@ -183,13 +150,6 @@ int main(int argc, char** argv)
 	int centerOffsetX = 0; //will need an automatic function for generating these: they depend on mechanical alignment
 	int centerOffsetY = 0; //findOffset()
 
-	// Open-loop vs. closed-loop run mode; currently controlled via giving any argument to run in open-loop
-	bool openLoop = false;
-	if(argc != 1)
-	{
-		openLoop = true;
-		log(std::cout, textFileOut,  "Running in OPEN-LOOP mode");
-	}
 
 	// CSV data saving, TBD
 	time_point<steady_clock> beginTime;
@@ -202,13 +162,26 @@ int main(int argc, char** argv)
 	// Main loop
 	for(int i = 1; ; i++)
 	{
+		//Inter-Process Communication:
+        
+		// Open-loop vs. closed-loop run mode; currently controlled via giving any argument to run in open-loop
+		bool openLoop = false;
+		/*
+		if(argc != 1)
+		{
+			openLoop = true;
+			log(std::cout, textFileOut,  "Running in OPEN-LOOP mode");
+		}
+		*/
+		
+		//PAT Phases:		
 		switch(phase)
 		{
 			case START:
-				laserOff(); //ensure calibration laser off
+				laserOff(fpga_map_request_port, 0); //TBR request number argument, ensure calibration laser off
 				//logAndConfirm("Start calibration with Enter..."); //testing only
 				log(std::cout, textFileOut, "Calibration Starting..."); //testing only
-				laserOn(); //turn calibration laser on
+				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
 				phase = CALIBRATION;
 				break;
 
@@ -220,7 +193,7 @@ int main(int argc, char** argv)
 					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
 					log(std::cout, textFileOut, "Calibration complete: ", calibExposure, " us");
 					logImage(string("CALIBRATION"), camera, textFileOut); //save image
-					laserOff(); //turn calibration laser off for acquistion
+					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
 					phase = ACQUISITION;
 				}
 				else
@@ -409,7 +382,7 @@ int main(int argc, char** argv)
 				camera.requestFrame(); //queue calib frame, pg-comment
 				log(std::cout, textFileOut,  "Double window tracking set up! Queued", camera.queuedCount, "requests");
 				//logAndConfirm("Turn on calibration laser and begin tracking with Enter..."); //test only
-				laserOn(); //turn on calibration laser
+				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
 				log(std::cout, textFileOut, "Calibration Laser On and Tracking Beginning");
 				// Next up is beacon spot frame
 				phase = CL_BEACON;

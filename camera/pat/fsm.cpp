@@ -1,7 +1,7 @@
 // Mirrorcle MEMS FSM control class for Raspberry Pi
 // Author: Ondrej Cierny
 #include "fsm.h"
-#include "log.h"
+//#include "log.h"
 //#include <pigpiod_if2.h>, nonflight
 #include <unistd.h>
 #include <cstdlib>
@@ -11,8 +11,8 @@
 // Initialize MEMS FSM control board over SPI; filter = cutoff in Hz
 //nonflight arguments: (int gpio, uint8_t spi, uint8_t pwmPin, uint8_t ePin, float vBias, float vMax, float filter, std::ofstream &fileStreamIn)
 //-----------------------------------------------------------------------------
-FSM::FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn) :
-fileStream(fileStreamIn)
+FSM::FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn, zmq::socket_t& fpga_pub_port_in) :
+fileStream(fileStreamIn), fpga_pub_port(fpga_pub_port_in)
 //-----------------------------------------------------------------------------
 {
 	// Voltage setting (ref. PicoAmp datasheet)
@@ -83,17 +83,6 @@ FSM::~FSM()
 //-----------------------------------------------------------------------------
 {
 	setNormalizedAngles(0, 0); //reset to zero before destruction
-	//not for flight:
-	//gpio_write(gpioHandle, enablePin, 0);
-	//pigpio_stop(gpioHandle);
-}
-
-//write to FSM
-void FSM::fsmWrite(uint8_t channel, uint8_t &data){
-	/* //update with zmq implementation
-	//status = flWriteChannel(handle, channel, sizeof(data), &error);
-	//check();
-	*/
 }
 
 //-----------------------------------------------------------------------------
@@ -121,36 +110,6 @@ void FSM::setNormalizedAngles(float x, float y)
 }
 
 //-----------------------------------------------------------------------------
-void FSM::sendCommand(uint8_t cmd, uint8_t addr, uint16_t value)
-//-----------------------------------------------------------------------------
-{
-  	/* //update with zmq implementation
-  	spiBuffer[0] = cmd | addr; //a
-  	spiBuffer[1] = (value >> 8) & 0xFF; //b
-  	spiBuffer[2] = value & 0xFF; //c
-  	spiTransfer(); //not for flight; replaced with write fsm buffer to fgpa below
-	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
-	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
-	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
-	*/
-}
-
-//-----------------------------------------------------------------------------
-void FSM::sendCommand(uint32_t cmd)
-//-----------------------------------------------------------------------------
-{
-	/* //update with zmq implementation
-	spiBuffer[0] = (cmd>>16) & 0xFF; //a
-	spiBuffer[1] = (cmd>>8) & 0xFF; //b
-	spiBuffer[2] = cmd & 0xFF; //c
-	//spiTransfer(); //not for flight; replaced with write fsm buffer to fpga below
-	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
-	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
-	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
-	*/
-}
-
-//-----------------------------------------------------------------------------
 void FSM::forceTransfer()
 //-----------------------------------------------------------------------------
 {
@@ -160,9 +119,40 @@ void FSM::forceTransfer()
 	sendCommand(DAC_CMD_WRITE_INPUT_UPDATE_ALL, DAC_ADDR_YM, voltageBias - oldY);
 }
 
+//-----------------------------------------------------------------------------
+void FSM::sendCommand(uint8_t cmd, uint8_t addr, uint16_t value)
+//-----------------------------------------------------------------------------
+{
+  	spiBuffer[0] = cmd | addr; //a
+  	spiBuffer[1] = (value >> 8) & 0xFF; //b
+  	spiBuffer[2] = value & 0xFF; //c
+	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
+	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
+	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
+}
+
+//-----------------------------------------------------------------------------
+void FSM::sendCommand(uint32_t cmd)
+//-----------------------------------------------------------------------------
+{
+	spiBuffer[0] = (cmd>>16) & 0xFF; //a
+	spiBuffer[1] = (cmd>>8) & 0xFF; //b
+	spiBuffer[2] = cmd & 0xFF; //c
+	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
+	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
+	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
+}
+
+//write to FSM
+void FSM::fsmWrite(uint8_t channel, uint8_t data){
+	char* packet_fsmWrite = create_packet_fpga_map_request_write(channel, data, 0); //TBR request number argument
+	send_packet(fpga_pub_port, packet_fsmWrite);
+}
+
+//test setup only, not needed for flight
 /*
 //-----------------------------------------------------------------------------
-void FSM::spiTransfer() //test setup only, not needed for flight
+void FSM::spiTransfer() 
 //-----------------------------------------------------------------------------
 //test only, not for flight hardware configuration
 {

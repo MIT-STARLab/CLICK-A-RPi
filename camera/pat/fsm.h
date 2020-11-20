@@ -4,8 +4,8 @@
 #ifndef __FSM
 #define __FSM
 #include <stdint.h>
-//#include "defines.h"
 #include "log.h"
+#include "packetdef.h"
 
 #define DAC_ADDR_XP						0x00
 #define DAC_ADDR_XM						0x01
@@ -24,16 +24,18 @@
 
 class FSM
 {
-	char spiBuffer[3];
+	uint8_t spiBuffer[3];
 	uint16_t voltageBias, voltageMax;
 	int16_t oldX, oldY;
+	std::ofstream &fileStream;
+	zmq::socket_t &fpga_pub_port;
+	void fsmWrite(uint8_t channel, uint8_t data);
 	void sendCommand(uint8_t cmd, uint8_t addr, uint16_t value);
 	void sendCommand(uint32_t cmd);
-	std::ofstream &fileStream;
+	
 public:
-	FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn);
+	FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn, zmq::socket_t& fpga_pub_port_in);
 	~FSM();
-	void fsmWrite(uint8_t channel, uint8_t &data);
 	void setNormalizedAngles(float x, float y);
 	void forceTransfer();
 };

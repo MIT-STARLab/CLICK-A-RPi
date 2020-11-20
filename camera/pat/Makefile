@@ -9,7 +9,7 @@ LIBS = -lmvPropHandling -lmvDeviceManager -lpthread -lzmq #-lboost_system
 ## Output
 ODIR = .
 POINTING_OUT = pat
-POINTING_OBJ = main.o camera.o processing.o fsm.o tracking.o calibration.o EasyBMP.o
+POINTING_OBJ = main.o camera.o processing.o fsm.o tracking.o calibration.o EasyBMP.o packetdef.o
 
 all: $(POINTING_OUT)
 
