@@ -8,20 +8,18 @@ import spidev
 
 from crccheck.crc import Crc16Ccitt as crc16
 
-import ipc_packets
+sys.path.append('/home/pi/CLICK-A-RPi/lib/')
+from ipc_packets import TxPacket, RxCommandPacket, RxPATPacket
+from options import TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT
+from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
-TX_PACKETS_PORT = "5561"
-RX_CMD_PACKETS_PORT = "5562"
-RX_PAT_PACKETS_PORT = "5563"
-
-SPI_BUS = 0
-SPI_DEV = 0
-SPI_HZ = 12000000
-
+SPI_DEV = '/dev/bct'
 VNC_ADDR = 0b000
 
 BUS_RX_DATA_LEN = 512
 BUS_TX_DATA_LEN = 4100 - 12 # from bus interface doc
+
+SPI_XFER_LEN = 105
 
 class BusInterface:
     context = zmq.Context()
@@ -30,8 +28,9 @@ class BusInterface:
     rx_pat_socket = context.socket(zmq.PUB)
     tx_socket = context.socket(zmq.SUB)
 
-    spi = spidev.SpiDev()
-
+    #spi = spidev.SpiDev()
+    # spi = open(SPI_DEV, os.O_RDWR | os.O_CREAT)
+    spi = open(SPI_DEV, 'wr')
 
     bus_rx_bytes_buffer = []
     bus_rx_pkts_buffer = []
@@ -46,40 +45,8 @@ class BusInterface:
         self.tx_socket.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.tx_socket.subscribe("")
 
-        self.spi.open(SPI_BUS, SPI_DEV)
-        self.spi.max_speed_hz = SPI_HZ
-
-    def spi_read_duplex(self):
-        read_cmd = (((VNC_ADDR << 1) + 0b1) << 4) + 0b1111
-
-        read_req = bytearray(BUS_RX_DATA_LEN *2)
-        read_req[0] = read_cmd
-
-        response = self.spi.xfer2(list(read_req))
-        # should check if response is None
-
-        ack = (response[0] >> 1) & 1
-        # rxf = (response[0] >> 2) & 1
-        # txe = (response[0] >> 3) & 1
-
-        if (ack == 0):
-            # Slave incorrectly decoded its address
-            return None
-
-        i = 0
-        raw_data = []
-        while (i < BUS_RX_DATA_LEN ):
-            #ack = (response[i*2] >> 1) & 1
-            #rxf = (response[i*2] >> 2) & 1
-            txe = (response[i*2] >> 3) & 1
-
-            if (txe == 1):
-                break
-
-            raw_data[i] = response[i*2 + 1]
-            i += 1
-        return raw_data
-
+        # self.spi.open(SPI_BUS, SPI_DEV)
+        # self.spi.max_speed_hz = SPI_HZ
 
     def bus_parse_bytes(self):
         ccsds_sync = [0x35, 0x2E, 0xF8, 0x53]
@@ -96,14 +63,16 @@ class BusInterface:
 
         start_index = b+len(ccsds_sync)
         pkt_len_index = start_index + 4
-        assert pkt_len_index + 1 < len(self.bus_rx_bytes_buffer)
+        if (pkt_len_index + 1 < len(self.bus_rx_bytes_buffer)):
             # What if entire packet hasn't been received yet?
+            return
 
         pkt_len = (self.bus_rx_bytes_buffer[pkt_len_index] << 8) | self.bus_rx_bytes_buffer[pkt_len_index + 1] + 1
 
         crc_index = start_index + 6 + pkt_len - 2
-        assert crc_index + 1 < len(self.bus_rx_bytes_buffer)
+        if (crc_index + 1 < len(self.bus_rx_bytes_buffer)):
             # What if entire packet hasn't been received yet?
+            return
 
         # Check CRC
         crc = (self.bus_rx_bytes_buffer[crc_index] << 8) | self.bus_rx_bytes_buffer[crc + 1]
@@ -192,7 +161,12 @@ class BusInterface:
             pass
 
     def tx_parse_pkts(self):
-        ipc_pkt = self.tx_ipc_pkts_buffer.pop(0)
+        try:
+            ipc_pkt = self.tx_ipc_pkts_buffer.pop(0)
+        except IndexError as e:
+            # Empty buffer, but that's ok
+            return
+
         pkt_data = ipc_pkt.payload
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
         seq_cnt = 0;
@@ -236,26 +210,54 @@ class BusInterface:
 
     def run(self):
 
+        tx = []
+        tx = [0 for i in range(SPI_XFER_LEN)]
+        apid = 0x250
+        packet_len = SPI_XFER_LEN - 11
+        tx[0] = 0x35
+        tx[1] = 0x2E
+        tx[2] = 0xF8
+        tx[3] = 0x53
+        tx[4] = (apid >> 8) & 0xFF
+        tx[5] = (apid & 0xFF)
+        tx[6] = 0b11000000; #sequence count is 0
+        tx[7] = 0x00; #sequence count is 0
+        tx[8] = (packet_len >> 8) & 0xFF;
+        tx[9] =  packet_len & 0xFF;
+        i = 10
+        while ( i < SPI_XFER_LEN-12):
+          tx[i] = i % 0xFF
+          i += 1
+        crc = crc16.calc(tx[:SPI_XFER_LEN-2])
+        tx[SPI_XFER_LEN-2] = (crc >> 8) & 0xFF
+        tx[SPI_XFER_LEN-1] =  crc & 0xFF
+        self.spi.write(bytearray(tx))
+
         while True:
 
             # Check for data from bus
             # raw_bus_data = [0x35, 0x2E, 0xF8, 0x53, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]
-            raw_bus_data = self.spi.readbytes(BUS_RX_DATA_LEN)
-            assert raw_bus_data is not None
+            #raw_bus_data = self.spi.readbytes(BUS_RX_DATA_LEN)
             # Add bus data to raw buffer
-            self.bus_rx_bytes_buffer.extend(raw_bus_data)
-            # Parse packet from buffer
-            self.bus_parse_bytes()
+            #self.bus_rx_bytes_buffer.extend(raw_bus_data)
 
-            self.bus_parse_pkts()
+            raw_bus_data = self.spi.read(SPI_XFER_LEN) #blocks
+            # raw_bus_data = os.read(self.spi, BUS_RX_DATA_LEN) #blocks
+            print(raw_bus_data)
+            # self.bus_rx_bytes_buffer.extend(raw_bus_data)
+            #
+            # # Parse packet from buffer
+            # self.bus_parse_bytes()
+            # self.bus_parse_pkts()
+            # self.send_ipc_pkts()
+            #
+            # self.recv_ipc_pkts()
+            #
+            # self.tx_parse_pkts()
 
-            self.send_ipc_pkts()
+            self.spi.write(bytearray(tx))
+            # os.write(self.spi, tx)
 
-            self.recv_ipc_pkts()
-
-            self.tx_parse_pkts()
-
-            self.spi.writebytes2(bus_tx_pkts_buffer.pop(0))
 
 
 if __name__ == '__main__':
