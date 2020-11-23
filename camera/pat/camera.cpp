@@ -27,7 +27,7 @@ Camera::Camera(std::ofstream &fileStreamIn, std::string serialNumber): fileStrea
 
 	if(device == NULL)
 	{
-		log(std::cerr, fileStream, "Could not open camera!");
+		log(std::cerr, fileStream, "In camera.cpp Camera::Camera - Could not open camera!");
 		exit(-1);
 	}
 

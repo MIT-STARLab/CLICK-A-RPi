@@ -5,7 +5,7 @@
 #define __FSM
 #include <stdint.h>
 #include "log.h"
-#include "packetdef.h"
+//#include "packetdef.h"
 
 #define DAC_ADDR_XP						0x00
 #define DAC_ADDR_XM						0x01

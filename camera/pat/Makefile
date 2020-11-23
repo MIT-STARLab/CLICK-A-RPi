@@ -9,15 +9,20 @@ LIBS = -lmvPropHandling -lmvDeviceManager -lpthread -lzmq #-lboost_system
 ## Output
 ODIR = .
 POINTING_OUT = pat
+TESTIPC_OUT = testipc
 POINTING_OBJ = main.o camera.o processing.o fsm.o tracking.o calibration.o EasyBMP.o packetdef.o
+TESTIPC_OBJ = testIPC.o packetdef.o
 
-all: $(POINTING_OUT)
+all: $(POINTING_OUT) $(TESTIPC_OUT)
 
 %.o: %.cpp
-	$(CC) -c -o $@ $< $(CFLAGS) -I$(mvINC) #nonflight, removed -I$(ioINC)
+	$(CC) -c -o $@ $< $(CFLAGS) -I$(mvINC) 
 
 $(POINTING_OUT): $(POINTING_OBJ)
-	$(CC) -o $@ $^ $(CFLAGS) -L$(mvLIB) $(LIBS) #nonflight, removed -L$(ioLIB)
+	$(CC) -o $@ $^ $(CFLAGS) -L$(mvLIB) $(LIBS) 
+	
+$(TESTIPC_OUT): $(TESTIPC_OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) -L$(mvLIB) $(LIBS) 
 
 debug: CFLAGS += -DDEBUG -g
 debug: all
@@ -29,4 +34,4 @@ run:
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o $(POINTING_OUT)
+	rm -f $(ODIR)/*.o $(POINTING_OUT) $(TESTIPC_OUT)

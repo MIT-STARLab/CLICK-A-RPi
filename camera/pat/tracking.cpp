@@ -63,10 +63,10 @@ bool Tracking::verifyFrame(Image& frame)
 		// All checks passed and we have some good groups!
 		if(frame.performPixelGrouping() > 0)
 		{
-			log(std::cout, fileStream, "Frame verified, tuning camera parameters");
+			log(std::cout, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters");
 			return true;
 		}
-		else log(std::cerr, fileStream, "Frame has good properties but grouping did not succeed");
+		else log(std::cerr, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
 	}
 	return false;
 }
@@ -124,7 +124,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 		}
 		else return false;
 	}
-	log(std::cerr, fileStream, "Freaky error in camera tuning");
+	log(std::cerr, fileStream, "In tracking.cpp Tracking::windowAndTune - Camera tuning failed.");
 	return false;
 }
 
@@ -196,7 +196,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 					}
 
 					// Camera reached lower limit, too high power
-					log(std::cerr, fileStream, "Unable to desaturate camera");
+					log(std::cerr, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to desaturate camera");
 					return true;
 				}
 				// Otherwise, have to increase exposure
@@ -217,13 +217,13 @@ bool Tracking::autoTuneExposure(Group& beacon)
 					}
 
 					// Very high parameters reached
-					log(std::cerr, fileStream, "Unable to reach desired brightness with maximum parameters");
+					log(std::cerr, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reach desired brightness with maximum parameters");
 					return true;
 				}
 			}
 		}
 	}
-	log(std::cerr, fileStream, "Freaky error in exposure auto tuning");
+	log(std::cerr, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure auto tuning failed.");
 	return false;
 }
 
@@ -279,7 +279,7 @@ void Tracking::updateTrackingWindow(Image& frame, Group& spot, AOI& window)
 		// Final check
 		if(x != window.x || y != window.y || height != window.h || width != window.w)
 		{
-			log(std::cout, fileStream, "Updated window to", width, "x", height, "at [", x, ",", y, "]");
+			log(std::cout, fileStream, "In tracking.cpp Tracking::updateTrackingWindow - Updated window to", width, "x", height, "at [", x, ",", y, "]");
 			window.x = x;
 			window.y = y;
 			window.w = width;

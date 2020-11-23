@@ -145,8 +145,8 @@ void FSM::sendCommand(uint32_t cmd)
 
 //write to FSM
 void FSM::fsmWrite(uint8_t channel, uint8_t data){
-	char* packet_fsmWrite = create_packet_fpga_map_request_write(channel, data, 0); //TBR request number argument
-	send_packet(fpga_pub_port, packet_fsmWrite);
+	//char* packet_fsmWrite = create_packet_fpga_map_request_write(channel, data, 0); //TBR request number argument
+	//send_packet(fpga_pub_port, packet_fsmWrite);
 }
 
 //test setup only, not needed for flight

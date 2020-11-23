@@ -2,72 +2,81 @@
 
 #include "packetdef.h"
 
-struct fpga_request_packet_struct{
-	uint8_t fpga_return_address;
-	uint8_t request_num;
-	uint8_t write_flag;
-	uint8_t start_address;
-	uint8_t data_size;
-	uint8_t data_to_write;
-};
-
 // Generic Code to Receive IPC Packet on SUB Port
-char* receive_packet(zmq::socket_t& sub_port)
+void receive_packet(zmq::socket_t& sub_port, char* packet, int packet_buffer_length)
 {
 	zmq::message_t message;
     sub_port.recv(message, zmq::recv_flags::none);
+    char buffer[message.size()];
+	memcpy(buffer, message.data(), message.size());
+	memcpy(packet, buffer, sizeof(buffer));
+	
+	pat_health_packet_struct packet_pat_health_struct = pat_health_packet_struct();
+	memcpy(&packet_pat_health_struct, message.data(), message.size());
+	printf("Internal - Return Address: %d; Size: %d; Data: %s \n", packet_pat_health_struct.return_address, packet_pat_health_struct.data_size, packet_pat_health_struct.data_to_write);
+		
+    /*
     std::string message_str;
     message_str.assign(static_cast<char *>(message.data()), message.size());
+    return message_str;
+    */
+    
+    /*
     int n = message_str.length();
     char packet[n + 1];
     strcpy(packet, message_str.c_str());
     return packet;
+    */
 }  
 
 // Generic Code to Send IPC Packet on PUB Port  
-void send_packet(zmq::socket_t& pub_port, char* packet)
+void send_packet(zmq::socket_t& pub_port, char* packet, int packet_buffer_length)
 {
-	zmq::message_t message(strlen(packet));
-	memcpy(message.data(), packet, strlen(packet));
+	char buffer[packet_buffer_length];
+	memcpy(buffer, packet, sizeof(buffer));
+	
+	zmq::message_t message(sizeof(buffer));
+	memcpy(message.data(), buffer, sizeof(buffer));
+	
+	pat_health_packet_struct packet_pat_health_struct = pat_health_packet_struct();
+	memcpy(&packet_pat_health_struct, message.data(), message.size());
+	printf("Internal Sender - Return Address: %d; Size: %d; Data: %s \n", packet_pat_health_struct.return_address, packet_pat_health_struct.data_size, packet_pat_health_struct.data_to_write);
+
 	pub_port.send(message);
 }
-	
+
+// Packet Creation for PUB Processes
 char* create_packet_fpga_map_request_write(uint8_t channel, uint8_t data, uint8_t request_number)
 {
 	fpga_request_packet_struct packet_struct = fpga_request_packet_struct();
-	packet_struct.fpga_return_address = 0x4B;
+	packet_struct.return_address = 3968; //Static PID: can replace with in-code console command to ps if dynamic PID is desired.
 	packet_struct.request_num = request_number;
-	packet_struct.write_flag = 0x01;
+	packet_struct.write_flag = 1;
 	packet_struct.start_address = channel;
 	packet_struct.data_size = sizeof(data);
 	packet_struct.data_to_write = data;
 	
 	char packet[sizeof(fpga_request_packet_struct)];
 	memcpy(packet, &packet_struct, sizeof(fpga_request_packet_struct));
-	return packet;
-		
-	//char* packet = reinterpret_cast<char*>(packet_raw);
-	
-	/*
-	//convert numerical packet data to strings
-	std::string fpga_return_address = std::to_string(0x4B);
-	std::string request_number_str = std::to_string(request_number);
-	std::string write_flag = std::to_string(0x01); //(read is 0x00)
-	std::string start_address = std::to_string(channel); 
-	std::string data_to_write = std::to_string(data); 
-	std::string data_size = std::to_string(data_to_write.length());	
-	//concatenate packet sub-strings
-	std::string packet_str = fpga_return_address + request_number_str + write_flag + start_address + data_size + data_to_write;
-	
-	//return packet character array
-	int n = packet_str.length();
-    char packet[n + 1];
-    strcpy(packet, packet_str.c_str());  
-    */
-      
+	return packet;      
 }
 
-// If needed, can put in a fpga_map_answer packet parsing helper here:
+void create_packet_pat_health(char* packet, char* data, int packet_buffer_length)
+{
+	pat_health_packet_struct packet_struct = pat_health_packet_struct();
+	packet_struct.return_address = 3968; //Static PID: can replace with in-code console command to ps if dynamic PID is desired.
+	packet_struct.data_size = sizeof(data);
+	memcpy(packet_struct.data_to_write, data, strlen(data)+1);
+	
+	char buffer[packet_buffer_length];
+	memcpy(buffer, &packet_struct, sizeof(buffer));
+	memcpy(packet, buffer, sizeof(buffer));
+}
+
+// TODO: create_packet_tx definition (don't need to send bus commands for basic operation)
+
+// Packet Parsing for SUB Processes
+// TODO: fpga_map_answer packet parsing helper here:
 // packet format:
 // return address/flag
 // request number
@@ -76,10 +85,6 @@ char* create_packet_fpga_map_request_write(uint8_t channel, uint8_t data, uint8_
 // size
 // data read
 
-// TODO: create_packet_tx definition (don't need to send bus commands for basic operation)
-
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
-
-// TODO: create_packet_pat_health (logs to housekeeping)
 
 // TODO: parse_packet_pat_control (commands from command handler)
