@@ -31,7 +31,7 @@ class BusInterface:
     tx_socket = context.socket(zmq.SUB)
 
     spi = spidev.SpiDev()
-    spi.max_speed_hz = SPI_HZ
+
 
     bus_rx_bytes_buffer = []
     bus_rx_pkts_buffer = []
@@ -47,14 +47,14 @@ class BusInterface:
         self.tx_socket.subscribe("")
 
         self.spi.open(SPI_BUS, SPI_DEV)
-
+        self.spi.max_speed_hz = SPI_HZ
 
     def spi_read_duplex(self):
         read_cmd = (((VNC_ADDR << 1) + 0b1) << 4) + 0b1111
-        
+
         read_req = bytearray(BUS_RX_DATA_LEN *2)
         read_req[0] = read_cmd
-        
+
         response = self.spi.xfer2(list(read_req))
         # should check if response is None
 
@@ -101,26 +101,26 @@ class BusInterface:
 
         pkt_len = (self.bus_rx_bytes_buffer[pkt_len_index] << 8) | self.bus_rx_bytes_buffer[pkt_len_index + 1] + 1
 
-        crc_index = start_index + 6 + pkt_len - 2 
+        crc_index = start_index + 6 + pkt_len - 2
         assert crc_index + 1 < len(self.bus_rx_bytes_buffer)
             # What if entire packet hasn't been received yet?
-        
+
         # Check CRC
         crc = (self.bus_rx_bytes_buffer[crc_index] << 8) | self.bus_rx_bytes_buffer[crc + 1]
 
         crc_check = crc16.calc(self.bus_rx_bytes_buffer[start_index:crc_index]) #confirm CRC calculated over entire packet
-        
+
         if (crc == crc_check):
             self.bus_rx_pkts_buffer.append(self.bus_rx_bytes_buffer[start_index:(crc_index+2)])
 
         del self.bus_rx_bytes_buffer[:(crc_index+2)]
-        
-        return 
+
+        return
 
     def bus_parse_pkts(self):
         pkt = self.bus_rx_pkts_buffer[0]
         # Check if pkt is part of a sequence
-        # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone 
+        # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
         seq_flag = (pkt[2] & 0b11000000) >> 4
 
         # Assuming that packets are received in the correct sequence...
@@ -128,14 +128,23 @@ class BusInterface:
             # pkt is standalone or first of sequence
             seq_cnt = ((pkt[2] & 0b00111111) << 8) | pkt[3]
 
-            if (seq_cnt < len(self.bus_rx_pkts_buffer)):
+            if (seq_flag == 0b01):
+                # Check that the entire sequence is received
+                completed = False
+                for i in range(len(self.bus_rx_pkts_buffer)):
+                    ipkt = self.bus_rx_pkts_buffer[i]
+                    seq_flag = (ipkt[2] & 0b11000000) >> 4
+                    if (seq_flag == 0b01):
+                        completed = True
+
+            if (completed is True):
                 # Entire sequence is received
 
                 apid = ((pkt[0] & 0b00000011) << 8) | pkt[1]
-                    
+
                 ts_sec = (((((pkt[6] << 8) | pkt[7]) << 8) | pkt[8]) << 8) | pkt[9]
                 ts_subsec = pkt[10] * 200
-                    
+
                 data_len = ((pkt[19] << 8) | pkt[20])
                 data = pkt[21:(21+data_len)]
                 for i in range(1, seq_cnt):
@@ -156,7 +165,7 @@ class BusInterface:
                 del self.bus_rx_pkts_buffer[:seq_cnt]
 
             #else: # End of sequence not received yet
-            
+
         else:
             # pkt is not standalone or first of sequence
             self.bus_rx_pkts_buffer.pop(0) # Just remove it
@@ -181,18 +190,18 @@ class BusInterface:
         except:
             # Nothing received, that's ok
             pass
-        
+
     def tx_parse_pkts(self):
         ipc_pkt = self.tx_ipc_pkts_buffer.pop(0)
         pkt_data = ipc_pkt.payload
-        # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone 
-        seq_cnt = 0; 
+        # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
+        seq_cnt = 0;
         seq_flag = 0b01
         while (len(pkt_data) > (BUS_TX_DATA_LEN)):
             bus_tx_pkt = []
             bus_tx_pkt[0] = ((ipc_pkt.APID >> 8) & 0b00000111)
             bus_tx_pkt[1] = (ipc_pkt.APID & 0xFF)
-            bus_tx_pkt[2] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111) 
+            bus_tx_pkt[2] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
             bus_tx_pkt[3] = (seq_cnt & 0xFF)
             bus_tx_pkt[4] = ((BUS_TX_DATA_LEN - 1) >> 8) & 0xFF
             bus_tx_pkt[5] = (BUS_TX_DATA_LEN -1) & 0xFF
@@ -205,8 +214,8 @@ class BusInterface:
 
             seq_cnt += 1
             seq_flag = 0b00
-        
-        #Last or only packet    
+
+        #Last or only packet
         if (seq_flag == 0b01):
             seq_flag = 0b11
         else:
@@ -215,7 +224,7 @@ class BusInterface:
         bus_tx_pkt = []
         bus_tx_pkt[0] = ((ipc_pkt.APID >> 8) & 0b00000111)
         bus_tx_pkt[1] = (ipc_pkt.APID & 0xFF)
-        bus_tx_pkt[2] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111) 
+        bus_tx_pkt[2] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
         bus_tx_pkt[3] = (seq_cnt & 0xFF)
         bus_tx_pkt[4] = ((len(pkt_data) - 1) >> 8) & 0xFF
         bus_tx_pkt[5] = (len(pkt_data) - 1) & 0xFF
@@ -242,7 +251,7 @@ class BusInterface:
 
             self.send_ipc_pkts()
 
-            self.recv_ipc_pkts() 
+            self.recv_ipc_pkts()
 
             self.tx_parse_pkts()
 
@@ -252,9 +261,3 @@ class BusInterface:
 if __name__ == '__main__':
     bus_interface = BusInterface()
     bus_interface.run()
-
-
-
-
-
-

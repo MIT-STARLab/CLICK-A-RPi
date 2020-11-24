@@ -1,3 +1,5 @@
+import zmq
+
 def push_zmq(socket, payload):
     '''push zmq message without envelope
     socket: zmq socket
@@ -31,3 +33,7 @@ def recv_zmq(socket):
            pass
        else:
            raise
+
+def separate(payload):
+    array = payload.split(b' ', 1)
+    return array[1], array[0]

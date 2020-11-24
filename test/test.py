@@ -18,7 +18,7 @@ sys.path.append('../lib/')
 sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, TEST_RESPONSE_PORT
 from ipc_packets import RxCommandPacket
-from zmqTxRx import recv_zmq, send_zmq, push_zmq
+from zmqTxRx import recv_zmq
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
@@ -27,8 +27,8 @@ pid = os.getpid()
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-socket_rx_command_packets = context.socket(zmq.PUSH) #send messages on this port (PUSH/PULL for load balancing!)
-socket_rx_command_packets.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT) #connect to specific address (localhost)
+socket_rx_command_packets = context.socket(zmq.PUB) #send messages on this port (PUSH/PULL for load balancing!)
+socket_rx_command_packets.bind("tcp://*:%s" % RX_CMD_PACKETS_PORT) #connect to specific address (localhost)
 
 print ("Subscribing to all TEST_RESPONSE topics")
 print ("on port {}".format(TEST_RESPONSE_PORT))
@@ -80,6 +80,7 @@ def evaluate_command(command):
 
         print ("Payloads:")
         print ("- getMap: tell Command Handler to tell FPGA Driver to send an FPGA_MAP")
+        print ("- block: tell Command Handler to block the process for 1 minute")
         print ("")
 
         payload = input ("Payload: ")
@@ -88,10 +89,12 @@ def evaluate_command(command):
         raw = ipc_rxcompacket.encode(APID=0x04,ts_txed_s=000,ts_txed_ms=0,payload=payload.encode('ascii'))
 
         ipc_rxcompacket.decode(raw)
-        print('SENDING')
+        print(' ')
+        print ('SENDING to %s' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT)))
         print(ipc_rxcompacket)
+        print(' ')
 
-        push_zmq(socket_rx_command_packets, raw)
+        socket_rx_command_packets.send(raw)
 
     elif command == "start":
         print ("Starting services")

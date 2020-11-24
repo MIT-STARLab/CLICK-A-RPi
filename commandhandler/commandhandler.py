@@ -13,8 +13,8 @@ import sys
 sys.path.append('../lib/')
 sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
-from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket
-from zmqTxRx import recv_zmq, send_zmq
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket
+from zmqTxRx import recv_zmq, separate
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
@@ -44,163 +44,73 @@ socket_tx_packets.connect ("tcp://localhost:%s" % TX_PACKETS_PORT)
 
 print ("Pulling RX_CMD_PACKETS")
 print ("on port {}".format(RX_CMD_PACKETS_PORT))
-socket_rx_command_packets = context.socket(zmq.PULL)
+socket_rx_command_packets = context.socket(zmq.SUB)
+socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
 socket_rx_command_packets.connect ("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
 
-# https://stackoverflow.com/questions/25188792/how-can-i-use-send-json-with-pyzmq-pub-sub
-# How can I use send_json with pyzmq PUB SUB
-def mogrify(topic, msg):
-    """ json encode the message and prepend the topic """
-    return (topic + ' ' + json.dumps(msg)).encode('ascii')
-
-def demogrify(topicmsg):
-    """ Inverse of mogrify() """
-    topicmsg = topicmsg.decode('ascii')
-    json0 = topicmsg.find('{')
-    topic = topicmsg[0:json0].strip()
-    msg = json.loads(topicmsg[json0:])
-    return topic, msg
-
-def sendPatControl(): #this should be the Bus
-    pat_control  = dict()
-    pat_control ['timestamp'] = time.time()
-    pat_control ['command'] = 'pat'
-    print ("Sending socket_pat_control from process {}".format(topic))
-    print (pat_control)
-    socket_pat_control.send(mogrify(topic, pat_control ))
-
-def returnToTest(): #this should be the Bus
-    test_response_packets  = dict()
-    test_response_packets ['timestamp'] = time.time()
-    test_response_packets ['command'] = 'pong'
-    print ("Sending test_response_packets from process {}".format(topic))
-    print (test_response_packets)
-    socket_test_response_packets.send(mogrify(topic, test_response_packets ))
-
-
-
 def getFPGAmap():
-    ipc_fpgarqpacket_write = FPGAMapRequestPacket()
+    ipc_fpgarqpacket_read = FPGAMapRequestPacket()
 
-    '''
-    #create bytes object (struct) for writing (we are not doing this [yet])
-    raw = ipc_fpgarqpacket_write.encode(return_addr=pid, rq_number=123, rw_flag=1, start_addr=0x5678, size=48, write_data=b"number of characters must match 'size' attribute")
-    '''
     #create bytes object (struct) for reading
     '''do we need error handling for struct generation?'''
-    raw = ipc_fpgarqpacket_write.encode(return_addr=pid, rq_number=123, rw_flag=0, start_addr=0x5678, size=48)
+    raw = ipc_fpgarqpacket_read.encode(return_addr=pid, rq_number=123, rw_flag=0, start_addr=0x5678, size=48)
+    ipc_fpgarqpacket_read.decode(raw)
 
-    #what's going on
-    print('')
-    ipc_fpgarqpacket_write.decode(raw)
-    print('PAYLOAD')
-    print(ipc_fpgarqpacket_write)
-    print('')
+    print ('SENDING to %s with ENVELOPE %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), ipc_fpgarqpacket_read.return_addr))
+    print(raw)
+    print(ipc_fpgarqpacket_read)
 
     #send message
-    '''do we need the return_addr in the struct?? we DO need it here'''
-    send_zmq(socket_FPGA_map_request, raw, pid)
+    socket_FPGA_map_request.send(raw)
 
-    #what's going on
-    print('')
-    print('SENDING')
-    print(raw)
-    print('TO')
-    print(socket_FPGA_map_request.get_string(zmq.LAST_ENDPOINT))
-    print('WITH ENVELOPE')
-    print(pid)
+    print ('RECEIVING on %s with TIMEOUT %d for ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), socket_FPGA_map_answer.get(zmq.RCVTIMEO), ipc_fpgarqpacket_read.return_addr))
+    message, envelope = separate(recv_zmq(socket_FPGA_map_answer))
 
+    print (b'| found ENVELOPE: ' + envelope)
+    print (b'| ' + message)
 
-    #socket_FPGA_map_request.send(b'123' + b' ' + ipc_fpgarqpacket_write)
+    # decode the package
+    ipc_fpgaaswpacket = FPGAMapAnswerPacket()
+    ipc_fpgaaswpacket.decode(message)
+    print (ipc_fpgaaswpacket)
+    print ('| got PAYLOAD %s' % (ipc_fpgaaswpacket.read_data))
 
-    #send_pickle(socket_FPGA_map_request, ipc_fpgarqpacket_write, '123')
+    # sending read_data back as TX packet
+    if ipc_fpgaaswpacket.read_data:
+        not_empty_ipc_txpacket = TxPacket()
+        raw = not_empty_ipc_txpacket.encode(APID=0x02,payload=ipc_fpgaaswpacket.read_data)
+        not_empty_ipc_txpacket.decode(raw)
+        print(not_empty_ipc_txpacket)
 
-    print("")
-    print("Waiting for FPGA_map_answer with topic {} ...".format(topic))
-    print("")
+        print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT)))
+        print(raw)
+        print(ipc_fpgarqpacket_read)
 
-    '''TODO: send to FPGA, wait for response, on timeout, send error'''
-
-    not_empty_ipc_txpacket = TxPacket()
-    raw = not_empty_ipc_txpacket.encode(APID=0x02,payload=b"timeout")
-    not_empty_ipc_txpacket.decode(raw)
-    print(not_empty_ipc_txpacket)
-
-    send_zmq(socket_tx_packets, raw, pid)
-
-    #what's going on
-    print('')
-    print('SENDING')
-    print(raw)
-    print('TO')
-    print(socket_tx_packets.get_string(zmq.LAST_ENDPOINT))
-    print('WITH ENVELOPE')
-    print(pid)
-
-    '''
-    FPGA_map_request = dict()
-    FPGA_map_request ['timestamp'] = time.time()
-    FPGA_map_request ['command'] = 'gib'
-    print ("Sending FPGA_map_request from process {}".format(topic))
-    print (FPGA_map_request)
-    socket_FPGA_map_request.send(mogrify(topic, FPGA_map_request ))
-    '''
-
-
-
-    '''
-    try:
-       recv_topic, FPGA_map_answer = demogrify(socket_FPGA_map_answer.recv())
-       print (recv_topic, FPGA_map_answer)
-       print ("\n=======\n")
-    except zmq.ZMQError as e:
-       if e.errno == zmq.EAGAIN:
-           print ("TIMEOUT!!!")
-           print ("\n=======\n")
-           pass
-       else:
-           raise
-    '''
-
-print ("\n")
+        socket_tx_packets.send(raw)
 
 while True:
-    '''
-    try:
-       print("Waiting for socket_rx_command_packets ...")
-       recv_topic, rx_command_packets = demogrify(socket_rx_command_packets.recv())
-       print (recv_topic, rx_command_packets)
-       print ("\n======= sending response ========\n")
-       sendPatControl()
-    except zmq.ZMQError as e: #socket_rx_command_packets should never timeout - instead it just waits forever for a packet to come in
-       if e.errno == zmq.EAGAIN:
-           print ("TIMEOUT!!!")
-           print ("\n=======\n")
-           pass
-       else:
-           raise
-    '''
 
-    #what's going on
-    print('')
-    print('RECEIVING ON')
-    print(socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT))
-    print('WITH TIMEOUT')
-    print(socket_rx_command_packets.get(zmq.RCVTIMEO))
-
+    # wait for a package to arrive
+    print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
     message = recv_zmq(socket_rx_command_packets)
 
-    #what's going on
-    print('')
-    print('GOT MESSAGE')
-    print(message)
-    print('WITH ENVELOPE')
+    # decode the package
+    ipc_rxcompacket = RxCommandPacket()
+    ipc_rxcompacket.decode(message)
+    print (ipc_rxcompacket)
+    print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
 
-    getFPGAmap()
-    time.sleep(10)
+    # do something with the package
+    if ipc_rxcompacket.payload == b'block':
+        print ("SLEEPING FOR 60 SECONDS")
+        time.sleep(30)
+    elif ipc_rxcompacket.payload == b'getMap':
+        print ("REQUESTING FPGA MAP")
+        getFPGAmap()
+
+
 
 
