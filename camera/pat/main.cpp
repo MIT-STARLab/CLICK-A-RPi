@@ -84,7 +84,7 @@ int main() //int argc, char** argv
 	std::string PAT_HEALTH_PORT = "tcp://*:5559"; //PUB to Housekeeping
     std::string PAT_CONTROL_PORT = "tcp://*:5560"; //SUB to Command Handler
     std::string FPGA_MAP_REQUEST_PORT = "tcp://*:5558"; //PUB to FPGA Driver
-    std::string FPGA_MAP_ANSWER_PORT = "tcp://*:5567"; //SUB to FPGA Driver
+    std::string FPGA_MAP_ANSWER_PORT = "tcp://*:5557"; //SUB to FPGA Driver
     
     // initialize the zmq context with 1 IO threads 
     zmq::context_t context{1}; 
