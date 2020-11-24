@@ -9,7 +9,7 @@
 // Initialize MEMS FSM control board over SPI; filter = cutoff in Hz
 //nonflight arguments: (int gpio, uint8_t spi, uint8_t pwmPin, uint8_t ePin, float vBias, float vMax, float filter, std::ofstream &fileStreamIn)
 //-----------------------------------------------------------------------------
-FSM::FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn, zmq::socket_t& fpga_map_request_port_in) :
+FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t& fpga_map_request_port_in, float vBias, float vMax, float filter) :
 fileStream(fileStreamIn), fpga_map_request_port(fpga_map_request_port_in)
 //-----------------------------------------------------------------------------
 {

@@ -35,8 +35,7 @@ int main () {
   fpga_map_request_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
   std::cout << "Listening to FPGA_MAP_REQUEST_PORT..." << std::endl; 
   
-  for(;;){
-    
+  for(;;){   
     /*
     //Receive PAT Health Packet
     char pat_health_packet[BUFFER_SIZE];
@@ -45,7 +44,7 @@ int main () {
     pat_health_packet_struct packet_struct_pat_health = pat_health_packet_struct();
 		memcpy(&packet_struct_pat_health, pat_health_packet, sizeof(pat_health_packet));
 		printf("\nPAT Health Packet Received: \nReturn Address: %d \nSize: %d \nData: %s", packet_struct_pat_health.return_address, packet_struct_pat_health.data_size, packet_struct_pat_health.data_to_write);
-    */
+    */ 
     
     //Receive FPGA Request Packet
     char fpga_request_packet[BUFFER_SIZE];

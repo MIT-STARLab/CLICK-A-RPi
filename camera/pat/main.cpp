@@ -117,6 +117,9 @@ int main() //int argc, char** argv
     fpga_map_answer_port.bind(FPGA_MAP_ANSWER_PORT); // bind to the transport
     fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	
+	//Allow sockets some time (otherwise you get dropped packets)
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+		
 	//telemetry file names
 	std::string textFileName = timeStamp() + string("_pat_logs.txt"); //used for text telemetry
 	std::string dataFileName = timeStamp() + string("_pat_data.csv"); //used by csv data file generation
@@ -128,21 +131,9 @@ int main() //int argc, char** argv
 	// Synchronization
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 	
-	//for(int i = 0; i < 10; i++){
-		//fsm.forceTransfer();
-		//fsm.setNormalizedAngles(0,0);
-		//fsm.setNormalizedAngles(1,1);
-		//logToPatHealth(pat_health_port, "Hello");
-		
-		//laserOn(fpga_map_request_port, i);
-		
-		//laserOff(fpga_map_request_port, 0);
-	//}
-	
 	// Hardware init	
 	log(std::cout, textFileOut, "In main.cpp - Hardware Initialization...");
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	FSM fsm(80, 129, 200, textFileOut, fpga_map_request_port);	
+	FSM fsm(textFileOut, fpga_map_request_port);	
 	Camera camera(textFileOut);
 	Calibration calibration(camera, fsm, textFileOut);
 	Tracking track(camera, calibration, textFileOut);

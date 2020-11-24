@@ -21,6 +21,10 @@
 #define FSM_B_CH 0x09 //fsm fpga channel b: voltage 1 (Notated_memory_map on Google Drive)
 #define FSM_C_CH 0x0A //fsm fpga channel c: voltage 2 (Notated_memory_map on Google Drive)
 
+#define FSM_VBIAS 80
+#define FSM_VMAX 129
+#define FSM_FILTER 200
+
 class FSM
 {
 	uint8_t spiBuffer[3];
@@ -33,7 +37,7 @@ class FSM
 	void fsmWrite(uint16_t channel, uint8_t data);
 	
 public:
-	FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn, zmq::socket_t& fpga_map_request_port_in);
+	FSM(std::ofstream &fileStreamIn, zmq::socket_t& fpga_map_request_port_in, float vBias = FSM_VBIAS, float vMax = FSM_VMAX, float filter = FSM_FILTER);
 	~FSM();
 	void setNormalizedAngles(float x, float y);
 	void forceTransfer();

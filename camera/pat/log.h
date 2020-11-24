@@ -27,7 +27,7 @@ void log(std::ostream& stream, std::ofstream& fileStream, args&&... msgs)
 	fileStream << std::endl;	
 }
 
-//Temporary PAT health log (TODO: integrate into standard log)
+//Temporary PAT health log
 template<typename... args>
 void logToPatHealth(zmq::socket_t& pat_health_port, args&&... msgs)
 //-----------------------------------------------------------------------------
