@@ -130,43 +130,11 @@ int main() //int argc, char** argv
 
 	for(;;){
 		//logToPatHealth(pat_health_port, "Hello");
-		char testData[] = "Hello";
-		int packet_buffer_length = 512;
-		char packet_pat_health[packet_buffer_length];
-		create_packet_pat_health(packet_pat_health, testData, packet_buffer_length);
-		send_packet(pat_health_port, packet_pat_health, packet_buffer_length);
 		
-		/*
 		char testData[] = "Hello";
-		int packet_buffer_length = 256;
-		char packet_pat_health[packet_buffer_length];
-		create_packet_pat_health(packet_pat_health, testData, packet_buffer_length);		
-		pat_health_packet_struct packet_pat_health_struct = pat_health_packet_struct();
-		memcpy(&packet_pat_health_struct, packet_pat_health, sizeof(packet_pat_health));
-		printf("Return Address: %d; Size: %d; Data: %s \n", packet_pat_health_struct.return_address, packet_pat_health_struct.data_size, packet_pat_health_struct.data_to_write);
-		*/
-		
-		/*
-		char testData[] = "Hello";
-		pat_health_packet_struct packet_pat_health_struct = create_packet_pat_health(testData);
-		printf("%s", packet_pat_health_struct.data_to_write);
-		std::cout << endl;
-		*/
-		
-		/*
-		char testData[] = "Hello";
-		send_packet(pat_health_port, testData);
-		*/
-
-		/*
-		std::stringstream s;
-        //size_t nmsg = 0;
-        s << "Hello"; //<< nmsg;
-        auto msg = s.str();
-        zmq::message_t message(msg.length());
-        memcpy(message.data(), msg.c_str(), msg.length());
-        pat_health_port.send(message);
-        */
+		char packet_pat_health[BUFFER_SIZE];
+		create_packet_pat_health(packet_pat_health, testData);
+		send_packet(pat_health_port, packet_pat_health);
 	}
 	
 	// Hardware init	

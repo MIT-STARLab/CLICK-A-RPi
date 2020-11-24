@@ -3,45 +3,22 @@
 #include "packetdef.h"
 
 // Generic Code to Receive IPC Packet on SUB Port
-void receive_packet(zmq::socket_t& sub_port, char* packet, int packet_buffer_length)
+void receive_packet(zmq::socket_t& sub_port, char* packet)
 {
 	zmq::message_t message;
-    sub_port.recv(message, zmq::recv_flags::none);
-    char buffer[message.size()];
-	memcpy(buffer, message.data(), message.size());
-	memcpy(packet, buffer, sizeof(buffer));
-	
-	pat_health_packet_struct packet_pat_health_struct = pat_health_packet_struct();
-	memcpy(&packet_pat_health_struct, message.data(), message.size());
-	printf("Internal - Return Address: %d; Size: %d; Data: %s \n", packet_pat_health_struct.return_address, packet_pat_health_struct.data_size, packet_pat_health_struct.data_to_write);
-		
-    /*
-    std::string message_str;
-    message_str.assign(static_cast<char *>(message.data()), message.size());
-    return message_str;
-    */
-    
-    /*
-    int n = message_str.length();
-    char packet[n + 1];
-    strcpy(packet, message_str.c_str());
-    return packet;
-    */
+	sub_port.recv(message, zmq::recv_flags::none);
+	memcpy(packet, message.data(), message.size());
 }  
 
 // Generic Code to Send IPC Packet on PUB Port  
-void send_packet(zmq::socket_t& pub_port, char* packet, int packet_buffer_length)
+void send_packet(zmq::socket_t& pub_port, char* packet)
 {
-	char buffer[packet_buffer_length];
+	char buffer[BUFFER_SIZE];
 	memcpy(buffer, packet, sizeof(buffer));
 	
 	zmq::message_t message(sizeof(buffer));
 	memcpy(message.data(), buffer, sizeof(buffer));
-	
-	pat_health_packet_struct packet_pat_health_struct = pat_health_packet_struct();
-	memcpy(&packet_pat_health_struct, message.data(), message.size());
-	printf("Internal Sender - Return Address: %d; Size: %d; Data: %s \n", packet_pat_health_struct.return_address, packet_pat_health_struct.data_size, packet_pat_health_struct.data_to_write);
-
+		
 	pub_port.send(message);
 }
 
@@ -61,15 +38,15 @@ char* create_packet_fpga_map_request_write(uint8_t channel, uint8_t data, uint8_
 	return packet;      
 }
 
-void create_packet_pat_health(char* packet, char* data, int packet_buffer_length)
+void create_packet_pat_health(char* packet, char* data)
 {
 	pat_health_packet_struct packet_struct = pat_health_packet_struct();
 	packet_struct.return_address = 3968; //Static PID: can replace with in-code console command to ps if dynamic PID is desired.
 	packet_struct.data_size = sizeof(data);
-	memcpy(packet_struct.data_to_write, data, strlen(data)+1);
+	memcpy(packet_struct.data_to_write, data, strlen(data)+1);	
 	
-	char buffer[packet_buffer_length];
-	memcpy(buffer, &packet_struct, sizeof(buffer));
+	char buffer[BUFFER_SIZE];
+	memcpy(buffer, &packet_struct, sizeof(buffer));	
 	memcpy(packet, buffer, sizeof(buffer));
 }
 
