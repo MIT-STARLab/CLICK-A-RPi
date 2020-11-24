@@ -18,6 +18,8 @@
 #define CALIB_CH 0x16 //calib laser fpga channel
 #define CALIB_ON 0x55 //calib laser ON code
 #define CALIB_OFF 0x0F //calib laser OFF code
+#define WRITE 1
+#define READ 0
 
 using namespace std;
 using namespace std::chrono;
@@ -129,12 +131,18 @@ int main() //int argc, char** argv
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 
 	for(;;){
-		//logToPatHealth(pat_health_port, "Hello");
+		logToPatHealth(pat_health_port, "Hello");
 		
+		char packet_fpga_request[BUFFER_SIZE];
+		create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_ON, WRITE, 0);
+		send_packet(fpga_map_request_port, packet_fpga_request);
+		
+		/*
 		char testData[] = "Hello";
 		char packet_pat_health[BUFFER_SIZE];
 		create_packet_pat_health(packet_pat_health, testData);
 		send_packet(pat_health_port, packet_pat_health);
+		*/
 	}
 	
 	// Hardware init	

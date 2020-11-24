@@ -8,8 +8,8 @@
 // Packet Definitions
 typedef struct fpga_request_packet_struct{
 	uint32_t return_address;
-	uint8_t request_num;
-	bool write_flag;
+	uint8_t request_number;
+	bool read_write_flag;
 	uint16_t start_address;
 	uint32_t data_size;
 	uint32_t data_to_write;
@@ -28,7 +28,7 @@ void receive_packet(zmq::socket_t& sub_port, char* packet);
 void send_packet(zmq::socket_t& pub_port, char* packet);
 
 // Packet Creation for PUB Processes
-char* create_packet_fpga_map_request_write(uint8_t channel, uint8_t data, uint8_t request_number);
+void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
 
 void create_packet_pat_health(char* packet, char* data);
 

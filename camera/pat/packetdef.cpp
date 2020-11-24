@@ -22,20 +22,20 @@ void send_packet(zmq::socket_t& pub_port, char* packet)
 	pub_port.send(message);
 }
 
-// Packet Creation for PUB Processes
-char* create_packet_fpga_map_request_write(uint8_t channel, uint8_t data, uint8_t request_number)
+// Packet Creation for PUB Processes:
+void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num)
 {
 	fpga_request_packet_struct packet_struct = fpga_request_packet_struct();
 	packet_struct.return_address = 3968; //Static PID: can replace with in-code console command to ps if dynamic PID is desired.
-	packet_struct.request_num = request_number;
-	packet_struct.write_flag = 1;
+	packet_struct.request_number = request_num;
+	packet_struct.read_write_flag = read_write;
 	packet_struct.start_address = channel;
 	packet_struct.data_size = sizeof(data);
 	packet_struct.data_to_write = data;
 	
-	char packet[sizeof(fpga_request_packet_struct)];
-	memcpy(packet, &packet_struct, sizeof(fpga_request_packet_struct));
-	return packet;      
+	char buffer[BUFFER_SIZE];
+	memcpy(buffer, &packet_struct, sizeof(buffer));	
+	memcpy(packet, buffer, sizeof(buffer));    
 }
 
 void create_packet_pat_health(char* packet, char* data)
