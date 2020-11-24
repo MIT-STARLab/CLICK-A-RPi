@@ -62,15 +62,17 @@ void logImage(string nameTag, Camera& cameraObj, ofstream& textFileIn)
 }
 
 //Turn on Calibration Laser
-void laserOn(zmq::socket_t& fpga_pub_port, uint8_t request_number){
-	//char* packet_laserOn = create_packet_fpga_map_request_write(CALIB_CH, CALIB_ON, request_number);
-	//send_packet(fpga_pub_port, packet_laserOn);
+void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
+	char packet_fpga_request[BUFFER_SIZE];
+	create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_ON, WRITE, request_number);
+	send_packet(fpga_map_request_port, packet_fpga_request);
 }
 
 //Turn Off Calibration Laser
-void laserOff(zmq::socket_t& fpga_pub_port, uint8_t request_number){
-	//char* packet_laserOff = create_packet_fpga_map_request_write(CALIB_CH, CALIB_OFF, request_number);
-	//send_packet(fpga_pub_port, packet_laserOff);
+void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
+	char packet_fpga_request[BUFFER_SIZE];
+	create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_OFF, WRITE, request_number);
+	send_packet(fpga_map_request_port, packet_fpga_request);
 }
 
 atomic<bool> stop(false);
@@ -132,10 +134,13 @@ int main() //int argc, char** argv
 
 	for(;;){
 		logToPatHealth(pat_health_port, "Hello");
-		
+		laserOn(fpga_map_request_port, 0);
+		laserOff(fpga_map_request_port, 0);
+		/*
 		char packet_fpga_request[BUFFER_SIZE];
 		create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_ON, WRITE, 0);
 		send_packet(fpga_map_request_port, packet_fpga_request);
+		*/
 		
 		/*
 		char testData[] = "Hello";
