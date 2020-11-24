@@ -37,6 +37,7 @@ int main () {
   
   for(;;){
     
+    /*
     //Receive PAT Health Packet
     char pat_health_packet[BUFFER_SIZE];
     receive_packet(pat_health_port, pat_health_packet);
@@ -44,6 +45,7 @@ int main () {
     pat_health_packet_struct packet_struct_pat_health = pat_health_packet_struct();
 		memcpy(&packet_struct_pat_health, pat_health_packet, sizeof(pat_health_packet));
 		printf("\nPAT Health Packet Received: \nReturn Address: %d \nSize: %d \nData: %s", packet_struct_pat_health.return_address, packet_struct_pat_health.data_size, packet_struct_pat_health.data_to_write);
+    */
     
     //Receive FPGA Request Packet
     char fpga_request_packet[BUFFER_SIZE];
@@ -55,9 +57,9 @@ int main () {
 		printf("\nReturn Address: %d", packet_struct_fpga_request.return_address);
     printf("\nRequest Number: %d", packet_struct_fpga_request.request_number);
     printf("\nRead/Write Flag: %d", packet_struct_fpga_request.read_write_flag);
-    printf("\nStart Address: %X", packet_struct_fpga_request.start_address);
+    printf("\nStart Address: %d", packet_struct_fpga_request.start_address);
     printf("\nData Size: %d", packet_struct_fpga_request.data_size);
-    printf("\nData: %X", packet_struct_fpga_request.data_to_write);    
+    printf("\nData: %d", packet_struct_fpga_request.data_to_write);    
   }
 
   return 0;

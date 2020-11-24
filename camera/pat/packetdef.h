@@ -3,10 +3,12 @@
 #define __PACKETDEF
 
 #include <zmq.hpp>
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 512 //Needs to be long enough to fit all messages
+#define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
+#define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 
 // Packet Definitions
-typedef struct fpga_request_packet_struct{
+struct fpga_request_packet_struct{
 	uint32_t return_address;
 	uint8_t request_number;
 	bool read_write_flag;
@@ -15,7 +17,7 @@ typedef struct fpga_request_packet_struct{
 	uint32_t data_to_write;
 };
 
-typedef struct pat_health_packet_struct{
+struct pat_health_packet_struct{
 	uint32_t return_address;
 	uint32_t data_size;
 	char data_to_write[BUFFER_SIZE];

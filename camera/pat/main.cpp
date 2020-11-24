@@ -8,22 +8,18 @@
 #include <stdio.h>
 
 #include "log.h"
-//#include "packetdef.h"
 #include "fsm.h"
 #include "camera.h"
 #include "processing.h"
 #include "tracking.h"
 #include "calibration.h"
 
-#define CALIB_CH 0x16 //calib laser fpga channel
-#define CALIB_ON 0x55 //calib laser ON code
-#define CALIB_OFF 0x0F //calib laser OFF code
-#define WRITE 1
-#define READ 0
+#define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
+#define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
+#define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
 
 using namespace std;
 using namespace std::chrono;
-//using namespace std::literals::chrono_literals;
 
 class CSVdata
 {
@@ -131,28 +127,23 @@ int main() //int argc, char** argv
 
 	// Synchronization
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
-
-	for(;;){
-		logToPatHealth(pat_health_port, "Hello");
-		laserOn(fpga_map_request_port, 0);
-		laserOff(fpga_map_request_port, 0);
-		/*
-		char packet_fpga_request[BUFFER_SIZE];
-		create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_ON, WRITE, 0);
-		send_packet(fpga_map_request_port, packet_fpga_request);
-		*/
+	
+	//for(int i = 0; i < 10; i++){
+		//fsm.forceTransfer();
+		//fsm.setNormalizedAngles(0,0);
+		//fsm.setNormalizedAngles(1,1);
+		//logToPatHealth(pat_health_port, "Hello");
 		
-		/*
-		char testData[] = "Hello";
-		char packet_pat_health[BUFFER_SIZE];
-		create_packet_pat_health(packet_pat_health, testData);
-		send_packet(pat_health_port, packet_pat_health);
-		*/
-	}
+		//laserOn(fpga_map_request_port, i);
+		
+		//laserOff(fpga_map_request_port, 0);
+	//}
 	
 	// Hardware init	
+	log(std::cout, textFileOut, "In main.cpp - Hardware Initialization...");
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	FSM fsm(80, 129, 200, textFileOut, fpga_map_request_port);	
 	Camera camera(textFileOut);
-	FSM fsm(80, 129, 200, textFileOut, fpga_map_request_port);
 	Calibration calibration(camera, fsm, textFileOut);
 	Tracking track(camera, calibration, textFileOut);
 
@@ -168,8 +159,8 @@ int main() //int argc, char** argv
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
 
-	int centerOffsetX = 0; //will need an automatic function for generating these: they depend on mechanical alignment
-	int centerOffsetY = 0; //findOffset()
+	int centerOffsetX = 0; //user input from calibration
+	int centerOffsetY = 0; //user input from calibration
 
 
 	// CSV data saving, TBD

@@ -53,14 +53,7 @@ void create_packet_pat_health(char* packet, char* data)
 // TODO: create_packet_tx definition (don't need to send bus commands for basic operation)
 
 // Packet Parsing for SUB Processes
-// TODO: fpga_map_answer packet parsing helper here:
-// packet format:
-// return address/flag
-// request number
-// read/write flag and error flag
-// start address
-// size
-// data read
+// TODO: fpga_map_answer packet parsing
 
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
 
