@@ -3,7 +3,8 @@
 #define __PACKETDEF
 
 #include <zmq.hpp>
-#define BUFFER_SIZE 512 //Needs to be long enough to fit all messages
+#include <iostream>
+#define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 
@@ -31,6 +32,10 @@ void send_packet(zmq::socket_t& pub_port, char* packet);
 
 // Packet Creation for PUB Processes
 void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
+
+void send_packet_fpga_map_request(zmq::socket_t& pub_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
+
+void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
 
 void create_packet_pat_health(char* packet, char* data);
 

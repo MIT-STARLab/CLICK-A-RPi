@@ -41,9 +41,13 @@ void logToPatHealth(zmq::socket_t& pat_health_port, args&&... msgs)
 	expand{0, (void(healthStream << std::forward<args>(msgs) << " "), 0)...};
 	healthStream << std::endl;	
 	
+	/*
 	char packet_pat_health[BUFFER_SIZE];
 	create_packet_pat_health(packet_pat_health, buffer);
 	send_packet(pat_health_port, packet_pat_health);
+	*/
+	
+	send_packet_pat_health(pat_health_port, buffer);
 }
 
 // won't be needed for flight, Confirmable standard C-output version

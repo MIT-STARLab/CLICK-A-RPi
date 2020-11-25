@@ -79,42 +79,43 @@ int main() //int argc, char** argv
 {
 	// https://ogbe.net/blog/zmq_helloworld.html
 	// define ports for PUB/SUB (this process binds)
-    std::string TX_PACKETS_PORT = "tcp://*:5561"; //PUB to Packetizer & Bus Interface
-    std::string RX_PAT_PACKETS_PORT = "tcp://*:5562";  //SUB to Packetizer & Bus Interface 
-	std::string PAT_HEALTH_PORT = "tcp://*:5559"; //PUB to Housekeeping
-    std::string PAT_CONTROL_PORT = "tcp://*:5560"; //SUB to Command Handler
-    std::string FPGA_MAP_REQUEST_PORT = "tcp://*:5558"; //PUB to FPGA Driver
-    std::string FPGA_MAP_ANSWER_PORT = "tcp://*:5557"; //SUB to FPGA Driver
+    std::string TX_PACKETS_PORT = "tcp://localhost:5561"; //PUB to Packetizer & Bus Interface
+    std::string RX_PAT_PACKETS_PORT = "tcp://localhost:5562";  //SUB to Packetizer & Bus Interface 
+	std::string PAT_HEALTH_PORT = "tcp://localhost:5559"; //PUB to Housekeeping
+    std::string PAT_CONTROL_PORT = "tcp://localhost:5560"; //SUB to Command Handler
+    std::string FPGA_MAP_REQUEST_PORT = "tcp://localhost:5558"; //PUB to FPGA Driver
+    std::string FPGA_MAP_ANSWER_PORT = "tcp://localhost:5557"; //SUB to FPGA Driver
     
     // initialize the zmq context with 1 IO threads 
     zmq::context_t context{1}; 
     
     // Create the PUB/SUB Sockets: 
+    
     // create the TX_PACKETS_PORT PUB socket
     zmq::socket_t tx_packets_socket(context, ZMQ_PUB); 
-    tx_packets_socket.bind(TX_PACKETS_PORT); // bind to the transport
+    tx_packets_socket.connect(TX_PACKETS_PORT); // connect to the transport
     
     // create the RX_PAT_PACKETS_PORT SUB socket
     zmq::socket_t rx_pat_packets_socket(context, ZMQ_SUB); 
-    rx_pat_packets_socket.bind(RX_PAT_PACKETS_PORT); // bind to the transport
+    rx_pat_packets_socket.connect(RX_PAT_PACKETS_PORT); // connect to the transport
     rx_pat_packets_socket.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
-    pat_health_port.bind(PAT_HEALTH_PORT); // bind to the transport bind(PAT_HEALTH_PORT)
+    pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
-    pat_control_port.bind(PAT_CONTROL_PORT); // bind to the transport
+    pat_control_port.connect(PAT_CONTROL_PORT); // connect to the transport
     pat_control_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
     
     // create the FPGA_MAP_REQUEST_PORT PUB socket
     zmq::socket_t fpga_map_request_port(context, ZMQ_PUB); 
-    fpga_map_request_port.bind(FPGA_MAP_REQUEST_PORT); // bind to the transport
+    fpga_map_request_port.connect(FPGA_MAP_REQUEST_PORT); // connect to the transport
     
     // create the FPGA_MAP_ANSWER_PORT SUB socket
     zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
-    fpga_map_answer_port.bind(FPGA_MAP_ANSWER_PORT); // bind to the transport
+    fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
     fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	
 	//Allow sockets some time (otherwise you get dropped packets)
@@ -131,8 +132,25 @@ int main() //int argc, char** argv
 	// Synchronization
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 	
-	// Hardware init	
+	//~ int telemNum = 10;
+	//~ float telemFloat = 3.14;
+	//~ for(int i = 0; ; i++){
+		//~ logToPatHealth(pat_health_port, "In main.cpp - Hardware Initialization...");
+		//~ //logToPatHealth(pat_health_port, "Hello");
+		//~ //logToPatHealth(pat_health_port, "In main.cpp phase ACQUISITION - Acquisition complete:", telemNum, "us ; beacon:",
+		//~ //				telemNum, "dB smoothing", telemFloat, "; calib:",
+		//~ //				telemNum, "dB smoothing", telemFloat);
+		//~ //send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_OFF, WRITE, 0);
+		//~ std::this_thread::sleep_for(std::chrono::seconds(1));
+	//~ }
+	
+	// Hardware init
+	logToPatHealth(pat_health_port, "In main.cpp - Hardware Initialization...");	
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	
 	log(std::cout, textFileOut, "In main.cpp - Hardware Initialization...");
+	
+	
 	FSM fsm(textFileOut, fpga_map_request_port);	
 	Camera camera(textFileOut);
 	Calibration calibration(camera, fsm, textFileOut);
