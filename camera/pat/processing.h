@@ -1,5 +1,5 @@
 // Image processing classes for beacon detector
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #ifndef __PROCESSING
 #define __PROCESSING
 #include <vector>
@@ -36,12 +36,13 @@ class Image
 {
 	TCameraBinningMode binningMode;
 	std::ofstream &fileStream;
+	zmq::socket_t &pat_health_port;
 public:
 	int size;
 	AOI area;
 	vector<Group> groups;
 	uint16_t *data, histBrightest, histPeak, histMean;
-	Image(Camera &camera, std::ofstream &fileStreamIn, int smoothing = 0);
+	Image(Camera &camera, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, int smoothing = 0);
 	~Image();
 	// Processing functions
 	void applyFastBlur(double radius, double passes = 2);

@@ -11,7 +11,7 @@ void receive_packet(zmq::socket_t& sub_port, char* packet) //TODO: customize thi
 }  
 
 // Generic Code to Send IPC Packet on PUB Port
-
+/*
 void send_packet(zmq::socket_t& pub_port, char* packet)
 {
 	char buffer[BUFFER_SIZE];
@@ -25,10 +25,10 @@ void send_packet(zmq::socket_t& pub_port, char* packet)
 	
 	pub_port.send(message);
 }
-
+*/
 
 // Packet Creation for PUB Processes:
-
+/*
 void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num)
 {
 	fpga_request_packet_struct packet_struct = fpga_request_packet_struct();
@@ -50,7 +50,7 @@ void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t dat
 	std::cout << "create packet - message: " << message.size() << std::endl;
 	
 }
-
+*/
 
 void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num)
 {
@@ -71,7 +71,7 @@ void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t
 	fpga_map_request_port.send(message);	
 }
 
-
+/*
 void create_packet_pat_health(char* packet, char* data)
 {
 	pat_health_packet_struct packet_struct = pat_health_packet_struct();
@@ -83,7 +83,7 @@ void create_packet_pat_health(char* packet, char* data)
 	memcpy(buffer, &packet_struct, sizeof(buffer));	
 	memcpy(packet, buffer, sizeof(buffer));
 }
-
+*/
 
 void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
 {
@@ -98,10 +98,6 @@ void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
 	zmq::message_t message(sizeof(packet));
 	memcpy(message.data(), packet, sizeof(packet));
 	
-	std::cout << "send health packet - data: " << strlen(data) << std::endl;
-	std::cout << "send health packet - packet: " << sizeof(packet) << std::endl;
-	std::cout << "send health packet - message: " << message.size() << std::endl;
-	
 	pat_health_port.send(message);	
 }
 
@@ -110,6 +106,6 @@ void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
 // Packet Parsing for SUB Processes
 // TODO: fpga_map_answer packet parsing
 
-// TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
-
 // TODO: parse_packet_pat_control (commands from command handler)
+
+// TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)

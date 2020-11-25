@@ -1,5 +1,5 @@
-// NODE FSM Calibration & Calibration laser algorithms
-// Author: Ondrej Cierny
+// CLICK A FSM Calibration & Calibration laser algorithms
+// Authors: Ondrej Cierny, Peter Grenfell
 #ifndef __CALIBRATION
 #define __CALIBRATION
 #include <vector>
@@ -38,13 +38,14 @@ class Calibration
 	// Sensitivity matrix
 	double s00, s01, s10, s11;
 	std::ofstream &fileStream;
+	zmq::socket_t &pat_health_port;
 	// Calculation functions
 	void calculateSensitivityMatrix(std::vector<Pair>& data);
 	void calculateAffineParameters(std::vector<Pair>& data);
 	bool findExposureRange(Group& calib);
 public:
 	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, smoothing;
-	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn) : camera(camera), fsm(fsm), fileStream(fileStreamIn) {};
+	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(camera), fsm(fsm), fileStream(fileStreamIn), pat_health_port(pat_health_port_in){};
 	int gainForExposure(int exposure);
 	int determineSmoothing(Image& frame);
 	double transformDx(double x, double y);

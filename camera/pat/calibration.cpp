@@ -1,5 +1,5 @@
 // NODE FSM Calibration & Calibration laser algorithms
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #include "calibration.h"
 #include "tracking.h"
 #include <chrono>
@@ -29,7 +29,7 @@ bool Calibration::findExposureRange(Group& calib)
 
 	if(camera.waitForFrame())
 	{
-		Image init(camera, fileStream, smoothing);
+		Image init(camera, fileStream, pat_health_port, smoothing);
 		if(init.histBrightest > CALIB_MIN_BRIGHTNESS &&
 		   init.histBrightest > init.histPeak &&
 		   init.histBrightest - init.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
@@ -40,7 +40,7 @@ bool Calibration::findExposureRange(Group& calib)
 
 			// Set small window on spot location and search for range
 			camera.setCenteredWindow(init.area.x + spot.x, init.area.y + spot.y, CALIB_SMALL_WINDOW);
-			log(std::cout, fileStream, "In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max", CALIB_MAX_EXPOSURE, "us at [",
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max", CALIB_MAX_EXPOSURE, "us at [",
 				init.area.x + spot.x, ",", init.area.y + spot.y, "] with smoothing", smoothing);
 
 			for(; exposure >= 10 && exposure/CALIB_EXP_DIVIDER >= 1; exposure -= exposure/CALIB_EXP_DIVIDER)
@@ -51,7 +51,7 @@ bool Calibration::findExposureRange(Group& calib)
 
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, fileStream, smoothing);
+					Image frame(camera, fileStream, pat_health_port, smoothing);
 					if(frame.histBrightest > frame.histPeak &&
 					   frame.histBrightest - frame.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
 					   frame.performPixelGrouping() > 0)
@@ -60,7 +60,7 @@ bool Calibration::findExposureRange(Group& calib)
 						// Find preferred exposure time (good brightness with no gain)
 						if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < TRACK_HAPPY_BRIGHTNESS)
 						{
-							log(std::cout, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure:", exposure, "us,", gain, "dB");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure:", exposure, "us,", gain, "dB");
 							preferredExpo = exposure;
 							if(smoothing == 0)
 							{
@@ -75,7 +75,7 @@ bool Calibration::findExposureRange(Group& calib)
 						// Find lowest acceptable exposure where no gain is needed
 						if(gain == 0 && lowestExpoNoGain == 0 && spot.valueMax <= CALIB_MIN_BRIGHTNESS)
 						{
-							log(std::cout, fileStream, "In calibration.cpp Calibration::findExposureRange - Found lowest no-gain exposure:", exposure, "us");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found lowest no-gain exposure:", exposure, "us");
 							lowestExpoNoGain = exposure;
 						}
 						// Check for lowest acceptable exposure with gain
@@ -91,12 +91,12 @@ bool Calibration::findExposureRange(Group& calib)
 					}
 					else
 					{
-						log(std::cerr, fileStream, "In calibration.cpp Calibration::findExposureRange - Lost spot during search! Peak is at", frame.histPeak, "brightest is", frame.histBrightest);
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Lost spot during search! Peak is at", frame.histPeak, "brightest is", frame.histBrightest);
 					}
 				}
 				else return false;
 			}
-			log(std::cout, fileStream, "In calibration.cpp Calibration::findExposureRange - Finished range search, lowest exposure", exposure, "us needs", gain, "dB");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Finished range search, lowest exposure", exposure, "us needs", gain, "dB");
 			lowestExpo = exposure;
 			gainMax = gain;
 			if(gain == 0 && preferredExpo > CALIB_MAX_EXPOSURE) preferredExpo = exposure;
@@ -146,13 +146,13 @@ bool Calibration::run(Group& calib)
 			camera.requestFrame();
 			if(camera.waitForFrame())
 			{
-				Image frame(camera, fileStream);
+				Image frame(camera, fileStream, pat_health_port);
 
 				if(frame.performPixelGrouping() > 0)
 				{
 					Group& spot = frame.groups[0];
 					points.emplace_back(frame.area.x + spot.x, frame.area.y + spot.y, x, y);
-					// log(std::cout, fileStream, "Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y,
+					// log(pat_health_port, fileStream, "Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y,
 					// 	"] for FSM [", x, ",", y, "]");
 
 					// Move window to new location
@@ -160,7 +160,7 @@ bool Calibration::run(Group& calib)
 				}
 				else
 				{
-					log(std::cerr, fileStream, "In calibration.cpp Calibration::run - Lost spot during FSM calibration!");
+					log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Lost spot during FSM calibration!");
 				}
 			}
 		}
@@ -175,8 +175,8 @@ bool Calibration::run(Group& calib)
 		// Use pairs to calculate transform parameters
 		calculateSensitivityMatrix(points);
 		calculateAffineParameters(points);
-		log(std::cout, fileStream, "In calibration.cpp Calibration::run - Calculated sensitivity matrix [", s00, s01, ";", s10, s11, "]");
-		log(std::cout, fileStream, "In calibration.cpp Calibration::run - Calculated affine transform [", a00, a01, ";", a10, a11, "] + [", t0, ";", t1, "]");
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Calculated sensitivity matrix [", s00, s01, ";", s10, s11, "]");
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Calculated affine transform [", a00, a01, ";", a10, a11, "] + [", t0, ";", t1, "]");
 		return true;
 
 	}

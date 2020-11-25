@@ -41,34 +41,30 @@ string timeStamp() 	//Get date and time for telemetry file names
 	return string(dateTime);
 }
 
-void logImage(string nameTag, Camera& cameraObj, ofstream& textFileIn)
+void logImage(string nameTag, Camera& cameraObj, ofstream& textFileIn, zmq::socket_t& pat_health_port)
 {
 	cameraObj.requestFrame(); //queue frame
 	if(cameraObj.waitForFrame())
 	{
 		const string imageFileName = timeStamp() + string("_") + nameTag + string(".bmp");
-		Image frame(cameraObj, textFileIn);
-		log(std::cout, textFileIn, "Saving image telemetry as: ", imageFileName);
+		Image frame(cameraObj, textFileIn, pat_health_port);
+		log(pat_health_port, textFileIn, "Saving image telemetry as: ", imageFileName);
 		frame.saveBMP(imageFileName);
 	}
 	else
 	{
-		log(std::cerr, textFileIn, "Error: waitForFrame");
+		log(pat_health_port, textFileIn, "Error: waitForFrame");
 	}
 }
 
 //Turn on Calibration Laser
 void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
-	char packet_fpga_request[BUFFER_SIZE];
-	create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_ON, WRITE, request_number);
-	send_packet(fpga_map_request_port, packet_fpga_request);
+	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_ON, WRITE, request_number);
 }
 
 //Turn Off Calibration Laser
 void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
-	char packet_fpga_request[BUFFER_SIZE];
-	create_packet_fpga_map_request(packet_fpga_request, CALIB_CH, CALIB_OFF, WRITE, request_number);
-	send_packet(fpga_map_request_port, packet_fpga_request);
+	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_OFF, WRITE, request_number);
 }
 
 atomic<bool> stop(false);
@@ -79,27 +75,18 @@ int main() //int argc, char** argv
 {
 	// https://ogbe.net/blog/zmq_helloworld.html
 	// define ports for PUB/SUB (this process binds)
-    std::string TX_PACKETS_PORT = "tcp://localhost:5561"; //PUB to Packetizer & Bus Interface
-    std::string RX_PAT_PACKETS_PORT = "tcp://localhost:5562";  //SUB to Packetizer & Bus Interface 
 	std::string PAT_HEALTH_PORT = "tcp://localhost:5559"; //PUB to Housekeeping
     std::string PAT_CONTROL_PORT = "tcp://localhost:5560"; //SUB to Command Handler
     std::string FPGA_MAP_REQUEST_PORT = "tcp://localhost:5558"; //PUB to FPGA Driver
     std::string FPGA_MAP_ANSWER_PORT = "tcp://localhost:5557"; //SUB to FPGA Driver
-    
+    //std::string TX_PACKETS_PORT = "tcp://localhost:5561"; //PUB to Packetizer & Bus Interface
+    //std::string RX_PAT_PACKETS_PORT = "tcp://localhost:5562";  //SUB to Packetizer & Bus Interface 
+
     // initialize the zmq context with 1 IO threads 
     zmq::context_t context{1}; 
     
     // Create the PUB/SUB Sockets: 
-    
-    // create the TX_PACKETS_PORT PUB socket
-    zmq::socket_t tx_packets_socket(context, ZMQ_PUB); 
-    tx_packets_socket.connect(TX_PACKETS_PORT); // connect to the transport
-    
-    // create the RX_PAT_PACKETS_PORT SUB socket
-    zmq::socket_t rx_pat_packets_socket(context, ZMQ_SUB); 
-    rx_pat_packets_socket.connect(RX_PAT_PACKETS_PORT); // connect to the transport
-    rx_pat_packets_socket.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
-	
+
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
     pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
@@ -118,6 +105,17 @@ int main() //int argc, char** argv
     fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
     fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	
+	/*
+    // create the TX_PACKETS_PORT PUB socket
+    zmq::socket_t tx_packets_socket(context, ZMQ_PUB); 
+    tx_packets_socket.connect(TX_PACKETS_PORT); // connect to the transport
+    
+    // create the RX_PAT_PACKETS_PORT SUB socket
+    zmq::socket_t rx_pat_packets_socket(context, ZMQ_SUB); 
+    rx_pat_packets_socket.connect(RX_PAT_PACKETS_PORT); // connect to the transport
+    rx_pat_packets_socket.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+	*/
+	
 	//Allow sockets some time (otherwise you get dropped packets)
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 		
@@ -132,31 +130,22 @@ int main() //int argc, char** argv
 	// Synchronization
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 	
-	//~ int telemNum = 10;
-	//~ float telemFloat = 3.14;
-	//~ for(int i = 0; ; i++){
-		//~ logToPatHealth(pat_health_port, "In main.cpp - Hardware Initialization...");
-		//~ //logToPatHealth(pat_health_port, "Hello");
-		//~ //logToPatHealth(pat_health_port, "In main.cpp phase ACQUISITION - Acquisition complete:", telemNum, "us ; beacon:",
-		//~ //				telemNum, "dB smoothing", telemFloat, "; calib:",
-		//~ //				telemNum, "dB smoothing", telemFloat);
-		//~ //send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_OFF, WRITE, 0);
-		//~ std::this_thread::sleep_for(std::chrono::seconds(1));
-	//~ }
+	// Hardware init		
+	log(pat_health_port, textFileOut, "In main.cpp - Hardware Initialization...");	
 	
-	// Hardware init
-	logToPatHealth(pat_health_port, "In main.cpp - Hardware Initialization...");	
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	
-	log(std::cout, textFileOut, "In main.cpp - Hardware Initialization...");
-	
-	
-	FSM fsm(textFileOut, fpga_map_request_port);	
-	Camera camera(textFileOut);
-	Calibration calibration(camera, fsm, textFileOut);
-	Tracking track(camera, calibration, textFileOut);
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);	
+	Camera camera(textFileOut, pat_health_port);	
+	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
+	Tracking track(camera, calibration, textFileOut, pat_health_port);
 
-	// Killing app handler
+	//Catch camera initialization failure state in a re-initialization loop:
+	while(!camera.initialize()){
+		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
+
+	// Killing app handler (TBR: does flight need this?)
 	signal(SIGINT, [](int signum) { stop = true; });
 
 	// Tracking variables
@@ -170,7 +159,6 @@ int main() //int argc, char** argv
 
 	int centerOffsetX = 0; //user input from calibration
 	int centerOffsetY = 0; //user input from calibration
-
 
 	// CSV data saving, TBD
 	time_point<steady_clock> beginTime;
@@ -191,7 +179,7 @@ int main() //int argc, char** argv
 		if(argc != 1)
 		{
 			openLoop = true;
-			log(std::cout, textFileOut,  "Running in OPEN-LOOP mode");
+			log(pat_health_port, textFileOut,  "Running in OPEN-LOOP mode");
 		}
 		*/
 		
@@ -200,8 +188,7 @@ int main() //int argc, char** argv
 		{
 			case START:
 				laserOff(fpga_map_request_port, 0); //TBR request number argument, ensure calibration laser off
-				//logAndConfirm("Start calibration with Enter..."); //testing only
-				log(std::cout, textFileOut, "In main.cpp phase START - Calibration Starting..."); //testing only
+				log(pat_health_port, textFileOut, "In main.cpp phase START - Calibration Starting..."); //testing only
 				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
 				phase = CALIBRATION;
 				break;
@@ -212,22 +199,21 @@ int main() //int argc, char** argv
 				if(calibration.run(calib)) //sets calib exposure, pg-comment
 				{
 					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
-					log(std::cout, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete: ", calibExposure, " us");
-					logImage(string("CALIBRATION"), camera, textFileOut); //save image
+					log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete: ", calibExposure, " us");
+					logImage(string("CALIBRATION"), camera, textFileOut, pat_health_port); //save image
 					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
 					phase = ACQUISITION;
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "In main.cpp phase CALIBRATION - Calibration failed!");
+					log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration failed!");
 					phase = START;
 				}
 				break;
 
 			// Beacon acquisition phase, internal laser has to be off!
 			case ACQUISITION:
-				//logAndConfirm("Start beacon acquisition with Enter..."); //test only
-				log(std::cout, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning");
+				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning");
 				if(track.runAcquisition(beacon) && beacon.pixelCount > MIN_PIXELS_PER_GROUP) //sets beacon exposure, pg-comment
 				{
 					// Acquisition passed!
@@ -237,15 +223,14 @@ int main() //int argc, char** argv
 					beaconExposure = camera.config->expose_us.read(); //save beacon exposure, pg-comment
 					beaconGain = camera.config->gain_dB.read();
 					calibGain = calibration.gainForExposure(beaconExposure);
-					log(std::cout, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete:", beaconExposure, "us ; beacon:",
+					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete:", beaconExposure, "us ; beacon:",
 						beaconGain, "dB smoothing", track.beaconSmoothing, "; calib:",
 						calibGain, "dB smoothing", calibration.smoothing);
-					logImage(string("ACQUISITION"), camera, textFileOut); //save image
+					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); //save image
 					// Set initial pointing in open-loop
 					calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 					track.controlOpenLoop(fsm, calib.x, calib.y);
-					// logAndConfirm("Start open-loop tracking with Enter...");
 					if(openLoop)
 					{
 						camera.requestFrame(); //queue frame, pg-comment
@@ -258,7 +243,7 @@ int main() //int argc, char** argv
 				}
 				else
 				{
-					log(std::cout, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Failed! Transitioning to Static Pointing Mode...");
+					log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Failed! Transitioning to Static Pointing Mode...");
 					phase = STATIC_POINT; 
 				}
 				break;
@@ -267,7 +252,7 @@ int main() //int argc, char** argv
 			case STATIC_POINT:
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, textFileOut, calibration.smoothing);
+					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
 					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
 					   frame.performPixelGrouping() > 0 && (
 					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
@@ -300,7 +285,7 @@ int main() //int argc, char** argv
 						}
 						else
 						{
-							if(haveCalibKnowledge) log(std::cout, textFileOut,  "In main.cpp phase STATIC_POINT - Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
+							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
 								calib.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
 							haveCalibKnowledge = false;
 						}
@@ -309,7 +294,7 @@ int main() //int argc, char** argv
 					{
 						if(haveCalibKnowledge)
 						{
-							log(std::cout, textFileOut,  "In main.cpp phase STATIC_POINT - Panic, calib spot vanished!");
+							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Panic, calib spot vanished!");
 							// Try forced FSM SPI transfer? Maybe data corruption
 							fsm.forceTransfer();
 						}
@@ -326,7 +311,7 @@ int main() //int argc, char** argv
 				}
 				else
 				{
-					log(std::cout, textFileOut, "In main.cpp phase STATIC_POINT - camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
+					log(pat_health_port, textFileOut, "In main.cpp phase STATIC_POINT - camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
 				}
 				break;
 
@@ -334,7 +319,7 @@ int main() //int argc, char** argv
 			case OPEN_LOOP:
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, textFileOut, track.beaconSmoothing);
+					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
 					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
 					   frame.performPixelGrouping() > 0 && (
 					   spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference)) >= 0 &&
@@ -359,14 +344,14 @@ int main() //int argc, char** argv
 						}
 						else
 						{
-							if(haveBeaconKnowledge) log(std::cout, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, rapid beacon spot property change, old", beacon.x, beacon.y, beacon.pixelCount,
+							if(haveBeaconKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, rapid beacon spot property change, old", beacon.x, beacon.y, beacon.pixelCount,
 								beacon.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
 							haveBeaconKnowledge = false;
 						}
 					}
 					else
 					{
-						if(haveBeaconKnowledge) log(std::cout, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, beacon spot vanished!");
+						if(haveBeaconKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, beacon spot vanished!");
 						haveBeaconKnowledge = false;
 					}
 					//nonflight: Send image to GUI
@@ -378,7 +363,7 @@ int main() //int argc, char** argv
 				}
 				else
 				{
-					log(std::cout, textFileOut, "In main.cpp phase OPEN_LOOP - camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
+					log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
 				}				
 				break;
 
@@ -401,10 +386,9 @@ int main() //int argc, char** argv
 				calib.pixelCount = 0;
 				camera.setWindow(calibWindow);
 				camera.requestFrame(); //queue calib frame, pg-comment
-				log(std::cout, textFileOut,  "In main.cpp phase CL_INIT - Double window tracking set up! Queued", camera.queuedCount, "requests");
-				//logAndConfirm("Turn on calibration laser and begin tracking with Enter..."); //test only
+				log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - Double window tracking set up! Queued", camera.queuedCount, "requests");
 				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
-				log(std::cout, textFileOut, "In main.cpp phase CL_INIT - Calibration Laser On and Tracking Beginning");
+				log(pat_health_port, textFileOut, "In main.cpp phase CL_INIT - Calibration Laser On and Tracking Beginning");
 				// Next up is beacon spot frame
 				phase = CL_BEACON;
 				// Save time
@@ -415,7 +399,7 @@ int main() //int argc, char** argv
 			case CL_BEACON:
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, textFileOut, track.beaconSmoothing);
+					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
 					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
 					   frame.performPixelGrouping() > 0 && (
 					   spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference)) >= 0 &&
@@ -445,7 +429,7 @@ int main() //int argc, char** argv
 						{
 							if(haveBeaconKnowledge) //Rapid spot change -> loss scenario, pg
 							{
-								log(std::cout, textFileOut,  "In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old", beacon.x, beacon.y, beacon.pixelCount,
+								log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old", beacon.x, beacon.y, beacon.pixelCount,
 								beacon.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
 								haveBeaconKnowledge = false; // This variable is false if timeout has started, pg
 								startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
@@ -456,7 +440,7 @@ int main() //int argc, char** argv
 					{
 						if(haveBeaconKnowledge) // Beacon Loss Scenario, pg
 						{
-							log(std::cout, textFileOut,  "In main.cpp phase CL_BEACON - Beacon spot vanished! Timeout started..."); //pg
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon spot vanished! Timeout started..."); //pg
 							haveBeaconKnowledge = false;
 							startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
 						}
@@ -487,7 +471,7 @@ int main() //int argc, char** argv
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "In main.cpp phase CL_BEACON - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
+					log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
 					phase = CL_INIT;
 				}
 				break;
@@ -496,7 +480,7 @@ int main() //int argc, char** argv
 			case CL_CALIB:
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, textFileOut, calibration.smoothing);
+					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
 					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
 					   frame.performPixelGrouping() > 0 && (
 					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
@@ -532,7 +516,7 @@ int main() //int argc, char** argv
 						}
 						else
 						{
-							if(haveCalibKnowledge) log(std::cout, textFileOut,  "In main.cpp phase CL_CALIB - Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
+							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
 								calib.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
 							haveCalibKnowledge = false;
 						}
@@ -541,7 +525,7 @@ int main() //int argc, char** argv
 					{
 						if(haveCalibKnowledge)
 						{
-							log(std::cout, textFileOut,  "In main.cpp phase CL_CALIB - Panic, calib spot vanished!");
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Panic, calib spot vanished!");
 							// Try forced FSM SPI transfer? Maybe data corruption
 							fsm.forceTransfer();
 						}
@@ -560,14 +544,14 @@ int main() //int argc, char** argv
 				}
 				else
 				{
-					log(std::cerr, textFileOut,  "In main.cpp phase CL_CALIB - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
+					log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
 					phase = CL_INIT;
 				}
 				break;
 
 			// Fail-safe
 			default:
-				log(std::cerr, textFileOut,  "In main.cpp phase CL_CALIB - Unknown phase encountered in switch structure. Resetting to START...");
+				log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Unknown phase encountered in switch structure. Resetting to START...");
 				phase = START;
 				break;
 		}
@@ -577,15 +561,15 @@ int main() //int argc, char** argv
 		{
 			if(phase == OPEN_LOOP)
 			{
-				log(std::cout, textFileOut, "In main.cpp console update - ", haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
+				log(pat_health_port, textFileOut, "In main.cpp console update - ", haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
 					"[", beacon.x, ",", beacon.y, "]");
 			}
 			else
 			{
-				if(beaconExposure == TRACK_MIN_EXPOSURE) log(std::cout, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
-				if(beaconExposure == TRACK_MAX_EXPOSURE) log(std::cout, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
+				if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
+				if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
 
-				log(std::cout, textFileOut, "In main.cpp console update - ", haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
+				log(pat_health_port, textFileOut, "In main.cpp console update - ", haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
 					"[", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]",
 					haveCalibKnowledge ? "Calib is at" : "No idea where calib is",
 					"[", calib.x, ",", calib.y, ", exp = ", calibExposure, "]"); //included exposure updates, pg
@@ -597,7 +581,7 @@ int main() //int argc, char** argv
 		if(stop) break;
 	}
 
-	log(std::cout, textFileOut,  "\nIn main.cpp - Saving telemetry files and ending process.");
+	log(pat_health_port, textFileOut,  "\nIn main.cpp - Saving telemetry files and ending process.");
 
 	ofstream out(dataFileName);
 	for(const auto& x : csvData)
@@ -612,32 +596,4 @@ int main() //int argc, char** argv
 	textFileOut.close(); //close text file
 
 	return 0;
-	
-		// Connection to GUI, testing only
-	/*
-	log(std::cout, textFileOut, "Connecting to GUI"); //testing only
-	Link link("http://10.0.5.1:3000"); //testing only
-	*/
-	/*
-	// not for flight, GPIO init
-	int gpioHandle = pigpio_start(0, 0);
-	if(gpioHandle < 0)
-	{
-		log(std::cerr, textFileOut,  "Failed to initialize GPIO!");
-		exit(1);
-	}
-	*/
-		// not for flight, Offset changes from GUI (user-input)
-	/*
-	atomic<int> centerOffsetX(5), centerOffsetY(32);
-	link.on("offsets", [&](sio::event& ev)
-	{
-		centerOffsetX = ev.get_message()->get_map()["x"]->get_int();
-		centerOffsetY = ev.get_message()->get_map()["y"]->get_int();
-		log(std::cout, textFileOut,  "Center offset updated to [", centerOffsetX, ",", centerOffsetY, "]");
-	});
-	*/
-	//not for flight, GUI update (manages FPS itself)
-		//link.sendUpdate(haveBeaconKnowledge, haveCalibKnowledge, beacon.x, beacon.y, calib.x, calib.y, track.actionX, track.actionY);
-
 }

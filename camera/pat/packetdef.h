@@ -28,16 +28,16 @@ struct pat_health_packet_struct{
 void receive_packet(zmq::socket_t& sub_port, char* packet);
 
 // Generic Code to Send IPC Packet on PUB Port  
-void send_packet(zmq::socket_t& pub_port, char* packet);
+//void send_packet(zmq::socket_t& pub_port, char* packet);
 
 // Packet Creation for PUB Processes
-void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
+//void create_packet_fpga_map_request(char* packet, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
 
 void send_packet_fpga_map_request(zmq::socket_t& pub_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
 
 void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
 
-void create_packet_pat_health(char* packet, char* data);
+//void create_packet_pat_health(char* packet, char* data);
 
 // TODO: create_packet_tx definition (don't need to send bus commands for basic operation)
 

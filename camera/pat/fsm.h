@@ -1,6 +1,6 @@
 // Mirrorcle MEMS FSM control class for the Raspberry Pi
 // Based on Hyosang Yoon's Arduino controller
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #ifndef __FSM
 #define __FSM
 #include <stdint.h>
@@ -31,13 +31,14 @@ class FSM
 	uint16_t voltageBias, voltageMax;
 	int16_t oldX, oldY;
 	std::ofstream &fileStream;
+	zmq::socket_t &pat_health_port;
 	zmq::socket_t &fpga_map_request_port;
 	void sendCommand(uint8_t cmd, uint8_t addr, uint16_t value);
 	void sendCommand(uint32_t cmd);
 	void fsmWrite(uint16_t channel, uint8_t data);
 	
 public:
-	FSM(std::ofstream &fileStreamIn, zmq::socket_t& fpga_map_request_port_in, float vBias = FSM_VBIAS, float vMax = FSM_VMAX, float filter = FSM_FILTER);
+	FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, float vBias = FSM_VBIAS, float vMax = FSM_VMAX, float filter = FSM_FILTER);
 	~FSM();
 	void setNormalizedAngles(float x, float y);
 	void forceTransfer();

@@ -1,5 +1,5 @@
 // Mirrorcle MEMS FSM control class for Raspberry Pi
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #include "fsm.h"
 #include <unistd.h>
 #include <cstdlib>
@@ -7,10 +7,9 @@
 #include <thread>
 
 // Initialize MEMS FSM control board over SPI; filter = cutoff in Hz
-//nonflight arguments: (int gpio, uint8_t spi, uint8_t pwmPin, uint8_t ePin, float vBias, float vMax, float filter, std::ofstream &fileStreamIn)
 //-----------------------------------------------------------------------------
-FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t& fpga_map_request_port_in, float vBias, float vMax, float filter) :
-fileStream(fileStreamIn), fpga_map_request_port(fpga_map_request_port_in)
+FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, float vBias, float vMax, float filter) :
+fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_port(fpga_map_request_port_in)
 //-----------------------------------------------------------------------------
 {
 	// Voltage setting (ref. PicoAmp datasheet)
@@ -18,6 +17,7 @@ fileStream(fileStreamIn), fpga_map_request_port(fpga_map_request_port_in)
 	voltageMax = (vMax/160)*32768;
 
 	// Initialize DAC - AD5664
+	log(pat_health_port, fileStream, "Initializing FSM DAC...");
 	oldX = 1; oldY = 1;
 	sendCommand(DAC_FULL_RESET);
 	sendCommand(DAC_ENABLE_INTERNAL_REFERENCE);
@@ -47,7 +47,7 @@ void FSM::setNormalizedAngles(float x, float y)
 	// Write X+, X-, Y+, Y- & Update
 	if(newX != oldX || newY != oldY)
 	{
-		//log(std::cout, fileStream,"Updating FSM position to", x, ",", y);
+		//log(pat_health_port, fileStream,"Updating FSM position to", x, ",", y);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XP, voltageBias + newX);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XM, voltageBias - newX);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_YP, voltageBias + newY);
@@ -91,10 +91,10 @@ void FSM::sendCommand(uint32_t cmd)
 	fsmWrite(FSM_C_CH, spiBuffer[2]); //write to channel c
 }
 
+//-----------------------------------------------------------------------------
 //write to FSM
-void FSM::fsmWrite(uint16_t channel, uint8_t data){
-	//log(std::cout, fileStream, "Writing to FSM Channel: ", channel, ", Data: ", int(data));
-	char packet_fpga_request[BUFFER_SIZE];
-	create_packet_fpga_map_request(packet_fpga_request, channel, data, WRITE, 0); //TBR request_number
-	send_packet(fpga_map_request_port, packet_fpga_request);
+void FSM::fsmWrite(uint16_t channel, uint8_t data)
+//-----------------------------------------------------------------------------
+{
+	send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, 0); //TBR request_number
 }

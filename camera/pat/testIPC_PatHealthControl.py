@@ -51,9 +51,9 @@ class PATHealthPacket(IpcPacket):
         
         assert self.size == raw_size
         
-        telemetry_bytes, padding_bytes = self.payload.split(b'\n')
+        payload_list = self.payload.split(b'\n')
         
-        telemetry_string = telemetry_bytes.decode('utf-8')
+        telemetry_string = payload_list[0].decode('utf-8')
         
         return telemetry_string, self.return_addr, self.size, self.payload
 
@@ -84,10 +84,10 @@ while True:
     ipc_patHealthPacket = PATHealthPacket()
     telemetry_string, return_addr, size, payload = ipc_patHealthPacket.decode(message)
     print(ipc_patHealthPacket)
-    print('telemetry_string: ',telemetry_string)
     print('return_addr: ',return_addr)
     print('size: ',size)
-    print('payload: ',payload)
+    print('telemetry_string: ',telemetry_string)
+    #print('payload: ',payload)
     
 
     # ~ if ipc_fpgarqpacket.rw_flag == 1:

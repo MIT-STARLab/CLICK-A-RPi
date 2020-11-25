@@ -1,5 +1,5 @@
 // Image processing classes for beacon detector
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #include "processing.h"
 #include <cmath>
 #include <functional>
@@ -7,7 +7,8 @@
 #include <memory>
 
 //-----------------------------------------------------------------------------
-Image::Image(Camera &camera, std::ofstream &fileStreamIn, int smoothing): fileStream(fileStreamIn)
+Image::Image(Camera &camera, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, int smoothing): 
+fileStream(fileStreamIn), pat_health_port(pat_health_port_in)
 //-----------------------------------------------------------------------------
 {
 	// Copy properties
@@ -35,7 +36,7 @@ Image::Image(Camera &camera, std::ofstream &fileStreamIn, int smoothing): fileSt
 	{
 		if(data[i] > 1023)
 		{
-			log(std::cerr, fileStream, "In processing.cpp Image::Image - Brightness overflow detected in frame");
+			log(pat_health_port, fileStream, "In processing.cpp Image::Image - Brightness overflow detected in frame");
 			continue;
 		}
 		sum += data[i];
@@ -127,7 +128,7 @@ int Image::performPixelGrouping(uint16_t threshold)
 				// Too many active pixels, must be background, clear and return
 				if(groupedPixels.size() > MAX_ACTIVE_PIXELS)
 				{
-					log(std::cerr, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many active pixels!");
+					log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many active pixels!");
 					groups.clear();
 					return -1;
 				}
@@ -139,7 +140,7 @@ int Image::performPixelGrouping(uint16_t threshold)
 				// Increase and check group count
 				if(++currentGroup > MAX_GROUPS)
 				{
-					log(std::cerr, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many groups!");
+					log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many groups!");
 					sort(groups.begin(), groups.end());
 					return -1;
 				}
@@ -149,7 +150,7 @@ int Image::performPixelGrouping(uint16_t threshold)
 
 	// Sort max-brightness-descending
 	if(groups.size() > 0) sort(groups.begin(), groups.end());
-	else log(std::cerr, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has no groups!");
+	else log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has no groups!");
 
 	return groups.size();
 }
@@ -290,9 +291,9 @@ void Image::saveBMP(const string& filename) //e.g. const string filename( "singl
 		AnImage.SetSize(newWidth,newHeight);
 		// Set its color depth to 8-bits
 		AnImage.SetBitDepth(8);
-		log(std::cout, fileStream, "In processing.cpp Image::saveBMP - Image Set Up, Beginning Saving...");
+		log(pat_health_port, fileStream, "In processing.cpp Image::saveBMP - Image Set Up, Beginning Saving...");
 		int ImgDataSize = ImgData->length();
-		log(std::cout, fileStream, "Size: ", ImgDataSize, ", Width: ", newWidth, ", Height: ", newHeight);
+		log(pat_health_port, fileStream, "Size: ", ImgDataSize, ", Width: ", newWidth, ", Height: ", newHeight);
 		for (int j = 0; j < newHeight; j++)
 			{
 				for (int i = 0; i < newWidth; i++)
@@ -309,9 +310,9 @@ void Image::saveBMP(const string& filename) //e.g. const string filename( "singl
 		AnImage.WriteToFile(filename.c_str());
 	}
 	catch(const std::exception& e){
-		log(std::cerr, fileStream, e.what()); // information from length_error printed
+		log(pat_health_port, fileStream, e.what()); // information from length_error printed
 	}
 	catch(...){
-		log(std::cerr, fileStream, "In processing.cpp Image::saveBMP - Error during image saving using EasyBMP functions.");
+		log(pat_health_port, fileStream, "In processing.cpp Image::saveBMP - Error during image saving using EasyBMP functions.");
 	}
 }

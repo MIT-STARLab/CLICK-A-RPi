@@ -1,10 +1,29 @@
 // BlueFox camera wrapper class
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #include "camera.h"
 #include <cstdlib>
 
 //-----------------------------------------------------------------------------
-Camera::Camera(std::ofstream &fileStreamIn, std::string serialNumber): fileStream(fileStreamIn)
+Camera::Camera(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, std::string serialNumber): 
+fileStream(fileStreamIn), pat_health_port(pat_health_port_in)
+//-----------------------------------------------------------------------------
+{
+	if(initialize(serialNumber))
+	{
+		log(pat_health_port, fileStream, "In camera.cpp Camera::Camera - Camera Connection Initialized");
+	}
+}
+
+//-----------------------------------------------------------------------------
+Camera::~Camera()
+//-----------------------------------------------------------------------------
+{
+	delete config;
+	delete fi;
+}
+
+//-----------------------------------------------------------------------------
+bool Camera::initialize(std::string serialNumber)
 //-----------------------------------------------------------------------------
 {
 	device = NULL;
@@ -27,23 +46,18 @@ Camera::Camera(std::ofstream &fileStreamIn, std::string serialNumber): fileStrea
 
 	if(device == NULL)
 	{
-		log(std::cerr, fileStream, "In camera.cpp Camera::Camera - Could not open camera!");
-		exit(-1);
+		error = ERROR_NULL_DEVICE;
+		return false;
 	}
-
-	// Basic configuration
-	fi = new FunctionInterface(device);
-	config = new CameraSettingsBlueFOX(device);
-	config->triggerMode.write(ctmOnDemand);
-	config->pixelFormat.write(ibpfMono10);
-}
-
-//-----------------------------------------------------------------------------
-Camera::~Camera()
-//-----------------------------------------------------------------------------
-{
-	delete config;
-	delete fi;
+	else
+	{
+		// Basic configuration
+		fi = new FunctionInterface(device);
+		config = new CameraSettingsBlueFOX(device);
+		config->triggerMode.write(ctmOnDemand);
+		config->pixelFormat.write(ibpfMono10);
+		return true;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -54,10 +68,10 @@ bool Camera::requestFrame()
 	if(result != DMR_NO_ERROR)
 	{
 		error = ImpactAcquireException::getErrorCodeAsString(result);
-		log(std::cerr, fileStream, "Error requesting", config->aoiWidth.read(), "x", config->aoiHeight.read(), "frame!", error);
+		log(pat_health_port, fileStream, "Error requesting", config->aoiWidth.read(), "x", config->aoiHeight.read(), "frame!", error);
 		return false;
 	}
-	// log(std::cout, "Requested", config->aoiWidth.read(), "x", config->aoiHeight.read(),
+	// log(pat_health_port, "Requested", config->aoiWidth.read(), "x", config->aoiHeight.read(),
 	// 	"at", config->aoiStartX.read(), ",", config->aoiStartY.read());
 	queuedCount++;
 	return true;
@@ -111,7 +125,7 @@ const Request* Camera::getRequest()
 void Camera::ignoreNextFrames(int n)
 //-----------------------------------------------------------------------------
 {
-	// if(n > 0) log(std::cout, "Ignoring", n, "pre-queued frames");
+	// if(n > 0) log(pat_health_port, "Ignoring", n, "pre-queued frames");
 	for(int i = 0; i < n; i++)
 	{
 		waitForFrame();

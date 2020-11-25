@@ -1,5 +1,5 @@
-// NODE Tracking algorithms
-// Author: Ondrej Cierny
+// CLICK A Tracking algorithms
+// Authors: Ondrej Cierny, Peter Grenfell
 #ifndef __TRACKING
 #define __TRACKING
 #include <chrono>
@@ -47,6 +47,7 @@ class Tracking
 	Calibration& calibration;
 	time_point<steady_clock> lastUpdate;
 	std::ofstream &fileStream;
+	zmq::socket_t &pat_health_port;
 
 	bool verifyFrame(Image& frame);
 	bool windowAndTune(Image& frame, Group& beacon);
@@ -54,7 +55,7 @@ class Tracking
 public:
 	int beaconSmoothing;
 	double actionX, actionY;
-	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn) : camera(c), calibration(calib), fileStream(fileStreamIn), beaconSmoothing(0), actionX(0), actionY(0) {};
+	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_health_port(pat_health_port_in), beaconSmoothing(0), actionX(0), actionY(0) {};
 	bool runAcquisition(Group& beacon);
 	int findSpotCandidate(Image& frame, Group& oldSpot, double *difference);
 	void updateTrackingWindow(Image& frame, Group& spot, AOI& window);
