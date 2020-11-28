@@ -130,6 +130,26 @@ int main() //int argc, char** argv
 	// Synchronization
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 	
+	// Get start command
+	log(pat_health_port, textFileOut, "In main.cpp - Standing by for CMD_START_PAT command...");
+	uint16_t command; 
+	bool STANDBY = true;
+	while(STANDBY){
+		command = receive_packet_pat_control(pat_control_port);	
+		switch(command){
+			case CMD_START_PAT:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command.");
+				STANDBY = false;
+				break;
+			case CMD_END_PAT:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
+				exit(-1);
+			default:
+				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command. Standing by...");
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+		}	
+	}		
+	
 	// Hardware init		
 	log(pat_health_port, textFileOut, "In main.cpp - Hardware Initialization...");	
 	

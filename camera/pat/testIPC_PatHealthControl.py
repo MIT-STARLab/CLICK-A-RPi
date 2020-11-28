@@ -14,6 +14,12 @@ from zmqTxRx import recv_zmq, send_zmq
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct
 
+#Shared Command Parameters with c-code (packetdef.h)
+CMD_START_PAT = 0x00
+CMD_END_PAT = 0x01
+CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
+CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
+
 class IpcPacket:
     def __init__(self): pass
     
@@ -57,7 +63,31 @@ class PATHealthPacket(IpcPacket):
         
         return telemetry_string, self.return_addr, self.size, self.payload
 
+def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
+        #Define Command Header
+        CMD_HEADER = return_address + '\0' #PID Header
+        #Header format checks and padding
+        assert len(CMD_HEADER) <= CMD_HEADER_SIZE #Ensure CMD_HEADER is the right length
+        if(len(CMD_HEADER) < CMD_HEADER_SIZE):
+                for i in range(CMD_HEADER_SIZE - len(CMD_HEADER)):
+                        CMD_HEADER = CMD_HEADER + '\0' #append null padding
+        assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
 
+        #Define Command Payload
+        CMD_PAYLOAD = payload + '\0'
+        assert len(CMD_PAYLOAD) <= CMD_PAYLOAD_SIZE #Ensure CMD_PAYLOAD is the right length
+        if(len(CMD_PAYLOAD) < CMD_PAYLOAD_SIZE):
+                for i in range(CMD_PAYLOAD_SIZE - len(CMD_PAYLOAD)):
+                        CMD_PAYLOAD = CMD_PAYLOAD + '\0' #append null padding
+        assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+        CMD_PAYLOAD = str(CMD_PAYLOAD).encode('ascii') #format to ascii
+
+        ipc_patControlPacket = PATControlPacket()
+        raw_patControlPacket = ipc_patControlPacket.encode(command,CMD_PAYLOAD) 
+        send_zmq(socket_PAT_control, raw_patControlPacket, CMD_HEADER) 
+        
+        return ipc_patControlPacket
+        
 context = zmq.Context()
 
 socket_PAT_health = context.socket(zmq.SUB)
@@ -74,45 +104,27 @@ time.sleep(1)
 
 print("\n")
 
-while True:
+return_address = '9999' #Placeholder PID
 
-    # wait for a package to arrive
-    print('RECEIVING on %s with TIMEOUT %d' % (socket_PAT_health.get_string(zmq.LAST_ENDPOINT), socket_PAT_health.get(zmq.RCVTIMEO)))
-    message = recv_zmq(socket_PAT_health)
+# Wait for a ping from the PAT process
+print('RECEIVING on %s with TIMEOUT %d' % (socket_PAT_health.get_string(zmq.LAST_ENDPOINT), socket_PAT_health.get(zmq.RCVTIMEO)))
+message = recv_zmq(socket_PAT_health)
+ipc_patHealthPacket = PATHealthPacket()
+telemetry_string, _, _, _ = ipc_patHealthPacket.decode(message) #decode the package
+print(telemetry_string)
+time.sleep(1)
 
-    # decode the package
-    ipc_patHealthPacket = PATHealthPacket()
-    telemetry_string, return_addr, size, payload = ipc_patHealthPacket.decode(message)
-    print(ipc_patHealthPacket)
-    print('return_addr: ',return_addr)
-    print('size: ',size)
-    print('telemetry_string: ',telemetry_string)
-    #print('payload: ',payload)
+# Send the CMD_START_PAT Command
+print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, CMD_START_PAT)    
+print(ipc_patControlPacket)
+time.sleep(1)
     
-
-    # ~ if ipc_fpgarqpacket.rw_flag == 1:
-        # ~ print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-        # ~ time.sleep(1)
-        # ~ # send the FPGA_map_answer packet (write)
-        # ~ ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
-        # ~ raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=123, rw_flag=1, error_flag=0, start_addr=0xDEF0, size=0)
-        # ~ ipc_fpgaaswpacket_write.decode(raw)
-        # ~ print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
-        # ~ print(b'| ' + raw)
-        # ~ print(ipc_fpgaaswpacket_write)
-        # ~ send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
-
-    # ~ else:
-        # ~ print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-        # ~ time.sleep(1)
-        # ~ # send the FPGA_map_answer packet (read)
-        # ~ ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
-        # ~ raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=123, rw_flag=0, error_flag=0, start_addr=0x9ABC, size=16, read_data=b"I'm Mr. Meeseeks")
-        # ~ ipc_fpgaaswpacket_read.decode(raw)
-        # ~ print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
-        # ~ print(b'| ' + raw)
-        # ~ print(ipc_fpgaaswpacket_read)
-        # ~ send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_read.return_addr)
-
-
-
+while True:
+        #Continuously read telemetry
+        print('RECEIVING on %s with TIMEOUT %d' % (socket_PAT_health.get_string(zmq.LAST_ENDPOINT), socket_PAT_health.get(zmq.RCVTIMEO)))
+        message = recv_zmq(socket_PAT_health)
+        ipc_patHealthPacket = PATHealthPacket()
+        telemetry_string, _, _, _ = ipc_patHealthPacket.decode(message) #decode the package
+        print(telemetry_string)
+        time.sleep(1)
