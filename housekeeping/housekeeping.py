@@ -11,17 +11,17 @@ import struct
 import psutil
 
 sys.path.append('/home/pi/CLICK-A-RPi/lib/')
-from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket
+from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
-FPGA_CHECK_PD = 50000
-CPU_CHECK_PD = 1
+FPGA_CHECK_PD = 6000
+CPU_CHECK_PD = 6000
 
-PAT_HEALTH_PD = 1
-CH_HEARTBEAT_PD = 1
-FPGA_ANS_PD = 1
+PAT_HEALTH_PD = 6000
+CH_HEARTBEAT_PD = 6000
+FPGA_ANS_PD = 6000
 
 CPU_APID = 0x312
 PAT_HEALTH_APID = 0x313
@@ -101,7 +101,8 @@ class Housekeeping:
         pkt = TxPacket()
         if process is 'camera':
             apid = PAT_HEALTH_APID
-            # TBD
+            pat_pkt = PATHealthPacket()
+            _, return_addr, size, payload = pat_pkt.decode(data)
             payload = data
 
         elif process is 'fpga':

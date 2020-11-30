@@ -137,6 +137,46 @@ class HandlerHeartbeatPacket(IpcPacket):
     def __str__(self):
         return 'IPC HANDLER_HEARTBEAT_PACKET, PID:%d, time:%d s' % (self.origin, self.ts_txed_s)
 
+class PATHealthPacket(IpcPacket):
+    def __init__(self): IpcPacket.__init__(self)
+
+    def encode(self, return_addr, payload=''):
+        '''Encode a packet to be transmited to the bus:
+        return_addr: return address of sender
+        size: size of telemetry contents in bytes
+        payload: raw telemetry contents, bytes
+        returns
+        message bytes'''
+
+        self.return_addr = return_addr
+        self.size = len(payload)
+        self.payload = payload
+
+        self.raw = struct.pack('II%ds'%self.size,return_addr,self.size,payload)
+
+        return self.raw
+
+    def decode(self, raw):
+        '''Decode a packet to be transmited to the bus:
+        raw: message bytes to decode
+        returns
+        return_addr: return address of sender
+        size: size of telemetry contents in bytes
+        payload: raw command contents, bytes'''
+
+        self.raw = raw
+        raw_size = len(raw)-8
+
+        self.return_addr, self.size, self.payload = struct.unpack('II%ds'%raw_size,raw)
+
+        assert self.size == raw_size
+
+        payload_list = self.payload.split(b'\n')
+
+        telemetry_string = payload_list[0].decode('utf-8')
+
+        return telemetry_string, self.return_addr, self.size, self.payload
+
 class FPGAMapRequestPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
@@ -425,4 +465,3 @@ if __name__ == '__main__':
     raw = not_empty_ipc_patcontrolpacket.encode(command=0x08,payload=b"Je s'appelle Groot")
     not_empty_ipc_patcontrolpacket.decode(raw)
     print(not_empty_ipc_patcontrolpacket)
-
