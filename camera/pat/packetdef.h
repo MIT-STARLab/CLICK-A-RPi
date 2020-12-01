@@ -7,10 +7,14 @@
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
-#define CMD_START_PAT 0x00
-#define CMD_END_PAT 0x01
 #define CMD_PAYLOAD_SIZE 256
 #define CMD_HEADER_SIZE 5
+#define CMD_START_PAT 0x01
+#define CMD_END_PAT 0x02
+#define CMD_START_PAT_OPEN_LOOP 0x03
+#define CMD_START_PAT_STATIC_POINT 0x04
+#define CMD_GET_IMAGE 0x05
+#define CMD_CALIB_TEST 0x06
 
 // Packet Definitions
 struct fpga_request_packet_struct{
@@ -34,8 +38,6 @@ struct pat_control_packet_struct{
 	uint16_t data_size;
 	char data_to_read[CMD_PAYLOAD_SIZE];
 };
-
-void receive_packet(zmq::socket_t& sub_port, char* packet);
 
 // Packet Sending for PUB Processes:
 void send_packet_fpga_map_request(zmq::socket_t& pub_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);

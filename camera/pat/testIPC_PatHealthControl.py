@@ -15,10 +15,14 @@ from zmqTxRx import recv_zmq, send_zmq
 import struct
 
 #Shared Command Parameters with c-code (packetdef.h)
-CMD_START_PAT = 0x00
-CMD_END_PAT = 0x01
 CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
 CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
+CMD_START_PAT = 0x01
+CMD_END_PAT = 0x02
+CMD_START_PAT_OPEN_LOOP = 0x03
+CMD_START_PAT_STATIC_POINT = 0x04
+CMD_GET_IMAGE = 0x05
+CMD_CALIB_TEST = 0x06
 
 class IpcPacket:
     def __init__(self): pass
@@ -114,9 +118,9 @@ telemetry_string, _, _, _ = ipc_patHealthPacket.decode(message) #decode the pack
 print(telemetry_string)
 time.sleep(1)
 
-# Send the CMD_START_PAT Command
+# Send a command: CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_GET_IMAGE, CMD_CALIB_TEST
 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, CMD_START_PAT)    
+ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, CMD_START_PAT_STATIC_POINT)    
 print(ipc_patControlPacket)
 time.sleep(1)
     

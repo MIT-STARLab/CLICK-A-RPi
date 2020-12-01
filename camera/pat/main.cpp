@@ -17,6 +17,8 @@
 #define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
 #define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
 #define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
+#define OFFSET_X 0 //user input from calibration for X bias
+#define OFFSET_Y 0 //user input from calibration for Y bias
 
 using namespace std;
 using namespace std::chrono;
@@ -72,7 +74,7 @@ atomic<bool> stop(false);
 //-----------------------------------------------------------------------------
 int main() //int argc, char** argv
 //-----------------------------------------------------------------------------
-{
+{	
 	// https://ogbe.net/blog/zmq_helloworld.html
 	// define ports for PUB/SUB (this process binds)
 	std::string PAT_HEALTH_PORT = "tcp://localhost:5559"; //PUB to Housekeeping
@@ -129,45 +131,8 @@ int main() //int argc, char** argv
 
 	// Synchronization
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
+	const char *phaseNames[8] = {"START","CALIBRATION","ACQUISITION","STATIC_POINT","OPEN_LOOP","CL_INIT","CL_BEACON","CL_CALIB"};
 	
-	// Get start command
-	log(pat_health_port, textFileOut, "In main.cpp - Standing by for CMD_START_PAT command...");
-	uint16_t command; 
-	bool STANDBY = true;
-	while(STANDBY){
-		command = receive_packet_pat_control(pat_control_port);	
-		switch(command){
-			case CMD_START_PAT:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command.");
-				STANDBY = false;
-				break;
-			case CMD_END_PAT:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
-				exit(-1);
-			default:
-				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command. Standing by...");
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-		}	
-	}		
-	
-	// Hardware init		
-	log(pat_health_port, textFileOut, "In main.cpp - Hardware Initialization...");	
-	
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);	
-	Camera camera(textFileOut, pat_health_port);	
-	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port);
-
-	//Catch camera initialization failure state in a re-initialization loop:
-	while(!camera.initialize()){
-		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
-	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
-
-	// Killing app handler (TBR: does flight need this?)
-	signal(SIGINT, [](int signum) { stop = true; });
-
 	// Tracking variables
 	Phase phase = START;
 	Group beacon, calib;
@@ -176,53 +141,166 @@ int main() //int argc, char** argv
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
+	int centerOffsetX = OFFSET_X; 
+	int centerOffsetY = OFFSET_Y; 
+	bool openLoop = false, staticPoint = false; 
+	
+	// Hardware init			
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);	
+	Camera camera(textFileOut, pat_health_port);	
+	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
+	Tracking track(camera, calibration, textFileOut, pat_health_port);
 
-	int centerOffsetX = 0; //user input from calibration
-	int centerOffsetY = 0; //user input from calibration
-
-	// CSV data saving, TBD
+	//Catch camera initialization failure state in a re-initialization loop:
+	//~ while(!camera.initialize()){
+		//~ log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		//~ std::this_thread::sleep_for(std::chrono::seconds(1));
+	//~ }
+	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
+	
+	// CSV data saving for CMD_SPIRAL_TEST
+	time_point<steady_clock> beginTime_spiral;
+	map<double, CSVdata> csvData_spiral;
+	
+	// Standby for command:
+	uint16_t command; 
+	bool STANDBY = true;
+	while(STANDBY){
+		log(pat_health_port, textFileOut, "In main.cpp - Standing by for command...");
+		command = receive_packet_pat_control(pat_control_port);	
+		switch(command){
+			case CMD_START_PAT:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop...");
+				STANDBY = false;
+				break;
+				
+			case CMD_END_PAT:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
+				exit(-1);
+				
+			case CMD_START_PAT_OPEN_LOOP:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_OPEN_LOOP command. Proceeding to main PAT loop...");
+				openLoop = true;
+				STANDBY = false;
+				break;
+			
+			case CMD_START_PAT_STATIC_POINT:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
+				staticPoint = true;
+				STANDBY = false;
+				break;
+				
+			case CMD_GET_IMAGE:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
+				logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
+				break;		
+						
+			case CMD_CALIB_TEST:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_TEST command.");
+				//Run calibration:
+				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on	
+				if(calibration.run(calib)) //sets calib exposure
+				{
+					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
+					log(pat_health_port, textFileOut, "In main.cpp CMD_CALIB_TEST - Calibration complete: ", 
+					"Calib Exposure = ", calibExposure, " us, ",
+					"Affine Transform (a00,a01,a10,a11,t0,t1) = (",calibration.a00,",",calibration.a01,",",calibration.a10,",",calibration.a11,",",calibration.t0,",",calibration.t1,"), ",
+					"Sensitivity Matrix (s00,s01,s10,s11) = (",calibration.s00,",",calibration.s01,",",calibration.s10,",",calibration.s11,")");
+					logImage(string("CMD_CALIB_TEST"), camera, textFileOut, pat_health_port); //save image
+				}
+				else
+				{
+					log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
+				}				
+				break;
+				
+			default:
+				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command. Standing by...");
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+		}	
+	}		
+	// END of STANDBY loop
+	
+	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
 	map<double, CSVdata> csvData;
 
 	//Beacon Loss Timing, pg
 	time_point<steady_clock> startBeaconLoss; //pg
 	duration<double> waitBeaconLoss(5.0); //wait time before switching back to ACQUISITION, pg
-
-	// Main loop
-	for(int i = 1; ; i++)
-	{
-		//Inter-Process Communication:
-        
-		// Open-loop vs. closed-loop run mode; currently controlled via giving any argument to run in open-loop
-		bool openLoop = false;
-		/*
-		if(argc != 1)
-		{
-			openLoop = true;
-			log(pat_health_port, textFileOut,  "Running in OPEN-LOOP mode");
-		}
-		*/
+	
+	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
+	signal(SIGINT, [](int signum) { stop = true; });
+	
+	// to use zmq_poll correctly, we construct this vector of pollitems (based on: https://ogbe.net/blog/zmq_helloworld.html)
+	std::vector<zmq::pollitem_t> p = {{pat_control_port, 0, ZMQ_POLLIN, 0}};
 		
+	// Main PAT Loop
+	for(int i = 1; ; i++)
+	{	
+		// Allow graceful exit with Ctrl-C (not for flight)
+		if(stop) break;
+		
+		// Listen for CMD_END_PAT 		
+		zmq::poll(p.data(), 1, -1); // when timeout (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(p[0].revents & ZMQ_POLLIN) {
+			// received something on the first (only) socket
+			command = receive_packet_pat_control(pat_control_port);
+			if (command == CMD_END_PAT){
+			  break;
+			}
+		}
+		
+		// Periodic health update
+		if(i % 50 == 0) //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 50x to 0.5Hz (one every 2 seconds < 5 second housekeeping aliveness check)
+		{
+			if(phase == OPEN_LOOP)
+			{
+				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - ", 
+				haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
+				"[", beacon.x, ",", beacon.y, "]");
+			}
+			else
+			{
+				if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
+				if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
+				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - ", 
+				haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
+				"[", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]",
+				haveCalibKnowledge ? "Calib is at" : "No idea where calib is",
+				"[", calib.x, ",", calib.y, ", exp = ", calibExposure, "]"); //included exposure updates, pg
+			}			
+			i = 0;
+		}
+							
 		//PAT Phases:		
 		switch(phase)
 		{
 			case START:
-				laserOff(fpga_map_request_port, 0); //TBR request number argument, ensure calibration laser off
-				log(pat_health_port, textFileOut, "In main.cpp phase START - Calibration Starting..."); //testing only
+				log(pat_health_port, textFileOut, "In main.cpp phase START - Calibration Starting...");
 				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
 				phase = CALIBRATION;
 				break;
 
 			// Calibration phase, internal laser has to be turned on, ran just once
 			case CALIBRATION:
-				//fsm.enableAmp(); nonflight
 				if(calibration.run(calib)) //sets calib exposure, pg-comment
 				{
 					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
-					log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete: ", calibExposure, " us");
+					log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete: ", 
+					"Calib Exposure = ", calibExposure, " us, ",
+					"Affine Transform (a00,a01,a10,a11,t0,t1) = (",calibration.a00,",",calibration.a01,",",calibration.a10,",",calibration.a11,",",calibration.t0,",",calibration.t1,"), ",
+					"Sensitivity Matrix (s00,s01,s10,s11) = (",calibration.s00,",",calibration.s01,",",calibration.s10,",",calibration.s11,")");
 					logImage(string("CALIBRATION"), camera, textFileOut, pat_health_port); //save image
-					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
-					phase = ACQUISITION;
+					if(staticPoint)
+					{
+						phase = STATIC_POINT;
+					}
+					else
+					{
+						laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
+						phase = ACQUISITION;
+					}
 				}
 				else
 				{
@@ -298,7 +376,7 @@ int main() //int argc, char** argv
 								// Save for CSV
 								time_point<steady_clock> now = steady_clock::now();
 								duration<double> diff = now - beginTime;
-								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
+								csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,
 									calib.x, calib.y, setPointX, setPointY, calibExposure)));
 								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 							}
@@ -320,8 +398,6 @@ int main() //int argc, char** argv
 						}
 						haveCalibKnowledge = false;
 					}
-					// nonflight, Send image to GUI
-					//link.setCalib(frame);
 
 					// Request new frame
 					camera.setWindow(calibWindow);
@@ -361,6 +437,14 @@ int main() //int argc, char** argv
 							calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 							calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 							track.controlOpenLoop(fsm, calib.x, calib.y);
+							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+								// Save for CSV
+								time_point<steady_clock> now = steady_clock::now();
+								duration<double> diff = now - beginTime;
+								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
+									calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
+								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							}
 						}
 						else
 						{
@@ -374,8 +458,6 @@ int main() //int argc, char** argv
 						if(haveBeaconKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, beacon spot vanished!");
 						haveBeaconKnowledge = false;
 					}
-					//nonflight: Send image to GUI
-					//link.setBeacon(frame);
 
 					// Request new frame
 					camera.setWindow(beaconWindow);
@@ -575,31 +657,8 @@ int main() //int argc, char** argv
 				phase = START;
 				break;
 		}
-
-		// Debug periodic console update
-		if(i % 200 == 0)
-		{
-			if(phase == OPEN_LOOP)
-			{
-				log(pat_health_port, textFileOut, "In main.cpp console update - ", haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
-					"[", beacon.x, ",", beacon.y, "]");
-			}
-			else
-			{
-				if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
-				if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
-
-				log(pat_health_port, textFileOut, "In main.cpp console update - ", haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
-					"[", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]",
-					haveCalibKnowledge ? "Calib is at" : "No idea where calib is",
-					"[", calib.x, ",", calib.y, ", exp = ", calibExposure, "]"); //included exposure updates, pg
-			}
-			i = 0;
-		}
-
-		// Allow exit with Ctrl-C
-		if(stop) break;
 	}
+	// END of main PAT loop
 
 	log(pat_health_port, textFileOut,  "\nIn main.cpp - Saving telemetry files and ending process.");
 

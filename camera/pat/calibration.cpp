@@ -152,8 +152,9 @@ bool Calibration::run(Group& calib)
 				{
 					Group& spot = frame.groups[0];
 					points.emplace_back(frame.area.x + spot.x, frame.area.y + spot.y, x, y);
-					// log(pat_health_port, fileStream, "Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y,
-					// 	"] for FSM [", x, ",", y, "]");
+					if(i % 10 == 0){
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y, "] for FSM [", x, ",", y, "]");
+					}
 
 					// Move window to new location
 					camera.setCenteredWindow(frame.area.x + spot.x, frame.area.y + spot.y, CALIB_SMALL_WINDOW);

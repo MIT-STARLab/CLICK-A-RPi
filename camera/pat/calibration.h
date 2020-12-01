@@ -33,10 +33,6 @@ class Calibration
 {
 	Camera& camera;
 	FSM& fsm;
-	// Affine transform parameters
-	double a00, a01, a10, a11, t0, t1;
-	// Sensitivity matrix
-	double s00, s01, s10, s11;
 	std::ofstream &fileStream;
 	zmq::socket_t &pat_health_port;
 	// Calculation functions
@@ -44,6 +40,10 @@ class Calibration
 	void calculateAffineParameters(std::vector<Pair>& data);
 	bool findExposureRange(Group& calib);
 public:
+	// Affine transform parameters
+	double a00, a01, a10, a11, t0, t1;
+	// Sensitivity matrix
+	double s00, s01, s10, s11;
 	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, smoothing;
 	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(camera), fsm(fsm), fileStream(fileStreamIn), pat_health_port(pat_health_port_in){};
 	int gainForExposure(int exposure);

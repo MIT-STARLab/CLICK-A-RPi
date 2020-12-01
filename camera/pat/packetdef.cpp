@@ -2,14 +2,6 @@
 
 #include "packetdef.h"
 
-// Generic Code to Receive IPC Packet on SUB Port
-void receive_packet(zmq::socket_t& sub_port, char* packet) //TODO: customize this for each type of packet (better to encapsulate packets for memory management)
-{
-	zmq::message_t message;
-	sub_port.recv(message, zmq::recv_flags::none);
-	memcpy(packet, message.data(), message.size());
-}  
-
 // Packet Sending for PUB Processes:
 
 void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num)
