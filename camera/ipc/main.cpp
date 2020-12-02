@@ -14,8 +14,8 @@ int main()
     using namespace std::chrono_literals;
 
     // define ports for PUB/SUB (this process binds)
-    std::string TX_PACKETS_PORT = "tcp://*:5561";
-    std::string PAT_CONTROL_PORT = "tcp://*:5560";
+    std::string TX_PACKETS_PORT = "tcp://*:55610";
+    std::string PAT_CONTROL_PORT = "tcp://*:55600";
 
     // initialize the zmq context with a single IO thread
     zmq::context_t context{1};
