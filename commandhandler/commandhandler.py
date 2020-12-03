@@ -8,6 +8,7 @@ import time
 import json
 import pickle
 import sys
+import struct
 
 #importing options and functions
 sys.path.append('../lib/')
@@ -35,7 +36,8 @@ socket_pat_control.connect("tcp://localhost:%s" % PAT_CONTROL_PORT) #connect to 
 print ("Subscribing to FPGA_MAP_ANSWER topic {}".format(topic))
 print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
 socket_FPGA_map_answer = context.socket(zmq.SUB)
-socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
+#socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
+socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, struct.pack('I',pid))
 socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, MESSAGE_TIMEOUT) # 5 second timeout on receive
 socket_FPGA_map_answer.connect ("tcp://localhost:%s" % FPGA_MAP_ANSWER_PORT)
 
@@ -67,16 +69,20 @@ def getFPGAmap():
     socket_FPGA_map_request.send(raw)
 
     print ('RECEIVING on %s with TIMEOUT %d for ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), socket_FPGA_map_answer.get(zmq.RCVTIMEO), ipc_fpgarqpacket_read.return_addr))
-    message, envelope = separate(recv_zmq(socket_FPGA_map_answer))
+    # message, envelope = separate(recv_zmq(socket_FPGA_map_answer))
+    message = recv_zmq(socket_FPGA_map_answer)
 
-    print (b'| found ENVELOPE: ' + envelope)
-    print (b'| ' + message)
+    print (message)
 
     # decode the package
     ipc_fpgaaswpacket = FPGAMapAnswerPacket()
     ipc_fpgaaswpacket.decode(message)
     print (ipc_fpgaaswpacket)
     print ('| got PAYLOAD %s' % (ipc_fpgaaswpacket.read_data))
+
+    envelope = ipc_fpgaaswpacket.return_addr
+    print(envelope)
+
 
     # sending read_data back as TX packet
     if ipc_fpgaaswpacket.read_data:

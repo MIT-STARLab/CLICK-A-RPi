@@ -1,128 +1,39 @@
 from multiprocessing import Process
 from time import sleep
 
-from hazelnut import MemInfo
-
 import sys
+import time
 import os
+import subprocess
 import zmq
 
+import struct
+import psutil
 
-CH_HEARTBEAT_PORT = "5555"
-HK_CONTROL_PORT = "5556"
+sys.path.append('/home/pi/CLICK-A-RPi/lib/')
+from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
+from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
+from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT
+from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
-FPGA_MAP_ANSWER_PORT = "5557"
-FPGA_MAP_REQUEST_PORT = "5558"
+FPGA_CHECK_PD = 6000
+CPU_CHECK_PD = 6000
 
-PAT_HEALTH_PORT = "5559"
-PAT_CONTROL_PORT = "5560"
+PAT_HEALTH_PD = 6000
+CH_HEARTBEAT_PD = 6000
+FPGA_ANS_PD = 6000
 
-TX_PACKETS_PORT = "5561"
-RX_CMD_PACKETS_PORT = "5562"
-RX_PAT_PACKETS_PORT = "5563"
+CPU_APID = 0x312
+PAT_HEALTH_APID = 0x313
+FPGA_MAP_APID = 0x314
 
-def PAT():
-    print("Start PAT process")
-    context = zmq.Context()
-    health_socket = context.socket(zmq.PUB)
-    health_socket.connect("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT)
-
-    control_socket = context.socket(zmq.SUB)
-    control_socket.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
-
-    tx_socket = context.socket(zmq.PUB)
-    tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-
-    rx_pat_socket = context.socket(zmq.SUB)
-    rx_pat_socket.connect("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
-
-    fpga_req_socket = context.socket(zmq.PUB)
-    fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
-
-    fpga_ans_socket = context.socket(zmq.SUB)
-    fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
-
-    n = 0
-    while True:
-        health_socket.send_string("Message from PAT %s" % n)
-        tx_socket.send_string("Message from PAT %s" % n)
-        n += 1
-        sleep(5)
-
-
-def CommandHandler():
-    print("Start CommandHandler process")
-    context = zmq.Context()
-
-    hk_control_socket = context.socket(zmq.PUB)
-    hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
-
-    ch_heartbeat_socket = context.socket(zmq.PUB)
-    ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
-
-    fpga_req_socket = context.socket(zmq.PUB)
-    fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
-
-    fpga_ans_socket = context.socket(zmq.SUB)
-    fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
-
-    pat_control_socket = context.socket(zmq.PUB)
-    pat_control_socket.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
-
-    rx_cmd_socket = context.socket(zmq.SUB)
-    rx_cmd_socket.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-
-    tx_socket = context.socket(zmq.PUB)
-    tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-
-    n = 0
-    while True:
-        pat_control_socket.send_string("Message from CH %s" % n)
-        pat_control_socket.send_string("Message from CH %s" % n)
-        n += 1
-        sleep(5)
-
-def FpgaDriver():
-    print("Start FPGA Driver process")
-    context = zmq.Context()
-    req_socket = context.socket(zmq.SUB)
-    req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
-    ans_socket = context.socket(zmq.PUB)
-    ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
-    
-    while True:
-        try:
-            result = req_socket.recv(flags=zmq.NOBLOCK) #this doesn't block
-            print("FPGA: received ", result) 
-            ans_socket.send_string("FPGA answer to request %s" % result.decode('ascii')[-1])
-        except:
-            pass
-            
-        sleep(1)
-        
-
-def BusInterface():
-    print("Start Bus process")
-    context = zmq.Context()
-    tx_socket = context.socket(zmq.SUB)
-    tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-
-    rx_cmd_socket = context.socket(zmq.PUB)
-    rx_cmd_socket.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-    rx_pat_socket = context.socket(zmq.PUB)
-    rx_pat_socket.connect("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
-
-    while True:
-        try:
-            print("Bus: received ", tx_socket.recv(flags=zmq.NOBLOCK)) #this doesn't block
-        except:
-            pass
-        sleep(1)
+## 1 indicates the housekeeper will send packets
+## 0 indicates the housekeeper will not send packets
+HK_SEND_MODE = 1
 
 class Housekeeping:
-    tasks = [PAT, FpgaDriver, BusInterface, CommandHandler, CommandHandler]
-    processes = {}
-    
+    pid = os.getpid()
+
     context = zmq.Context()
     pat_health_socket = context.socket(zmq.SUB)
     fpga_req_socket = context.socket(zmq.PUB)
@@ -130,7 +41,11 @@ class Housekeeping:
     tx_socket = context.socket(zmq.PUB)
     hk_control_socket = context.socket(zmq.SUB)
     ch_heartbeat_socket = context.socket(zmq.SUB)
-    
+
+    poller = zmq.Poller()
+
+    packet_buf = []
+    procs = {'camera':0xA0, 'commandhandler':0xA1, 'fpga':0xA2, 'bus_tx':0xA3, 'bus_rx':0xA4}
 
     def __init__(self):
 
@@ -141,75 +56,144 @@ class Housekeeping:
         self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
         self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
 
-        n = 0
-        for task in self.tasks:
-            p = Process(target=task)
-            p.start()
-            self.processes[n] = (p, task)
-            n += 1
+
+        self.poller.register(self.pat_health_socket, zmq.POLLIN)
+        self.poller.register(self.hk_control_socket, zmq.POLLIN)
+        self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
+        self.poller.register(self.fpga_ans_socket, zmq.POLLIN)
+        # self.poller.register(fpga_req_socket, zmq.POLLOUT)
+        # self.poller.register(tx_socket, zmq.POLLOUT)
+        self.fpga_ans_socket.setsockopt(zmq.SUBSCRIBE, str(self.pid).encode('ascii'))
 
     def check_fpga_mmap(self):
+        pkt = FPGAMapRequestPacket()
+        tc_pkt = pkt.encode(self.pid, 0, 0, 96, 22) # registers 0 through 14
+        self.fpga_req_socket.send(tc_pkt)
+        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 22) # registers 32 through 38
+        self.fpga_req_socket.send(tc_pkt)
+        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 22) # registers 49 through 68
+        self.fpga_req_socket.send(tc_pkt)
+        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 22) # registers 96 through 117
         return
 
-    def check_pat(self):
-        return
+    def check_cpu(self):
 
-    def check_mem(self):
-        #Uses hazelnut library
-        mem = MemInfo()
-        mem_total = mem.get('MemTotal') # total usable RAM of the system (in kB)
-        mem_free = mem.get('MemFree') # total amount of free memory (includes low_Free)
-        mem_available = mem.get('MemAvailable') # estimate of how much memory is available for starting new apps
-        print("MemTotal: ", mem_total, "MemFree: ", mem_free, "MemAvailble: ", mem_available)
+        pkt = bytearray()
+
+        mem = psutil.virtual_memory()
+        mem_total = mem.total
+        mem_available = mem.available
+        print("MemTotal: ", mem_total, "MemAvailable: ", mem_available)
+
+        pkt.extend(struct.pack('L', mem_available))
+
+        for p in psutil.process_iter(['pid','name','cpu_percent','memory_percent']):
+            p_name = p.info['name']
+            if p_name in self.procs:
+                print(p_name, ": ", p.cpu_percent(), " - ", p.memory_percent('uss'))
+                pkt.extend(struct.pack('B', self.procs[p_name]))
+                pkt.extend(struct.pack('L', int(p.cpu_percent())))
+                pkt.extend(struct.pack('L', int(p.memory_percent('uss'))))
+
+        return pkt
+
+    def handle_hk_pkt(self, data, process):
+        pkt = TxPacket()
+        if process is 'camera':
+            apid = PAT_HEALTH_APID
+            pat_pkt = PATHealthPacket()
+            _, return_addr, size, payload = pat_pkt.decode(data)
+            payload = data
+
+        elif process is 'fpga':
+            apid = FPGA_MAP_APID
+            fpga_pkt = FPGAMapAnswerPacket()
+            ##TBD - Should actually check the received packet for errors
+            return_addr, rq_number, rw_flag, error, start_addr, size, read_data = fpga_pkt.decode(data)
+            if error is 0:
+                payload = read_data
+            else:
+                return
+
+        elif process is 'cpu':
+            apid = CPU_APID
+            payload = data
+
+        raw_pkt = pkt.encode(apid, payload)
+        self.packet_buf.append(raw_pkt)
+
+    def restart_process(self, process):
+        status = subprocess.call("systemctl --user restart " + process)
+
+    def handle_hk_command(self, command):
+        hk = HousekeepingControlPacket()
+        cmd, payload = hk.decode(command)
+        ##TBD - handle command
 
     def run(self):
-        print("Start HK process")  
-        n = 0
+        print("Start HK process")
+
+        curr_time = time.time()
+
+        fpga_check_ts = curr_time
+        cpu_check_ts = curr_time
+        pat_health_packet_ts = curr_time
+        ch_heartbeat_ts = curr_time
+        fpga_ans_ts = curr_time
+
+        hk_send_mode = HK_SEND_MODE
+
         while True:
-            # Ping Bus and FPGA
-            self.tx_socket.send_string("Message part a from HK %s" % n)
-            self.tx_socket.send_string("Message part b from HK %s" % n)
-            self.fpga_req_socket.send_string("Request from HK %s" % n)
-            
-            # Check for PAT health messages
-            try:
-                print("HK: received ", self.pat_health_socket.recv(flags=zmq.NOBLOCK))
-            except:
-                pass
-            
-            # Check for FPGA answer messages
-            try:
-                print("HK: received ", self.fpga_ans_socket.recv(flags=zmq.NOBLOCK))
-            except:
-                pass
-            
-            n += 1
+            ## Check if it's time to check FPGA health or memory, do so if necessary
+            if ((time.time() - fpga_check_ts) > FPGA_CHECK_PD):
+                self.check_fpga_mmap()
+                fpga_check_ts = time.time()
+                fpga_req_num_cnt += 1
 
-            # Check processes are alive
-            # for i in list(self.processes):
-            #     (p, t) = self.processes[i]
-            #     if p.exitcode is None: # Not finished
-            #         if not p.is_alive(): # Not running
-            #             print(t, "not finished and not running")
-            #             # Do error handling and restarting here assigning the new process to processes[n]
-            #         else:
-            #             print(t, "not finished")
-            #     elif p.exitcode < 0:
-            #         print(t, "ended with an error", p.exitcode)
-            #         # Handle this either by restarting or delete the entry so it is removed from list as for else
-            #     else:
-            #         print(t, "finished")
-            #         p.join() # Allow tidyup
-            #         del self.processes[i] # Removed finished items from the dictionary 
+            if ((time.time() - cpu_check_ts) > CPU_CHECK_PD):
+                message = self.check_cpu()
+                self.handle_hk_pkt(message, 'cpu')
+                ##handle CPU data packet
+                cpu_check_ts = time.time()
 
-            sleep(2)
+            ## Receive packets from the other processes
+            sockets = dict(self.poller.poll(0)) # No timeout
+            if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
+                message = self.pat_health_socket.recv()
+                ##handle pat health packet
+                self.handle_hk_pkt(message, 'pat')
+                pat_health_packet_ts = time.time()
+
+            elif self.fpga_ans_socket in sockets and sockets[self.fpga_ans_socket] == zmq.POLLIN:
+                message = self.fpga_ans_socket.recv()
+                self.handle_hk_pkt(message, 'fpga')
+                ##handle fpga health packet
+
+            elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
+                message = self.ch_heartbeat_socket.recv()
+                ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
+                ch_heartbeat_ts = time.time()
+
+            elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
+                message = self.hk_control_socket.recv()
+                self.handle_hk_command(message)
+
+            ## Check if any timeouts have been exceeded
+            curr_time = time.time()
+            if ((curr_time - pat_health_packet_ts) > PAT_HEALTH_PD):
+                self.restart_process("camera")
+
+            if ((curr_time - ch_heartbeat_ts) > CH_HEARTBEAT_PD):
+                self.restart_process("commandhandler")
+
+            if ((fpga_ans_ts - fpga_check_ts) < 0) and ((curr_time - fpga_check_ts) > FPGA_CHECK_PD):
+                self.restart_process("fpga")
+
+            if (HK_SEND_MODE):
+                ## Send to tx socket
+                while self.packet_buf:
+                    self.tx_socket.send(self.packet_buf.pop(0))
 
 if __name__ == '__main__':
     housekeeper = Housekeeping()
     housekeeper.run()
-
-
-
-
-
-
