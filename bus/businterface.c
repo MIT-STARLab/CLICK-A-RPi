@@ -23,7 +23,7 @@ uint8_t rx[SPI_XFER_LEN];
 
 int main(int argc, char **argv)
 {
-	int i, ret, status;
+	int i, j, ret, status;
   int spi_fd;
 
   // initialize tx for test
@@ -50,24 +50,27 @@ int main(int argc, char **argv)
   tx[SPI_XFER_LEN-2] = (uint8_t)(crc >> 8) & 0xFF;
   tx[SPI_XFER_LEN-1] = (uint8_t) crc & 0xFF;
 
-  spi_fd = open(SPI_DEV, O_RDONLY);
+  spi_fd = open(SPI_DEV, O_RDWR);
   if (spi_fd < 0) {
     perror("can't open device");
   }
+  ret = 0;
 
-	while (1) {
+	for (i = 0; i < 20; i++){
     status = read(spi_fd, rx, 20);
 
     printf("response(%2d): \n", status);
     if (status < 0) {
-      return;
+      return -1;
     }
-      for (i = 0; i < 20; i++) {
-        printf(" %02x", rx[i]);
-      }
-      printf("\n");
+    for (j = 0; j < 20; j++) {
+      printf(" %02x", rx[j]);
     }
+    printf("\n");
+  }
 
+  status = write(spi_fd, tx, SPI_XFER_LEN);
+  printf("wrote to bus: %2d \n", status);
 
 	return ret;
 }

@@ -2,13 +2,15 @@
 ** Filename: crc.h
 ** Author: Ondrej
 **
-** CRC functions
+** CRC function used by BCT
 */
 
 #ifndef _crc_H_
 #define _crc_H_
 
-uint16_t crc_16_update(uint16_t crc, uint8_t *data, size_t len);
-uint16_t crc_16_finalize(uint16_t crc);
+#include <stdint.h>
+#include <linux/types.h>
+
+uint16_t crc_16_update(uint16_t crc, uint8_t *data, uint16_t len);
 
 #endif /* _crc_H_ */

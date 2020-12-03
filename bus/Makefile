@@ -1,12 +1,11 @@
-PROJ=businterface
 CC=cc
-SRC=businterface.c
-# LIBS=-lgpiod
-LIBS=-pthread -lpigpiod_if2 -lrt
-CFLAGS=-D CONSUMER=\"$(PROJ)\"
+DEPS=crc.h
+OBJ = businterface.o crc.o
+LIBS=
+CFLAGS=-I.
 
-all:
-	$(CC) $(SRC) $(LIBS) $(CFLAGS) -o $(PROJ)
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
-clean:
-	rm $(PROJ)
+businterface: $(OBJ)
+		$(CC) -o $@ $^ $(CFLAGS)
