@@ -1,10 +1,9 @@
 // Mirrorcle MEMS FSM control class for the Raspberry Pi
 // Based on Hyosang Yoon's Arduino controller
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #ifndef __FSM
 #define __FSM
 #include <stdint.h>
-//#include "defines.h"
 #include "log.h"
 
 #define DAC_ADDR_XP						0x00
@@ -18,22 +17,29 @@
 #define DAC_CMD_WRITE_INPUT_REG			0x00
 #define DAC_CMD_WRITE_INPUT_UPDATE_ALL	(0x02 << 3)
 
-#define FSM_A_CH 0x20 //fsm fpga channel a: fsm configuration
-#define FSM_B_CH 0x21 //fsm fpga channel b: voltage 1
-#define FSM_C_CH 0x22 //fsm fpga channel c: voltage 2
+#define FSM_A_CH 0x08 //fsm fpga channel a: fsm configuration (Notated_memory_map on Google Drive)
+#define FSM_B_CH 0x09 //fsm fpga channel b: voltage 1 (Notated_memory_map on Google Drive)
+#define FSM_C_CH 0x0A //fsm fpga channel c: voltage 2 (Notated_memory_map on Google Drive)
+
+#define FSM_VBIAS 80
+#define FSM_VMAX 129
+#define FSM_FILTER 200
 
 class FSM
 {
-	char spiBuffer[3];
+	uint8_t spiBuffer[3];
 	uint16_t voltageBias, voltageMax;
 	int16_t oldX, oldY;
+	std::ofstream &fileStream;
+	zmq::socket_t &pat_health_port;
+	zmq::socket_t &fpga_map_request_port;
 	void sendCommand(uint8_t cmd, uint8_t addr, uint16_t value);
 	void sendCommand(uint32_t cmd);
-	std::ofstream &fileStream;
+	void fsmWrite(uint16_t channel, uint8_t data);
+	
 public:
-	FSM(float vBias, float vMax, float filter, std::ofstream &fileStreamIn);
+	FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, float vBias = FSM_VBIAS, float vMax = FSM_VMAX, float filter = FSM_FILTER);
 	~FSM();
-	void fsmWrite(uint8_t channel, uint8_t &data);
 	void setNormalizedAngles(float x, float y);
 	void forceTransfer();
 };
