@@ -9,12 +9,11 @@ import spidev
 from crccheck.crc import Crc16Ccitt as crc16
 
 sys.path.append('/home/pi/CLICK-A-RPi/lib/')
-from ipc_packets import TxPacket, RxCommandPacket, RxPATPacket
-from options import TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT
+from ipc_packets import TxPacket
+from options import TX_PACKETS_PORT
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
-VNC_ADDR = 0b000
 
 BUS_RX_DATA_LEN = 512
 BUS_TX_DATA_LEN = 4100 - 12 # from bus interface doc
@@ -24,29 +23,20 @@ SPI_XFER_LEN = 105
 class Packetizer:
     context = zmq.Context()
 
-    rx_cmd_socket = context.socket(zmq.PUB)
-    rx_pat_socket = context.socket(zmq.PUB)
     tx_socket = context.socket(zmq.SUB)
 
     #spi = spidev.SpiDev()
     # spi = open(SPI_DEV, os.O_RDWR | os.O_CREAT)
-    spi = open(SPI_DEV, 'wr')
+    spi = open(SPI_DEV, 'w')
 
-    bus_rx_bytes_buffer = []
-    bus_rx_pkts_buffer = []
-    rx_ipc_pkts_buffer = []
     tx_ipc_pkts_buffer = []
     bus_tx_pkts_buffer = []
 
     def __init__(self):
 
-        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-        self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
         self.tx_socket.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.tx_socket.subscribe("")
 
-        # self.spi.open(SPI_BUS, SPI_DEV)
-        # self.spi.max_speed_hz = SPI_HZ
 
     def bus_parse_bytes(self):
         ccsds_sync = [0x35, 0x2E, 0xF8, 0x53]
