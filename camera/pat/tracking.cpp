@@ -1,5 +1,5 @@
-// NODE Tracking algorithms
-// Author: Ondrej Cierny
+// CLICK A Tracking algorithms
+// Authors: Ondrej Cierny, Peter Grenfell
 #include "tracking.h"
 #include <cmath>
 
@@ -26,7 +26,7 @@ bool Tracking::runAcquisition(Group& beacon)
 	{
 		if(camera.waitForFrame())
 		{
-			Image frame(camera, fileStream);
+			Image frame(camera, fileStream, pat_health_port);
 			if(verifyFrame(frame) && windowAndTune(frame, beacon)) return true;
 			camera.config->expose_us.write(exposure);
 			camera.requestFrame();
@@ -63,10 +63,10 @@ bool Tracking::verifyFrame(Image& frame)
 		// All checks passed and we have some good groups!
 		if(frame.performPixelGrouping() > 0)
 		{
-			log(std::cout, fileStream, "Frame verified, tuning camera parameters");
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters");
 			return true;
 		}
-		else log(std::cerr, fileStream, "Frame has good properties but grouping did not succeed");
+		else log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
 	}
 	return false;
 }
@@ -87,7 +87,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 		camera.requestFrame();
 
 		// Try tuning the windowed frame
-		// log(std::cout, fileStream, "Prepared windowed tuning frame at [", fullX, fullY, "]");
+		// log(pat_health_port, fileStream, "Prepared windowed tuning frame at [", fullX, fullY, "]");
 		bool success = autoTuneExposure(beacon);
 
 		// Switch back to full frame
@@ -100,7 +100,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 		{
 			if(camera.waitForFrame())
 			{
-				Image test(camera, fileStream);
+				Image test(camera, fileStream, pat_health_port);
 				if(test.performPixelGrouping() > 0)
 				{
 					if(abs(test.groups[0].x * 2 - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
@@ -124,7 +124,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 		}
 		else return false;
 	}
-	log(std::cerr, fileStream, "Freaky error in camera tuning");
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::windowAndTune - Camera tuning failed.");
 	return false;
 }
 
@@ -141,7 +141,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		camera.requestFrame();
 		if(camera.waitForFrame())
 		{
-			Image test(camera, fileStream, beaconSmoothing);
+			Image test(camera, fileStream, pat_health_port, beaconSmoothing);
 			if(test.performPixelGrouping() > 0)
 			{
 				Group& spot = test.groups[0];
@@ -163,7 +163,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 	// Grab a frame to determine the next step
 	if(camera.waitForFrame())
 	{
-		Image frame(camera, fileStream);
+		Image frame(camera, fileStream, pat_health_port);
 		if(frame.performPixelGrouping() > 0)
 		{
 			// Determine smoothing
@@ -196,7 +196,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 					}
 
 					// Camera reached lower limit, too high power
-					log(std::cerr, fileStream, "Unable to desaturate camera");
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to desaturate camera");
 					return true;
 				}
 				// Otherwise, have to increase exposure
@@ -217,13 +217,13 @@ bool Tracking::autoTuneExposure(Group& beacon)
 					}
 
 					// Very high parameters reached
-					log(std::cerr, fileStream, "Unable to reach desired brightness with maximum parameters");
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reach desired brightness with maximum parameters");
 					return true;
 				}
 			}
 		}
 	}
-	log(std::cerr, fileStream, "Freaky error in exposure auto tuning");
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure auto tuning failed.");
 	return false;
 }
 
@@ -279,7 +279,7 @@ void Tracking::updateTrackingWindow(Image& frame, Group& spot, AOI& window)
 		// Final check
 		if(x != window.x || y != window.y || height != window.h || width != window.w)
 		{
-			log(std::cout, fileStream, "Updated window to", width, "x", height, "at [", x, ",", y, "]");
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::updateTrackingWindow - Updated window to", width, "x", height, "at [", x, ",", y, "]");
 			window.x = x;
 			window.y = y;
 			window.w = width;
@@ -334,7 +334,7 @@ void Tracking::controlOpenLoop(FSM& fsm, double x, double y)
 {
 	actionX = calibration.affineTransformX(x, y);
 	actionY = calibration.affineTransformY(x, y);
-	// log(std::cout, fileStream, "Moving FSM to", x, y, "... that is", actionX, actionY);
+	// log(pat_health_port, fileStream, "Moving FSM to", x, y, "... that is", actionX, actionY);
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = steady_clock::now();
 }
@@ -349,7 +349,7 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	duration<double> diff = now - lastUpdate;
 	double Ts = diff.count() > TRACK_CONTROL_MAX_TS ? TRACK_CONTROL_MAX_TS : diff.count();
 
-	// log(std::cout, fileStream, "Ts is", diff.count());
+	// log(pat_health_port, fileStream, "Ts is", diff.count());
 
 	// Calculate errors on FSM
 	double ex = calibration.transformDx(spX - x, spY - y);

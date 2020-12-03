@@ -1,5 +1,5 @@
 // BlueFox camera wrapper class
-// Author: Ondrej Cierny
+// Authors: Ondrej Cierny, Peter Grenfell
 #ifndef __CAMERA
 #define __CAMERA
 #include <mvIMPACT_CPP/mvIMPACT_acquire.h>
@@ -9,6 +9,7 @@
 #define CAMERA_HEIGHT 1944
 #define CAMERA_MAX_WAIT 5000	// Max frame timeout in ms
 #define SERIAL_NUMBER "297"
+#define ERROR_NULL_DEVICE "NULL device"
 
 // An area of interest on camera
 class AOI
@@ -26,12 +27,14 @@ class Camera
 	DeviceManager manager;
 	FunctionInterface *fi;
 	std::ofstream &fileStream;
+	zmq::socket_t &pat_health_port;
 public:
 	std::string error;
 	int requestQueueSize, queuedCount;
 	CameraSettingsBlueFOX *config;
-	Camera(std::ofstream &fileStreamIn, std::string serialNumber = SERIAL_NUMBER);
+	Camera(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, std::string serialNumber = SERIAL_NUMBER);
 	~Camera();
+	bool initialize(std::string serialNumber = SERIAL_NUMBER);
 	bool requestFrame();
 	bool waitForFrame();
 	bool fillRequestQueue();
