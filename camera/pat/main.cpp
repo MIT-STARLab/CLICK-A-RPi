@@ -2,7 +2,6 @@
 #include <atomic>
 #include <csignal>
 #include <chrono>
-#include <ctime>
 #include <thread>
 #include <sstream>
 #include <stdio.h>
@@ -33,32 +32,6 @@ public:
     calX(calXin), calY(calYin), calSetX(calSetXin), calSetY(calSetYin), calExp(calExpIn) {}
 };
 
-string timeStamp() 	//Get date and time for telemetry file names
-{
-	time_t     now = time(0);
-	struct tm  tstruct;
-	char       dateTime[80];
-	tstruct = *localtime(&now);
-	strftime(dateTime, sizeof(dateTime), "%Y-%m-%d-%H-%M-%S", &tstruct);
-	return string(dateTime);
-}
-
-void logImage(string nameTag, Camera& cameraObj, ofstream& textFileIn, zmq::socket_t& pat_health_port)
-{
-	cameraObj.requestFrame(); //queue frame
-	if(cameraObj.waitForFrame())
-	{
-		const string imageFileName = timeStamp() + string("_") + nameTag + string(".bmp");
-		Image frame(cameraObj, textFileIn, pat_health_port);
-		log(pat_health_port, textFileIn, "Saving image telemetry as: ", imageFileName);
-		frame.saveBMP(imageFileName);
-	}
-	else
-	{
-		log(pat_health_port, textFileIn, "Error: waitForFrame");
-	}
-}
-
 //Turn on Calibration Laser
 void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_ON, WRITE, request_number);
@@ -69,7 +42,7 @@ void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_OFF, WRITE, request_number);
 }
 
-atomic<bool> stop(false);
+atomic<bool> stop(false); //not for flight
 
 //-----------------------------------------------------------------------------
 int main() //int argc, char** argv
@@ -152,10 +125,10 @@ int main() //int argc, char** argv
 	Tracking track(camera, calibration, textFileOut, pat_health_port);
 
 	//Catch camera initialization failure state in a re-initialization loop:
-	//~ while(!camera.initialize()){
-		//~ log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
-		//~ std::this_thread::sleep_for(std::chrono::seconds(1));
-	//~ }
+	while(!camera.initialize()){
+		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
 	
 	// CSV data saving for CMD_SPIRAL_TEST
@@ -192,7 +165,7 @@ int main() //int argc, char** argv
 				
 			case CMD_GET_IMAGE:
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
-				logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
+				logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, true); 
 				break;		
 						
 			case CMD_CALIB_TEST:
@@ -201,12 +174,8 @@ int main() //int argc, char** argv
 				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on	
 				if(calibration.run(calib)) //sets calib exposure
 				{
-					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
-					log(pat_health_port, textFileOut, "In main.cpp CMD_CALIB_TEST - Calibration complete: ", 
-					"Calib Exposure = ", calibExposure, " us, ",
-					"Affine Transform (a00,a01,a10,a11,t0,t1) = (",calibration.a00,",",calibration.a01,",",calibration.a10,",",calibration.a11,",",calibration.t0,",",calibration.t1,"), ",
-					"Sensitivity Matrix (s00,s01,s10,s11) = (",calibration.s00,",",calibration.s01,",",calibration.s10,",",calibration.s11,")");
-					logImage(string("CMD_CALIB_TEST"), camera, textFileOut, pat_health_port); //save image
+					calibExposure = camera.config->expose_us.read(); //save calib exposure
+					log(pat_health_port, textFileOut, "In main.cpp CMD_CALIB_TEST - Calibration complete. Calib Exposure = ", calibExposure, " us.");
 				}
 				else
 				{
@@ -287,11 +256,7 @@ int main() //int argc, char** argv
 				if(calibration.run(calib)) //sets calib exposure, pg-comment
 				{
 					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
-					log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete: ", 
-					"Calib Exposure = ", calibExposure, " us, ",
-					"Affine Transform (a00,a01,a10,a11,t0,t1) = (",calibration.a00,",",calibration.a01,",",calibration.a10,",",calibration.a11,",",calibration.t0,",",calibration.t1,"), ",
-					"Sensitivity Matrix (s00,s01,s10,s11) = (",calibration.s00,",",calibration.s01,",",calibration.s10,",",calibration.s11,")");
-					logImage(string("CALIBRATION"), camera, textFileOut, pat_health_port); //save image
+					log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure = ", calibExposure, " us.");
 					if(staticPoint)
 					{
 						phase = STATIC_POINT;
@@ -324,7 +289,7 @@ int main() //int argc, char** argv
 					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete:", beaconExposure, "us ; beacon:",
 						beaconGain, "dB smoothing", track.beaconSmoothing, "; calib:",
 						calibGain, "dB smoothing", calibration.smoothing);
-					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); //save image
+					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); //save image
 					// Set initial pointing in open-loop
 					calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
