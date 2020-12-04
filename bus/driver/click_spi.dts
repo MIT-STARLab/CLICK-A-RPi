@@ -1,0 +1,67 @@
+/* Device tree overlay for CLICK SPI driver */
+/dts-v1/;
+/plugin/;
+
+/{
+    /* Targeted for RPi rev 3 */
+    compatible = "brcm,bcm2835";
+
+    /* Disable spidev on SPI0 CE0 */
+    fragment@0 {
+        target = <&spidev0>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+    /* Disable spidev on SPI0 CE1 */
+    fragment@1 {
+        target = <&spidev1>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+    /* Configure SPI0 */
+    fragment@2 {
+        target = <&spi0>;
+        __overlay__ {
+            /* Needed to avoid dtc warning */
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            /* Enable SPI0 */
+            status = "okay";
+
+            /* Add our device to SPI0 CE0 */
+            click_spi: click_spi@0 {
+                compatible = "mit,click_spi";   /* Kernel module reference */
+                reg = <0>;                      /* CE0 */
+                mode = <0>;                     /* SPI mode 0 */
+                pinctrl-names = "default";
+                pinctrl-0 = <&click_irq>;
+                interrupt-parent = <&gpio>;
+                interrupts = <25 0x3>;          /* 0x3 = both edges */
+                spi-max-frequency = <12000000>;
+                status = "okay";
+            };
+        };
+    };
+
+    /* Configure IRQ GPIO */
+    fragment@3 {
+        target = <&gpio>;
+        __overlay__ {
+            click_irq: click_irq {
+                brcm,pins = <25>;       /* default pin */
+                brcm,function = <0>;    /* input */
+                brcm,pull = <1>;        /* pull down */
+            };
+        };
+    };
+
+    /* Configurable irq pin parameter */
+    __overrides__ {
+        irq   = <&click_spi>, "interrupts:0", <&click_irq>, "brcm,pins:0";
+    };
+};
