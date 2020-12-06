@@ -4,7 +4,6 @@ obj-m := $(modname).o
 $(modname)-y := main.o driver.o
 
 all:
-	make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -C .. M=$(shell pwd) modules
-	# scp $(modname).ko click:~/flight/spi_driver/
+	$(MAKE) -C $(LINUX_DIR) M=$(PWD) modules
 clean:
-	make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -C .. M=$(shell pwd) clean
+	$(MAKE) -C $(LINUX_DIR) M=$(PWD) clean
