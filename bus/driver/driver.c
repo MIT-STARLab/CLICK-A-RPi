@@ -48,7 +48,7 @@ irqreturn_t interrupt_handler(int irq, void *arg)
         }
         else spi_xfer(data, data->rx, DEFAULT_READ_LEN);
     }
-    dev_notice_once(&data->spi->dev, "IRQ is working\n");
+    dev_info_once(&data->spi->dev, "IRQ is working\n");
     return IRQ_HANDLED;
 }
 
@@ -117,7 +117,7 @@ void spi_xfer_complete(void *arg)
                 PACKET_OVERHEAD + data->payload_len);
             if (copied == (PACKET_OVERHEAD + data->payload_len))
             {
-                dev_notice_once(&data->spi->dev, "packets are being received\n");
+                dev_info_once(&data->spi->dev, "packets are being received\n");
             }
             else dev_warn_once(&data->spi->dev, "rx fifo copy error\n");
         }
