@@ -147,6 +147,10 @@ static int driver_probe(struct spi_device *spi)
     int res = 0;
     spi_data_t *data = NULL;
     struct device *dev_ret = NULL;
+    struct spi_delay delay = {
+        .value = 1,
+        .unit = SPI_DELAY_UNIT_SCK
+    };
 
     /* Allocate SPI data */
     if ((data = devm_kzalloc(&spi->dev, sizeof(spi_data_t), GFP_KERNEL)) == NULL ||
@@ -159,8 +163,7 @@ static int driver_probe(struct spi_device *spi)
 
     /* Initialize SPI hardware */
     spi->mode = SPI_MODE_0;
-    spi->word_delay_usecs = 0;
-    spi_set_cs_timing(spi, 0, 0, 0);
+    spi_set_cs_timing(spi, &delay, &delay, &delay);
     spi_setup(spi);
 
     /* Initialize SPI data */
