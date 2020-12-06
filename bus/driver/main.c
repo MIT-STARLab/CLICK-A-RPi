@@ -210,7 +210,7 @@ static int driver_probe(struct spi_device *spi)
     /* Success */
     else
     {
-        dev_notice(&spi->dev, "loaded\n");
+        dev_info(&spi->dev, "loaded\n");
         return res;
     }
 
@@ -238,7 +238,7 @@ static int driver_remove(struct spi_device *spi)
     unregister_chrdev_region(data->dev_num, 1);
     kfifo_free(&rx_fifo);
     tx_queue_clear();
-    dev_notice(&spi->dev, "unloaded\n");
+    dev_info(&spi->dev, "unloaded\n");
     return 0;
 }
 
