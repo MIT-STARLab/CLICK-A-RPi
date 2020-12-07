@@ -16,8 +16,12 @@
 #define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
 #define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
 #define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
-#define OFFSET_X 0 //user input from calibration for X bias
-#define OFFSET_Y 0 //user input from calibration for Y bias
+#define OFFSET_X 0 //user input from calibration
+#define OFFSET_Y 0 //user input from calibration
+#define CENTROID2ANGLE_SLOPE_X 1 //user input from calibration
+#define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
+#define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
+#define CENTROID2ANGLE_BIAS_Y 0 //user input from calibration
 
 using namespace std;
 using namespace std::chrono;
@@ -42,6 +46,18 @@ void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_OFF, WRITE, request_number);
 }
 
+//Convert Beacon Centroid to Error Angles for the Bus
+struct error_angles{
+	float angle_x_radians;
+	float angle_y_radians;
+};
+error_angles centroid2angles(double centroid_x, double centroid_y){
+	error_angles angles = error_angles();
+	angles.angle_x_radians = (float) CENTROID2ANGLE_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
+	angles.angle_y_radians = (float) CENTROID2ANGLE_SLOPE_Y*centroid_y + CENTROID2ANGLE_BIAS_Y;
+	return angles;
+}
+
 atomic<bool> stop(false); //not for flight
 
 //-----------------------------------------------------------------------------
@@ -54,7 +70,7 @@ int main() //int argc, char** argv
     std::string PAT_CONTROL_PORT = "tcp://localhost:5560"; //SUB to Command Handler
     std::string FPGA_MAP_REQUEST_PORT = "tcp://localhost:5558"; //PUB to FPGA Driver
     std::string FPGA_MAP_ANSWER_PORT = "tcp://localhost:5557"; //SUB to FPGA Driver
-    //std::string TX_PACKETS_PORT = "tcp://localhost:5561"; //PUB to Packetizer & Bus Interface
+    std::string TX_PACKETS_PORT = "tcp://localhost:5561"; //PUB to Packetizer & Bus Interface
     //std::string RX_PAT_PACKETS_PORT = "tcp://localhost:5562";  //SUB to Packetizer & Bus Interface 
 
     // initialize the zmq context with 1 IO threads 
@@ -79,16 +95,16 @@ int main() //int argc, char** argv
     zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
     fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
     fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
-	
-	/*
+
     // create the TX_PACKETS_PORT PUB socket
-    zmq::socket_t tx_packets_socket(context, ZMQ_PUB); 
-    tx_packets_socket.connect(TX_PACKETS_PORT); // connect to the transport
+    zmq::socket_t tx_packets_port(context, ZMQ_PUB); 
+    tx_packets_port.connect(TX_PACKETS_PORT); // connect to the transport
     
+    /*
     // create the RX_PAT_PACKETS_PORT SUB socket
-    zmq::socket_t rx_pat_packets_socket(context, ZMQ_SUB); 
-    rx_pat_packets_socket.connect(RX_PAT_PACKETS_PORT); // connect to the transport
-    rx_pat_packets_socket.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+    zmq::socket_t rx_pat_packets_port(context, ZMQ_SUB); 
+    rx_pat_packets_port.connect(RX_PAT_PACKETS_PORT); // connect to the transport
+    rx_pat_packets_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	*/
 	
 	//Allow sockets some time (otherwise you get dropped packets)
@@ -116,7 +132,7 @@ int main() //int argc, char** argv
 	double propertyDifference = 0;
 	int centerOffsetX = OFFSET_X; 
 	int centerOffsetY = OFFSET_Y; 
-	bool openLoop = false, staticPoint = false; 
+	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	
 	// Hardware init			
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);	
@@ -130,10 +146,6 @@ int main() //int argc, char** argv
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
-	
-	// CSV data saving for CMD_SPIRAL_TEST
-	time_point<steady_clock> beginTime_spiral;
-	map<double, CSVdata> csvData_spiral;
 	
 	// Standby for command:
 	uint16_t command; 
@@ -162,6 +174,12 @@ int main() //int argc, char** argv
 				staticPoint = true;
 				STANDBY = false;
 				break;
+				
+			case CMD_START_PAT_BUS_FEEDBACK:
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_BUS_FEEDBACK command. Proceeding to main PAT loop...");
+				sendBusFeedback = true;
+				STANDBY = false;
+				break;		
 				
 			case CMD_GET_IMAGE:
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
@@ -490,6 +508,16 @@ int main() //int argc, char** argv
 								double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 								double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 								track.controlOpenLoop(fsm, setPointX, setPointY);
+							}
+							// If sending beacon angle errors to the bus adcs
+							//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
+							if(sendBusFeedback && (i % 25 == 0))
+							{
+								error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
+								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
+								"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
+								"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
+								send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
 							}
 						}
 						else
