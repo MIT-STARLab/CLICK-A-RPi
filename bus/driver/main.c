@@ -230,7 +230,6 @@ static int driver_probe(struct spi_device *spi)
 static int driver_remove(struct spi_device *spi)
 {
     spi_data_t *data = spi_get_drvdata(spi);
-    spi_slave_abort(spi);
     free_irq(spi->irq, data);
     cdev_del(&data->fs_dev);
     device_destroy(data->cl, data->dev_num);
