@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <ctime>
 #include "packetdef.h"
 
 // Variable argument logging function with clock timestamp
@@ -38,37 +39,6 @@ void log(zmq::socket_t& pat_health_port, std::ofstream& fileStream, args&&... ms
 	std::cout << std::endl;	
 }
 
-/*
-//Temporary PAT health log
-template<typename... args>
-void logToPatHealth(zmq::socket_t& pat_health_port, args&&... msgs)
-//-----------------------------------------------------------------------------
-{	
-	char buffer[BUFFER_SIZE];	
-	std::stringstream healthStream;
-	healthStream.rdbuf()->pubsetbuf(buffer, sizeof(buffer));
-	
-	using expand = int[];
-	healthStream << "[" << std::fixed << std::setprecision(2) << (float)clock()/CLOCKS_PER_SEC << std::setprecision(5) << "] ";
-	expand{0, (void(healthStream << std::forward<args>(msgs) << " "), 0)...};
-	healthStream << std::endl;	
-	
-	send_packet_pat_health(pat_health_port, buffer);
-}
-*/
-
-// won't be needed for flight, Confirmable standard C-output version
-/*
-//-----------------------------------------------------------------------------
-template<typename... args>
-void logAndConfirm(args&&... msgs)
-//-----------------------------------------------------------------------------
-{
-	using expand = int[];
-	std::cout << "[" << std::fixed << std::setprecision(2) << (float)clock()/CLOCKS_PER_SEC << std::setprecision(5) << "] ";
-	expand{0, (void(std::cout << std::forward<args>(msgs) << " "), 0)...};
-	std::cin.ignore();
-}
-*/
+std::string timeStamp();
 
 #endif

@@ -316,3 +316,36 @@ void Image::saveBMP(const string& filename) //e.g. const string filename( "singl
 		log(pat_health_port, fileStream, "In processing.cpp Image::saveBMP - Error during image saving using EasyBMP functions.");
 	}
 }
+
+//-----------------------------------------------------------------------------
+// Log Image from Camera
+//-----------------------------------------------------------------------------
+void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures)
+{
+	int exposure_init = cameraObj.config->expose_us.read(); //get current camera exposure	
+	int exposures[3];
+	exposures[0] = exposure_init;
+	int num_images = 1;
+	if(save_extra_exposures){
+		exposures[1] = (exposure_init - 10)/2; num_images++;
+		exposures[2] = (10000 - exposure_init)/2; num_images++;
+	}	
+	
+	for(int i = 0; i < num_images; i++){
+		cameraObj.config->expose_us.write(exposures[i]); //set camera exposure
+		cameraObj.requestFrame(); //queue frame
+		if(cameraObj.waitForFrame())
+		{
+			const std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".bmp");
+			Image frame(cameraObj, textFileIn, pat_health_port);
+			log(pat_health_port, textFileIn, "Saving image telemetry as: ", imageFileName);
+			frame.saveBMP(imageFileName);
+		}
+		else
+		{
+			log(pat_health_port, textFileIn, "Error: waitForFrame");
+		}
+	}
+	
+	cameraObj.config->expose_us.write(exposure_init); //reset camera exposure
+}

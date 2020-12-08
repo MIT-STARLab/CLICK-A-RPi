@@ -135,6 +135,7 @@ bool Calibration::run(Group& calib)
 		// Use preferred exposure
 		camera.config->gain_dB.write(0);
 		camera.config->expose_us.write(preferredExpo);
+		logImage(string("CALIBRATION_Start"), camera, fileStream, pat_health_port, true); 
 		for(int i = 0; i < 100; i++)
 		{
 			// Spiral outwards with 100 points from 0 to defined max FSM range
@@ -165,6 +166,8 @@ bool Calibration::run(Group& calib)
 				}
 			}
 		}
+		
+		logImage(string("CALIBRATION_End"), camera, fileStream, pat_health_port, true); 
 
 		// Reset FSM & Camera
 		camera.setFullWindow();

@@ -51,4 +51,7 @@ public:
 	void saveBMP(const string& filename);
 };
 
+// Log camera images
+void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures = false);
+
 #endif
