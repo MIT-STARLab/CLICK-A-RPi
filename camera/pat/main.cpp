@@ -307,7 +307,7 @@ int main() //int argc, char** argv
 					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete:", beaconExposure, "us ; beacon:",
 						beaconGain, "dB smoothing", track.beaconSmoothing, "; calib:",
 						calibGain, "dB smoothing", calibration.smoothing);
-					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); //save image
+					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); //save image
 					// Set initial pointing in open-loop
 					calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
