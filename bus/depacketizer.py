@@ -4,7 +4,6 @@ from time import sleep
 import sys
 import os
 import zmq
-import spidev
 
 from crccheck.crc import Crc16Ccitt as crc16
 
@@ -15,10 +14,8 @@ from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
 
-BUS_RX_DATA_LEN = 512
-BUS_TX_DATA_LEN = 4100 - 12 # from bus interface doc
-
-SPI_XFER_LEN = 20
+CCSDS_HEADER_LEN = 6
+PKT_LEN_INDEX = 4
 
 class Depacketizer:
     context = zmq.Context()
@@ -27,95 +24,62 @@ class Depacketizer:
     rx_pat_socket = context.socket(zmq.PUB)
 
     #spi = spidev.SpiDev()
-    # spi = open(SPI_DEV, os.O_RDWR | os.O_CREAT)
+    # spi = open(SPI_DEV, os.O_RDWR)
     spi = open(SPI_DEV, 'r')
 
-    bus_rx_bytes_buffer = []
-    bus_rx_pkts_buffer = []
-    rx_ipc_pkts_buffer = []
+    bus_pkts_buffer = []
+    ipc_pkts_buffer = []
 
     def __init__(self):
         self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
         self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
 
-    def bus_parse_bytes(self):
-        ccsds_sync = [0x35, 0x2E, 0xF8, 0x53]
-
-        # Find sync marker
-        b = 0
-        for b in range(len(self.bus_rx_bytes_buffer)-len(ccsds_sync)+1):
-            if (self.bus_rx_bytes_buffer[b:b+4] == ccsds_sync):
-                break
-
-        start_index = b+len(ccsds_sync)
-        pkt_len_index = start_index + 4
-        if (pkt_len_index + 1 < len(self.bus_rx_bytes_buffer)):
-            # What if entire packet hasn't been received yet?
-            return
-
-        pkt_len = (self.bus_rx_bytes_buffer[pkt_len_index] << 8) | self.bus_rx_bytes_buffer[pkt_len_index + 1] + 1
-
-        crc_index = start_index + 6 + pkt_len - 2
-        if (crc_index + 1 < len(self.bus_rx_bytes_buffer)):
-            # What if entire packet hasn't been received yet?
-            return
-
-        # Check CRC
-        crc = (self.bus_rx_bytes_buffer[crc_index] << 8) | self.bus_rx_bytes_buffer[crc + 1]
-
-        crc_check = crc16.calc(self.bus_rx_bytes_buffer[start_index:crc_index]) #confirm CRC calculated over entire packet
-
-        if (crc == crc_check):
-            self.bus_rx_pkts_buffer.append(self.bus_rx_bytes_buffer[start_index:(crc_index+2)])
-
-        del self.bus_rx_bytes_buffer[:(crc_index+2)]
-
-        return
-
     def acquire_bus_pkt(self):
+        # returns a full bus packet without the sync marker
         ccsds_sync = [0x35, 0x2E, 0xF8, 0x53]
-        bytes_buffer = []
-
-        # Read 1 byte from SPI device until start of sync marker is found
-        b = self.spi.read(1))
-        while (b != ccsds_sync[0]):
+        buf = []
+        # Read 1 byte from SPI device until the sync marker is found
+        sync_index = 0
+        while (sync_index < (len(ccsds_sync))):
             b = self.spi.read(1)
+            if(b == ccsds_sync[sync_index]):
+                # buf.append(b)
+                sync_index += 1
+            elif (b == ccsds_sync[0]):
+                # buf = [b]
+                sync_index = 1
+            else:
+                sync_index = 0
 
+        # Read 6 CCSDS header bytes
+        buf = self.spi.read(CCSDS_HEADER_LEN)
+        pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
 
-        raw_bus_data = self.spi.read(SPI_XFER_LEN)
+        # Read payload data bytes and crc bytes
+        pkt = self.spi.read(pkt_len)
+        # Assuming crc is included in the packet length
 
-        b = 0
-        for b in range(len(self.bus_rx_bytes_buffer)-len(ccsds_sync)+1):
-            if (self.bus_rx_bytes_buffer[b:b+4] == ccsds_sync):
-                break
+        buf.extend(pkt)
 
-        start_index = b+len(ccsds_sync)
-        pkt_len_index = start_index + 4
-        if (pkt_len_index + 1 < len(self.bus_rx_bytes_buffer)):
-            # What if entire packet hasn't been received yet?
-            return
+        # Check crc
+        crc_index = CCSDS_HEADER_LEN + pkt_len - 2
+        crc = (pkt[crc_index] << 8) | pkt[crc_index + 1]
 
-        pkt_len = (self.bus_rx_bytes_buffer[pkt_len_index] << 8) | self.bus_rx_bytes_buffer[pkt_len_index + 1] + 1
-
-        crc_index = start_index + 6 + pkt_len - 2
-        if (crc_index + 1 < len(self.bus_rx_bytes_buffer)):
-            # What if entire packet hasn't been received yet?
-            return
-
-        # Check CRC
-        crc = (self.bus_rx_bytes_buffer[crc_index] << 8) | self.bus_rx_bytes_buffer[crc + 1]
-
-        crc_check = crc16.calc(self.bus_rx_bytes_buffer[start_index:crc_index]) #confirm CRC calculated over entire packet
+        crc_check = crc16.calc(buf[:crc_index])
+        #confirm CRC calculated over entire packet
 
         if (crc == crc_check):
-            self.bus_rx_pkts_buffer.append(self.bus_rx_bytes_buffer[start_index:(crc_index+2)])
+            return buf
+        else:
+            return None
 
-        del self.bus_rx_bytes_buffer[:(crc_index+2)]
+    def handle_bus_pkts(self):
+        try:
+            pkt = self.bus_pkts_buffer[0]
+        except IndexError as e:
+            # Empty buffer
+            return
 
-        return
-
-    def bus_parse_pkts(self):
-        pkt = self.bus_rx_pkts_buffer[0]
         # Check if pkt is part of a sequence
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
         seq_flag = (pkt[2] & 0b11000000) >> 4
@@ -128,8 +92,9 @@ class Depacketizer:
             if (seq_flag == 0b01):
                 # Check that the entire sequence is received
                 completed = False
-                for i in range(len(self.bus_rx_pkts_buffer)):
-                    ipkt = self.bus_rx_pkts_buffer[i]
+
+                for i in range(len(self.bus_pkts_buffer)):
+                    ipkt = self.bus_pkts_buffer[i]
                     seq_flag = (ipkt[2] & 0b11000000) >> 4
                     if (seq_flag == 0b01):
                         completed = True
@@ -143,9 +108,11 @@ class Depacketizer:
                 ts_subsec = pkt[10] * 200
 
                 data_len = ((pkt[19] << 8) | pkt[20])
+
                 data = pkt[21:(21+data_len)]
+
                 for i in range(1, seq_cnt):
-                    pkt = bus_rx_pkts_buffer[i]
+                    pkt = bus_pkts_buffer[i]
                     data_len += ((pkt[19] << 8) | pkt[20])
                     data.extend(pkt[21:(21+data_len)])
 
@@ -155,43 +122,47 @@ class Depacketizer:
                 else: # assume this is PAT idk
                     ipc_pkt = RxPatPacket()
 
-                ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+                raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
 
-                self.rx_ipc_pkts_buffer.append(ipc_pkt)
+                self.ipc_pkts_buffer.append(raw_ipc_pkt)
 
-                del self.bus_rx_pkts_buffer[:seq_cnt]
+                del self.bus_pkts_buffer[:seq_cnt]
 
             #else: # End of sequence not received yet
 
         else:
             # pkt is not standalone or first of sequence
-            self.bus_rx_pkts_buffer.pop(0) # Just remove it
+            self.bus_pkts_buffer.pop(0) # Just remove it
 
         return
 
     def send_ipc_pkts(self):
 
-        ipc_pkt = self.rx_ipc_pkts_buffer.pop(0)
-        if (ipc_pkt.APID == 0x01):
-            self.rx_cmd_socket.send(ipc_pkt.encode())
+        try:
+            raw_ipc_pkt = self.ipc_pkts_buffer.pop(0)
+        except IndexError as e:
+            # Empty buffer, but that's ok
+            return
+
+        ipc_pkt = RxCommandPacket()
+        APID,_ = ipc_pkt.decode(raw_ipc_pkt)
+        if (APID == 0x01):
+            self.rx_cmd_socket.send(raw_ipc_pkt)
         else:
-            self.rx_pat_socket.send(ipc_pkt.encode())
+            self.rx_pat_socket.send(raw_ipc_pkt)
 
     def run(self):
-
+        print("Start Depacketizer")
         while True:
 
-            bus_packet
-            raw_bus_data = self.spi.read(SPI_XFER_LEN) #blocks
+            bus_packet = self.acquire_bus_pkt() # BLOCKS
 
-            print(raw_bus_data)
+            print(bus_packet)
+            self.bus_pkts_buffer.append(bus_packet)
 
-            # self.bus_rx_bytes_buffer.extend(raw_bus_data)
-            #
-            # # Parse packet from buffer
-            # self.bus_parse_bytes()
-            # self.bus_parse_pkts()
-            # self.send_ipc_pkts()
+            # Parse packet from buffer
+            self.handle_bus_pkts()
+            self.send_ipc_pkts()
 
 
 
