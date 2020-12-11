@@ -316,3 +316,77 @@ void Image::saveBMP(const string& filename) //e.g. const string filename( "singl
 		log(pat_health_port, fileStream, "In processing.cpp Image::saveBMP - Error during image saving using EasyBMP functions.");
 	}
 }
+
+// Image Saving Capability: save to PNG - adapted from github.mit.edu: CLICK_TVAC_Support/Dark/main.cpp (Author: Ondrej Cierny)
+//-----------------------------------------------------------------------------
+void Image::savePNG(std::string fileName)
+//-----------------------------------------------------------------------------
+{
+	vector<unsigned char> png;
+	png.resize(area.w * area.h * 2);
+
+	// Copy 10 bit data into 16 bit format
+	for (unsigned y = 0; y < area.h; y++)
+	{
+		for (unsigned x = 0; x < area.w; x++)
+		{
+			png[2 * area.w * y + 2 * x + 0] = data[(y*area.w) + x] >> 2; // most significant
+			png[2 * area.w * y + 2 * x + 1] = data[(y*area.w) + x] << 6; // least significant
+		}
+	}
+
+	// Notify main thread we finished copying data
+	// c.notify_one(); //original used multi-threading to minimize delays (will try without this first for code stability).
+
+	// Begin encoding into 16-bit greyscale PNG
+	unsigned error = lodepng::encode(fileName, png, area.w, area.h, LCT_GREY, 16);
+
+	if (error != 0)
+	{
+		log(pat_health_port, fileStream, "In processing.cpp Image::savePNG - Encoding error:", error);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Log Image from Camera
+//-----------------------------------------------------------------------------
+void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures, std::string fileType)
+{
+	int exposure_init = cameraObj.config->expose_us.read(); //get current camera exposure	
+	int exposures[3];
+	exposures[0] = exposure_init;
+	int num_images = 1;
+	if(save_extra_exposures){
+		exposures[1] = (exposure_init - 10)/2; num_images++;
+		exposures[2] = (10000 - exposure_init)/2; num_images++;
+	}	
+	
+	for(int i = 0; i < num_images; i++){
+		cameraObj.config->expose_us.write(exposures[i]); //set camera exposure
+		cameraObj.requestFrame(); //queue frame
+		if(cameraObj.waitForFrame())
+		{
+			Image frame(cameraObj, textFileIn, pat_health_port);
+			
+			if((fileType.compare(std::string("bmp")) == 0) || (fileType.compare(std::string("BMP")) == 0)){
+				const std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".bmp");
+				log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+				frame.saveBMP(imageFileName);
+			} else if((fileType.compare(std::string("png")) == 0) || (fileType.compare(std::string("PNG")) == 0)){
+				std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".png");
+				log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+				frame.savePNG(imageFileName);
+			} else{
+				log(pat_health_port, textFileIn, "In processing.cpp logImage - Error: unrecognized file type ", fileType);
+			}
+		}
+		else
+		{
+			log(pat_health_port, textFileIn, "In processing.cpp logImage - Error: waitForFrame");
+		}
+	}
+	
+	if(save_extra_exposures){
+		cameraObj.config->expose_us.write(exposure_init); //reset camera exposure
+	}
+}
