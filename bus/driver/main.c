@@ -75,11 +75,7 @@ static ssize_t packet_read(struct file *f, char __user *buf, size_t len, loff_t 
     /* Wait for SPI transfers until len data is read */
     while (kfifo_len(&rx_fifo) < len)
     {
-        if(wait_for_completion_interruptible(&xfer_done) != 0)
-        {
-            pr_warn_once(NAME ": read wait was interrupted\n");
-            break;
-        }
+        wait_for_completion(&xfer_done);
     }
 
     /* Try read data from rx fifo */
