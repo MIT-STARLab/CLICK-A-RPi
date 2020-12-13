@@ -31,7 +31,7 @@ sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev cro
 ```
 First prepare a Linux source directory:
 ```
-git clone --depth=1 https://github.com/raspberrypi/linux
+git clone --depth=1 --branch rpi-5.9.y https://github.com/raspberrypi/linux
 cd linux
 export MAKE="make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-"
 KERNEL="kernel7"
