@@ -75,19 +75,25 @@ static ssize_t packet_read(struct file *f, char __user *buf, size_t len, loff_t 
     /* Wait for SPI transfers until len data is read */
     while (kfifo_len(&rx_fifo) < len)
     {
-        if(wait_for_completion_interruptible(&xfer_done) != 0) break;
+        if(wait_for_completion_interruptible(&xfer_done) != 0)
+        {
+            pr_warn_once(NAME ": read wait was interrupted\n");
+            break;
+        }
     }
 
     /* Try read data from rx fifo */
-    if(kfifo_len(&rx_fifo) >= len && kfifo_to_user(&rx_fifo, buf, len, &copied) == 0 && copied == len)
+    if(kfifo_len(&rx_fifo) >= len)
     {
-        return len;
+        if(kfifo_to_user(&rx_fifo, buf, len, &copied) == 0)
+        {
+            if(copied == len) return len;
+            else pr_warn_once(NAME ": kfifo_to_user copied only %d out of %d", copied, len);
+        }
+        else pr_warn_once(NAME ": kfifo_to_user failed");
     }
-    else
-    {
-        pr_warn_once(NAME ": rx fifo read error\n");
-        return -EAGAIN;
-    }
+    else pr_warn_once(NAME ": read request for %d but fifo only has %d\n", len, kfifo_len(&rx_fifo));
+    return -EAGAIN;
 }
 
 /* Add tx packet from userspace to kernel memory queue via write to /dev */
