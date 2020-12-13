@@ -41,7 +41,7 @@ $MAKE modules_prepare
 ```
 Then, navigate to the driver source directory and run:
 ```
-make LINUX_DIR="<path to linux repo>"
+make LINUX_DIR="<path to linux repo>" clean all symbols
 ```
 The `click_spi.dts` file has to be compiled using the [device-tree-compiler](https://packages.debian.org/buster/device-tree-compiler). The following command will build it:
 ```
