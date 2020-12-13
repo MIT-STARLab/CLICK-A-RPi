@@ -25,7 +25,11 @@ There are two steps to build the driver:
 1. Compiling the kernel module
 2. Compiling the device tree overlay
 
-The module can be cross-compiled on any linux host. First prepare a Linux source directory:
+The module can be cross-compiled on any linux host with the following packages:
+```
+sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-armhf
+```
+First prepare a Linux source directory:
 ```
 git clone --depth=1 https://github.com/raspberrypi/linux
 cd linux
