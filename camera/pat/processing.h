@@ -5,6 +5,7 @@
 #include <vector>
 #include "camera.h"
 #include "EasyBMP.h"
+#include "lodepng.h"
 
 #define LINK_MAX_FRAME_HEIGHT 640
 
@@ -49,6 +50,10 @@ public:
 	uint16_t autoThresholdPeakToMax(float fraction = 1.75);
 	int performPixelGrouping(uint16_t threshold = 0);
 	void saveBMP(const string& filename);
+	void savePNG(std::string fileName);
 };
+
+// Log camera images
+void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures = false, std::string fileType = std::string("png"));
 
 #endif

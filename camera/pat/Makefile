@@ -9,9 +9,7 @@ LIBS = -lmvPropHandling -lmvDeviceManager -lpthread -lzmq
 ## Output
 ODIR = .
 POINTING_OUT = pat
-TESTIPC_OUT = testipc
-POINTING_OBJ = main.o camera.o processing.o fsm.o tracking.o calibration.o EasyBMP.o packetdef.o
-TESTIPC_OBJ = testIPC.o packetdef.o
+POINTING_OBJ = main.o camera.o processing.o fsm.o tracking.o calibration.o EasyBMP.o packetdef.o log.o lodepng.o
 
 all: $(POINTING_OUT)
 

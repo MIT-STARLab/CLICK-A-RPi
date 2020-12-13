@@ -39,7 +39,33 @@ void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
 	pat_health_port.send(message);	
 }
 
-// TODO: create_packet_tx definition (don't need to send bus commands for basic operation)
+void send_packet_tx_adcs(zmq::socket_t& tx_packets_port, float body_frame_x_angular_error_radians, float body_frame_y_angular_error_radians)
+{
+	pat_tx_adcs_packet_struct packet_struct = pat_tx_adcs_packet_struct();
+	packet_struct.apid = TX_ADCS_APID;
+	packet_struct.data_size = sizeof(packet_struct.data_to_write);
+	
+	uint32_t buffer_x_error_little_endian;
+	memcpy(&buffer_x_error_little_endian, &body_frame_x_angular_error_radians, sizeof(buffer_x_error_little_endian));
+	packet_struct.data_to_write[0] = htonl(buffer_x_error_little_endian); //convert to big endian
+	
+	uint32_t buffer_y_error_little_endian;
+	memcpy(&buffer_y_error_little_endian, &body_frame_y_angular_error_radians, sizeof(buffer_y_error_little_endian));
+	packet_struct.data_to_write[1] = htonl(buffer_y_error_little_endian); //convert to big endian
+	
+	float body_frame_z_angular_error_radians = 0; //set to zero - see bus pointing feedback user's guide (one drive)
+	uint32_t buffer_z_error_little_endian;
+	memcpy(&buffer_z_error_little_endian, &body_frame_z_angular_error_radians, sizeof(buffer_z_error_little_endian));
+	packet_struct.data_to_write[2] = htonl(buffer_z_error_little_endian); //convert to big endian
+
+	char packet[sizeof(pat_tx_adcs_packet_struct)];
+	memcpy(packet, &packet_struct, sizeof(packet));	
+	
+	zmq::message_t message(sizeof(packet));
+	memcpy(message.data(), packet, sizeof(packet));
+	
+	tx_packets_port.send(message);	
+}
 
 // Packet Receiving & Parsing for SUB Processes:
 
