@@ -4,6 +4,7 @@ import sys
 import zmq
 import json
 import time
+import fl
 
 import sys #importing options and functions
 sys.path.append('../lib/')
@@ -44,6 +45,34 @@ def demogrify(topicmsg):
 
 print ("\n")
 
+handle = fl.FLHandle()
+try:
+    fl.flInitialise(0)
+
+    vp = argList.v[0]
+    print("Attempting to open connection to FPGALink device {}...".format(vp))
+    try:
+        handle = fl.flOpen(vp)
+    except fl.FLException as ex:
+        if ( argList.i ):
+            ivp = argList.i[0]
+            print("Loading firmware into {}...".format(ivp))
+            fl.flLoadStandardFirmware(ivp, vp);
+	    print type(ivp)
+	    print type(vp)
+            # Long delay for renumeration
+            # TODO: fix this hack.  The timeout value specified in flAwaitDevice() below doesn't seem to work
+            time.sleep(3)
+            
+            print("Awaiting renumeration...")
+            if ( not fl.flAwaitDevice(vp, 10000) ):
+                raise fl.FLException("FPGALink device did not renumerate properly as {}".format(vp))
+
+            print("Attempting to open connection to FPGALink device {} again...".format(vp))
+            handle = fl.flOpen(vp)
+        else:
+            raise fl.FLException("Could not open FPGALink device at {} and no initial VID:PID was supplied".format(vp))
+
 while True:
 
     # wait for a package to arrive
@@ -52,8 +81,20 @@ while True:
 
     # decode the package
     ipc_fpgarqpacket = FPGAMapRequestPacket()
-    ipc_fpgarqpacket.decode(message)
+    return_addr, rq_number, rw_flag, start_addr, size, write_data  = ipc_fpgarqpacket.decode(message) #
     print (ipc_fpgarqpacket)
+
+    if(start_addr == 0x20):
+        if(write_data == 0x55):
+            fl.flWriteChannel(handle, 35, 0x55)
+            time.sleep(0.001)
+            fl.flWriteChannel(handle, 32, 0x55) 
+            time.sleep(0.001)
+        if(write_data == 0x0F):
+            fl.flWriteChannel(handle, 32, 0x0F) 
+            time.sleep(0.001)
+    
+    fl.flWriteChannel(handle, start_addr, write_data)
 
     if ipc_fpgarqpacket.rw_flag == 1:
         print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))

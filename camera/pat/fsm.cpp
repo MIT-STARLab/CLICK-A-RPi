@@ -13,8 +13,8 @@ fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_
 //-----------------------------------------------------------------------------
 {
 	// Voltage setting (ref. PicoAmp datasheet)
-	voltageBias = (vBias/160)*65535;
-	voltageMax = (vMax/160)*32768;
+	voltageBias = 22000; //(vBias/160)*65535;
+	voltageMax = 34000; //(vMax/160)*32768;
 
 	// Initialize DAC - AD5664
 	log(pat_health_port, fileStream, "Initializing FSM DAC...");
