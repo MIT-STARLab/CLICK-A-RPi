@@ -17,25 +17,30 @@ Only one process can open the device for reading (O_RDWR/O_RDONLY). The read cal
 ## Hardware configuration
 The configurable HW parameters include the SPI frequency (via `SPI_FREQ`) and the GPIO pin which is used to handle the interrupt from VNC2L, set in `click_spi.dts`. The GPIO pin can be changed from its default (GPIO25) in `/boot/config.txt` by passing `dtoverlay=click_spi,irq=25`.
 
+## Building (with buildroot)
+The CLICK image generation tool will automatically pull this git repo and compile the kernel driver for the image.
+
 ## Building (without buildroot)
 There are two steps to build the driver:
 1. Compiling the kernel module
 2. Compiling the device tree overlay
 
-The module can be either cross-compiled on any linux host, or compiled directly on the RPi. This [guide](https://www.raspberrypi.org/documentation/linux/kernel/building.md) shows the necessary steps needed to prepare the build environment. Once the kernel is checked out, the necessary make commands are:
+The module can be cross-compiled on any linux host with the following packages:
 ```
-cp -r driver/ linux/
+sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-armhf
+```
+First prepare a Linux source directory:
+```
+git clone --depth=1 --branch rpi-5.9.y https://github.com/raspberrypi/linux
 cd linux
-KERNEL=kernel7
-make bcm2709_defconfig
-make prepare
-make modules_prepare
-cd driver
-make
+export MAKE="make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-"
+KERNEL="kernel7"
+$MAKE bcm2709_defconfig prepare modules_prepare
 ```
-
-When cross-compiling, all make commands need the `ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-` parameters.
-
+Then, navigate to the driver source directory and run:
+```
+make LINUX_DIR="<path to linux repo>" clean all symbols
+```
 The `click_spi.dts` file has to be compiled using the [device-tree-compiler](https://packages.debian.org/buster/device-tree-compiler). The following command will build it:
 ```
 dtc -O dtb -o click_spi.dtbo -b 0 -@ click_spi.dts
