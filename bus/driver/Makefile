@@ -7,4 +7,6 @@ all:
 	$(MAKE) -C $(LINUX_DIR) M=$(PWD) modules
 clean:
 	$(MAKE) -C $(LINUX_DIR) M=$(PWD) clean
+symbols:
+	readelf -s $(modname).ko | grep -oP "(?<= UND ).*" > symbols.txt
 	
