@@ -33,7 +33,7 @@
 #define PACKET_TC_MAX_LEN 1024
 #define PACKET_TM_MAX_LEN 4100
 #define PACKET_LATENCY 4
-#define DEFAULT_READ_LEN 104
+#define DEFAULT_READ_LEN 128
 #define SYNC_VALID(sync) (sync == PACKET_SYNC_MARKER)
 #define SYNC_UPDATE(sync, ptr) sync = ((sync << 8) | ((*(ptr)) & 0xFF))
 

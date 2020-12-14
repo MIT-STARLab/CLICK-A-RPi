@@ -50,7 +50,6 @@ static int device_open(struct inode *inode, struct file *file)
     {
         if (dev_busy) return -EBUSY;
         dev_busy = true;
-        pr_notice_once(NAME ": /dev/" DEVICE " open\n");
     }
     return 0;
 }
@@ -83,7 +82,10 @@ static ssize_t packet_read(struct file *f, char __user *buf, size_t len, loff_t 
     {
         if(kfifo_to_user(&rx_fifo, buf, len, &copied) == 0)
         {
-            if(copied == len) return len;
+            if(copied == len)
+            {
+                return len;
+            }
             else pr_warn_once(NAME ": kfifo_to_user copied only %d out of %d", copied, len);
         }
         else pr_warn_once(NAME ": kfifo_to_user failed");
@@ -212,7 +214,7 @@ static int driver_probe(struct spi_device *spi)
     /* Success */
     else
     {
-        dev_info(&spi->dev, "loaded\n");
+        dev_notice(&spi->dev, "loaded\n");
         return res;
     }
 
@@ -239,7 +241,7 @@ static int driver_remove(struct spi_device *spi)
     unregister_chrdev_region(data->dev_num, 1);
     kfifo_free(&rx_fifo);
     tx_queue_clear();
-    dev_info(&spi->dev, "unloaded\n");
+    dev_notice(&spi->dev, "unloaded\n");
     return 0;
 }
 

@@ -35,9 +35,7 @@ git clone --depth=1 --branch rpi-5.9.y https://github.com/raspberrypi/linux
 cd linux
 export MAKE="make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-"
 KERNEL="kernel7"
-$MAKE bcm2709_defconfig
-$MAKE prepare
-$MAKE modules_prepare
+$MAKE bcm2709_defconfig prepare modules_prepare
 ```
 Then, navigate to the driver source directory and run:
 ```
