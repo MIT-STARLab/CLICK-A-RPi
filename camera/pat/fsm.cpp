@@ -17,12 +17,16 @@ fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_
 	voltageMax = 34000; //(vMax/160)*32768;
 
 	// Initialize DAC - AD5664
-	log(pat_health_port, fileStream, "Initializing FSM DAC...");
 	oldX = 1; oldY = 1;
+	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding DAC_FULL_RESET = ", DAC_FULL_RESET);
 	sendCommand(DAC_FULL_RESET);
+	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE = ", DAC_ENABLE_INTERNAL_REFERENCE);
 	sendCommand(DAC_ENABLE_INTERNAL_REFERENCE);
+	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS = ", DAC_ENABLE_ALL_DAC_CHANNELS);
 	sendCommand(DAC_ENABLE_ALL_DAC_CHANNELS);
+	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC = ", DAC_ENABLE_SOFTWARE_LDAC);
 	sendCommand(DAC_ENABLE_SOFTWARE_LDAC);
+	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding Normalized Angles to (0,0).");
 	setNormalizedAngles(0, 0);
 }
 
