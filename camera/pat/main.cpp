@@ -38,12 +38,12 @@ public:
 
 //Turn on Calibration Laser
 void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
-	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_ON, WRITE, request_number);
+	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
 }
 
 //Turn Off Calibration Laser
 void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
-	send_packet_fpga_map_request(fpga_map_request_port, CALIB_CH, CALIB_OFF, WRITE, request_number);
+	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -134,9 +134,19 @@ int main() //int argc, char** argv
 	int centerOffsetY = OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	
-	// Hardware init			
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);	
+	log(pat_health_port, textFileOut, "Testing Laser Commands...");
+	for(int i = 0;;i++){
+		log(pat_health_port, textFileOut, "Laser ON...");
+		laserOn(fpga_map_request_port, i);
+		std::this_thread::sleep_for(std::chrono::seconds(3));
+		log(pat_health_port, textFileOut, "Laser OFF...");
+		laserOff(fpga_map_request_port, i);
+		std::this_thread::sleep_for(std::chrono::seconds(3));
+	}
+	
+	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
 	Tracking track(camera, calibration, textFileOut, pat_health_port);
 

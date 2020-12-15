@@ -4,15 +4,26 @@
 
 // Packet Sending for PUB Processes:
 
-void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num)
+void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, bool read_write, uint8_t request_num)
 {
 	fpga_request_packet_struct packet_struct = fpga_request_packet_struct();
 	packet_struct.return_address = 3968; //Static PID: can replace with in-code console command to ps if dynamic PID is desired.
 	packet_struct.request_number = request_num;
 	packet_struct.read_write_flag = read_write;
-	packet_struct.start_address = channel;
-	packet_struct.data_size = sizeof(data); 
-	packet_struct.data_to_write = data;
+	packet_struct.start_address = channel;	
+	packet_struct.data_to_write[0] = 0x00; //pre-padding
+	packet_struct.data_to_write[1] = 0x00; //pre-padding
+	packet_struct.data_to_write[2] = 0x00; //pre-padding
+	packet_struct.data_to_write[3] = data;
+	packet_struct.data_size = sizeof(packet_struct.data_to_write); 
+	
+	std::cout << "packetdef - packet size: " << sizeof(fpga_request_packet_struct) << std::endl;
+	std::cout << "packetdef - return_address: " << packet_struct.return_address << std::endl;
+	std::cout << "packetdef - request_number: " << unsigned(packet_struct.request_number) << std::endl;
+	std::cout << "packetdef - read_write_flag: " << packet_struct.read_write_flag << std::endl;
+	std::cout << "packetdef - start_address: " << packet_struct.start_address << std::endl;
+	std::cout << "packetdef - data_size: " << packet_struct.data_size << std::endl;
+	std::cout << "packetdef - data_to_write: " << unsigned(packet_struct.data_to_write[3]) << std::endl;
 	
 	char packet[sizeof(fpga_request_packet_struct)];
 	memcpy(packet, &packet_struct, sizeof(packet));	   

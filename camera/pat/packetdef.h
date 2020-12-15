@@ -26,7 +26,7 @@ struct fpga_request_packet_struct{
 	bool read_write_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	uint32_t data_to_write;
+	uint8_t data_to_write[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct pat_health_packet_struct{
@@ -49,7 +49,7 @@ struct pat_control_packet_struct{
 };
 
 // Packet Sending for PUB Processes:
-void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
+void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, bool read_write, uint8_t request_num);
 
 void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
 

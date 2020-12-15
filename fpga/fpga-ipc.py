@@ -4,8 +4,8 @@ import sys
 import zmq
 import json
 import time
-import fl
 import argparse
+import fl
 
 import sys #importing options and functions
 sys.path.append('../lib/')
@@ -114,8 +114,15 @@ while True:
 
     # decode the package
     ipc_fpgarqpacket = FPGAMapRequestPacket()
-    return_addr, rq_number, rw_flag, start_addr, size, write_data  = ipc_fpgarqpacket.decode(message) #
+    return_addr, rq_number, rw_flag, start_addr, size, write_data = ipc_fpgarqpacket.decode(message) #
     print (ipc_fpgarqpacket)
+    print "return_addr: ", return_addr
+    print "rq_number: ", rq_number
+    print "rw_flag: ", rw_flag
+    print "start_addr: ", start_addr
+    print "size: ", size
+    print "write_data (X): 0x%X" % int(write_data.encode('hex'), 16)
+    print "write_data (d): %d" % int(write_data.encode('hex'), 16)
 
     if(start_addr == 0x20):
         if(write_data == 0x55):
@@ -129,29 +136,29 @@ while True:
     
     fl.flWriteChannel(handle, start_addr, write_data)
 
-    if ipc_fpgarqpacket.rw_flag == 1:
-        print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-        time.sleep(1)
-        # send the FPGA_map_answer packet (write)
-        ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
-        raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=123, rw_flag=1, error_flag=0, start_addr=0xDEF0, size=0)
-        ipc_fpgaaswpacket_write.decode(raw)
-        print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
-        print(b'| ' + raw)
-        print(ipc_fpgaaswpacket_write)
-        send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
+    # ~ if ipc_fpgarqpacket.rw_flag == 1:
+        # ~ print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
+        # ~ time.sleep(1)
+        # ~ # send the FPGA_map_answer packet (write)
+        # ~ ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
+        # ~ raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=123, rw_flag=1, error_flag=0, start_addr=0xDEF0, size=0)
+        # ~ ipc_fpgaaswpacket_write.decode(raw)
+        # ~ print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
+        # ~ print(b'| ' + raw)
+        # ~ print(ipc_fpgaaswpacket_write)
+        # ~ send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
 
-    else:
-        print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-        time.sleep(1)
-        # send the FPGA_map_answer packet (read)
-        ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
-        raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=123, rw_flag=0, error_flag=0, start_addr=0x9ABC, size=16, read_data=b"I'm Mr. Meeseeks")
-        ipc_fpgaaswpacket_read.decode(raw)
-        print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
-        print(b'| ' + raw)
-        print(ipc_fpgaaswpacket_read)
-        send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_read.return_addr)
+    # ~ else:
+        # ~ print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
+        # ~ time.sleep(1)
+        # ~ # send the FPGA_map_answer packet (read)
+        # ~ ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
+        # ~ raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=123, rw_flag=0, error_flag=0, start_addr=0x9ABC, size=16, read_data=b"I'm Mr. Meeseeks")
+        # ~ ipc_fpgaaswpacket_read.decode(raw)
+        # ~ print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
+        # ~ print(b'| ' + raw)
+        # ~ print(ipc_fpgaaswpacket_read)
+        # ~ send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_read.return_addr)
 
 
 

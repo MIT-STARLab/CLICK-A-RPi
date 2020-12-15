@@ -236,7 +236,6 @@ class FPGAMapRequestPacket(IpcPacket):
         if self.rw_flag == 0:
             #Reading
             assert raw_size == 0
-
             self.write_data = ''
 
         elif self.rw_flag == 1:
