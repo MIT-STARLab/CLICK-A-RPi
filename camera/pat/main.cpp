@@ -230,7 +230,7 @@ int main() //int argc, char** argv
 				break;
 				
 			default:
-				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command. Standing by...");
+				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 		}	
 	}		
