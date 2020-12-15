@@ -76,7 +76,7 @@ void FSM::sendCommand(uint8_t cmd, uint8_t addr, uint16_t value)
 //-----------------------------------------------------------------------------
 {
   	spiBuffer[0] = cmd | addr; //a, bitwise OR operation
-  	spiBuffer[1] = (value >> 8) & 0xFF; //b, shift value to the right by 8 bits and mask to last 8 bits
+  	spiBuffer[1] = (value & 0xFF00) >> 8; //b, shift value to the right by 8 bits and mask to last 8 bits
   	spiBuffer[2] = value & 0xFF; //c, value to last 8 bits
 	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
 	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
@@ -88,7 +88,7 @@ void FSM::sendCommand(uint32_t cmd)
 //-----------------------------------------------------------------------------
 {
 	spiBuffer[0] = (cmd>>16) & 0xFF; //a, shift cmd to the right by 16 bits and mask to last 8 bits
-	spiBuffer[1] = (cmd>>8) & 0xFF; //b, shift cmd to the right by 8 bits and mask to last 8 bits
+	spiBuffer[1] = (cmd & 0xFF00) >> 8; //b, shift cmd to the right by 8 bits and mask to last 8 bits
 	spiBuffer[2] = cmd & 0xFF; //c, mask to last 8 bits
 	fsmWrite(FSM_A_CH, spiBuffer[0]); //write to channel a
 	fsmWrite(FSM_B_CH, spiBuffer[1]); //write to channel b
