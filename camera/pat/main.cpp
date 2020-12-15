@@ -162,16 +162,16 @@ int main() //int argc, char** argv
 	*/
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
-	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port);
-
 	//Catch camera initialization failure state in a re-initialization loop:
 	while(!camera.initialize()){
 		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
+
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
+	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
+	Tracking track(camera, calibration, textFileOut, pat_health_port);
 	
 	// Standby for command:
 	uint16_t command; 
