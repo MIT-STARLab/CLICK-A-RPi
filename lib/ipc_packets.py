@@ -42,7 +42,7 @@ class TxPacket(IpcPacket):
 
     def __str__(self):
         if self.payload:
-            return 'IPC TX_PACKET, APID:0x%02X, size:%d, payload:0x%X' % (self.APID, self.size, int.from_bytes(self.payload,'big'))
+            return 'IPC TX_PACKET, APID:0x%02X, size:%d, payload:0x%X' % (self.APID, self.size, int(self.payload.encode('hex'), 16)) #int.from_bytes(self.payload,'big')
         else:
             return 'IPC TX_PACKET, APID:0x%02X, size:%d' % (self.APID, self.size)
 
@@ -91,7 +91,7 @@ class RxCommandPacket(IpcPacket):
 
     def __str__(self):
         if self.payload:
-            return 'IPC RX_COMMAND_PACKET, APID:0x%02X, time:%d.%d s, size:%d, payload:0x%X' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size, int.from_bytes(self.payload,'big'))
+            return 'IPC RX_COMMAND_PACKET, APID:0x%02X, time:%d.%d s, size:%d, payload:0x%X' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size, int(self.payload.encode('hex'), 16))
         else:
             return 'IPC RX_COMMAND_PACKET, APID:0x%02X, time:%d.%d s, size:%d' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size)
 
@@ -100,7 +100,7 @@ class RxPATPacket(RxCommandPacket):
 
     def __str__(self):
         if self.payload:
-            return 'IPC RX_PAT_PACKET, APID:0x%02X, time:%d.%d s, size:%d, payload:0x%X' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size, int.from_bytes(self.payload,'big'))
+            return 'IPC RX_PAT_PACKET, APID:0x%02X, time:%d.%d s, size:%d, payload:0x%X' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size, int(self.payload.encode('hex'), 16))
         else:
             return 'IPC RX_PAT_PACKET, APID:0x%02X, time:%d.%d s, size:%d' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size)
 
@@ -254,7 +254,7 @@ class FPGAMapRequestPacket(IpcPacket):
         if self.rw_flag == 0:
             return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Reading %d bytes from address:0x%04X' % (self.return_addr, self.rq_number, self.size, self.start_addr)
         elif self.rw_flag == 1:
-            return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Writing %d bytes to address:0x%04X, data:0x%X' % (self.return_addr, self.rq_number, self.size, self.start_addr, int.from_bytes(self.write_data,'big'))
+            return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Writing %d bytes to address:0x%04X, data:0x%X' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.write_data.encode('hex'), 16))
 
 class FPGAMapAnswerPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
@@ -340,7 +340,7 @@ class FPGAMapAnswerPacket(IpcPacket):
         if self.error: status_str = 'Failed'
         else: status_str = 'Success'
         if self.rw_flag == 0:
-            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:0x%X, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int.from_bytes(self.read_data,'big'), status_str)
+            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:0x%X, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.read_data.encode('hex'), 16), status_str)
         elif self.rw_flag == 1:
             return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Write to address:0x%04X, %s' % (self.return_addr, self.rq_number, self.start_addr, status_str)
 
@@ -386,7 +386,7 @@ class HousekeepingControlPacket(GenericControlPacket):
 
     def __str__(self):
         if self.payload:
-            return 'IPC HK_CONTROL_PACKET, Command:0x%02X, size:%d, payload:0x%X' % (self.command, self.size, int.from_bytes(self.payload,'big'))
+            return 'IPC HK_CONTROL_PACKET, Command:0x%02X, size:%d, payload:0x%X' % (self.command, self.size, int(self.payload.encode('hex'), 16))
         else:
             return 'IPC HK_CONTROL_PACKET, Command:0x%02X, size:%d' % (self.command, self.size)
 
@@ -395,7 +395,7 @@ class PATControlPacket(GenericControlPacket):
 
     def __str__(self):
         if self.payload:
-            return 'IPC PAT_CONTROL_PACKET, Command:0x%02X, size:%d, payload:0x%X' % (self.command, self.size, int.from_bytes(self.payload,'big'))
+            return 'IPC PAT_CONTROL_PACKET, Command:0x%02X, size:%d, payload:0x%X' % (self.command, self.size, int(self.payload.encode('hex'), 16))
         else:
             return 'IPC PAT_CONTROL_PACKET, Command:0x%02X, size:%d' % (self.command, self.size)
 
