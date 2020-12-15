@@ -176,6 +176,9 @@ try:
         
         print "Writing to FPGA..."
         if(isCommCapable):
+            if(start_addr == 0x08):
+                print "Prior to FSM Command - Writing 0x55 to channel 33"
+                fl.flWriteChannel(handle, 33, 0x55)
             print "Writing to Channel: 0x%X" % start_addr
             print "Data to Write: 0x%X" % write_data
             fl.flWriteChannel(handle, start_addr, write_data)
