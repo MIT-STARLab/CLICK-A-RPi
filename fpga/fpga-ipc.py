@@ -114,25 +114,29 @@ while True:
 
     # decode the package
     ipc_fpgarqpacket = FPGAMapRequestPacket()
-    return_addr, rq_number, rw_flag, start_addr, size, write_data = ipc_fpgarqpacket.decode(message) #
+    return_addr, rq_number, rw_flag, start_addr, size, write_data_raw = ipc_fpgarqpacket.decode(message) #
+    write_data = int(write_data_raw.encode('hex'), 16) 
     print (ipc_fpgarqpacket)
     print "return_addr: ", return_addr
     print "rq_number: ", rq_number
     print "rw_flag: ", rw_flag
     print "start_addr: ", start_addr
     print "size: ", size
-    print "write_data (X): 0x%X" % int(write_data.encode('hex'), 16)
-    print "write_data (d): %d" % int(write_data.encode('hex'), 16)
+    print "write_data (X): 0x%X" % write_data
+    print "write_data (d): %d" % write_data
 
     if(start_addr == 0x20):
         if(write_data == 0x55):
+            print "Prior to Cal Laser ON - Writing 0x55 to channel 35"
             fl.flWriteChannel(handle, 35, 0x55)
             time.sleep(0.001)
-            fl.flWriteChannel(handle, 32, 0x55) 
-            time.sleep(0.001)
-        if(write_data == 0x0F):
-            fl.flWriteChannel(handle, 32, 0x0F) 
-            time.sleep(0.001)
+            #print "Prior to Cal Laser ON - Writing 0x55 to channel 32"
+            #fl.flWriteChannel(handle, 32, 0x55) 
+            #time.sleep(0.001)
+        #if(write_data == 0x0F):
+        #    print "Prior to Cal Laser OFF - Writing 0x0F to channel 32"
+        #    fl.flWriteChannel(handle, 32, 0x0F) 
+        #    time.sleep(0.001)
     
     fl.flWriteChannel(handle, start_addr, write_data)
 
