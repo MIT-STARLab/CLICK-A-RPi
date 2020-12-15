@@ -134,6 +134,7 @@ int main() //int argc, char** argv
 	int centerOffsetY = OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	
+	/*
 	log(pat_health_port, textFileOut, "Testing Laser Commands...");
 	for(int i = 0;;i++){
 		log(pat_health_port, textFileOut, "Laser ON...");
@@ -143,10 +144,25 @@ int main() //int argc, char** argv
 		laserOff(fpga_map_request_port, i);
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
+	*/
+
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	log(pat_health_port, textFileOut, "Turning Laser On...");
+	laserOn(fpga_map_request_port, 0);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	for(;;){
+		log(pat_health_port, textFileOut, "Moving FSM to (0.1,0)...");
+		fsm.setNormalizedAngles(0.1, 0);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		log(pat_health_port, textFileOut, "Moving FSM to (-0.1,0)...");
+		fsm.setNormalizedAngles(-0.1, 0);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
 	
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
+	//FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
 	Tracking track(camera, calibration, textFileOut, pat_health_port);
 

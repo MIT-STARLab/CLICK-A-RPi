@@ -173,13 +173,6 @@ try:
                     print "Channel 35 Value: 0x%X" % ch35_val
                 else:
                     print "Error: FPGA not Comm Capable"
-                #print "Prior to Cal Laser ON - Writing 0x55 to channel 32"
-                #fl.flWriteChannel(handle, 32, 0x55) 
-                #time.sleep(0.001)
-            #if(write_data == 0x0F):
-            #    print "Prior to Cal Laser OFF - Writing 0x0F to channel 32"
-            #    fl.flWriteChannel(handle, 32, 0x0F) 
-            #    time.sleep(0.001)
         
         print "Writing to FPGA..."
         if(isCommCapable):
