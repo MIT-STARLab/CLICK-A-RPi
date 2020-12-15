@@ -138,10 +138,10 @@ int main() //int argc, char** argv
 	for(int i = 0;;i++){
 		log(pat_health_port, textFileOut, "Laser ON...");
 		laserOn(fpga_map_request_port, i);
-		std::this_thread::sleep_for(std::chrono::seconds(3));
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 		log(pat_health_port, textFileOut, "Laser OFF...");
 		laserOff(fpga_map_request_port, i);
-		std::this_thread::sleep_for(std::chrono::seconds(3));
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
 	
 	// Hardware init				

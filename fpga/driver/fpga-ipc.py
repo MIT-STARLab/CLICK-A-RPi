@@ -183,11 +183,11 @@ try:
         
         print "Writing to FPGA..."
         if(isCommCapable):
-            print "Writing to Channel 0x%X: " % start_addr
-            print "Data to Write: " % write_data
+            print "Writing to Channel: 0x%X" % start_addr
+            print "Data to Write: 0x%X" % write_data
             fl.flWriteChannel(handle, start_addr, write_data)
             ch_val = fl.flReadChannel(handle, start_addr) 
-            print "New Channel Value: " % ch_val
+            print "New Channel Value: 0x%X" % ch_val
         else:
             print "Error: FPGA not Comm Capable"
 
