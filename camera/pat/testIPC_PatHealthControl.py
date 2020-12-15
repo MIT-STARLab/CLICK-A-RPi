@@ -121,7 +121,7 @@ time.sleep(1)
 
 # Send a command: CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_GET_IMAGE, CMD_CALIB_TEST
 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, CMD_CALIB_TEST)    
+ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, CMD_GET_IMAGE)     
 print(ipc_patControlPacket)
 time.sleep(1)
     

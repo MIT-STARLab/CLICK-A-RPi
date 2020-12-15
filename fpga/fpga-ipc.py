@@ -45,6 +45,10 @@ def demogrify(topicmsg):
 
 print ("\n")
 
+argList = parser.parse_args()
+
+print argList
+
 handle = fl.FLHandle()
 try:
     fl.flInitialise(0)
@@ -57,7 +61,7 @@ try:
         if ( argList.i ):
             ivp = argList.i[0]
             print("Loading firmware into {}...".format(ivp))
-            fl.flLoadStandardFirmware(ivp, vp);
+            fl.flLoadStandardFirmware(ivp, vp)
 	    print type(ivp)
 	    print type(vp)
             # Long delay for renumeration
@@ -72,6 +76,12 @@ try:
             handle = fl.flOpen(vp)
         else:
             raise fl.FLException("Could not open FPGALink device at {} and no initial VID:PID was supplied".format(vp))
+except fl.FLException as ex:
+    print(ex)
+finally:
+    fl.flClose(handle)
+
+
 
 while True:
 
