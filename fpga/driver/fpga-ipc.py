@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#/usr/bin/env python3
 
 import sys
 import zmq
@@ -14,8 +14,8 @@ import edfa
 import alignment
 
 import sys #importing options and functions
-sys.path.append('../lib/')
-sys.path.append('/home/pi/CLICK-A/github/lib/')
+sys.path.append('../../lib/')
+#sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket
 from zmqTxRx import recv_zmq, send_zmq
