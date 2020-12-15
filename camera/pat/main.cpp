@@ -163,8 +163,10 @@ int main() //int argc, char** argv
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
-	while(!camera.initialize()){
+	bool camera_initialized = camera.initialize();
+	while(!camera_initialized){
 		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		camera_initialized = camera.initialize();
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
