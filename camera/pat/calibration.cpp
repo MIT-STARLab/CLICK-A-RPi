@@ -23,12 +23,12 @@ bool Calibration::findExposureRange(Group& calib)
 	camera.config->expose_us.write(exposure);
 	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
 	
-    logImage(string("CALIBRATION_debug"), camera, fileStream, pat_health_port);
+    //logImage(string("CALIBRATION_debug"), camera, fileStream, pat_health_port);
     
     camera.requestFrame();
 
 	// Skip pre-queued old frames
-	//camera.ignoreNextFrames(skip);
+	camera.ignoreNextFrames(skip);
 
 	if(camera.waitForFrame())
 	{
@@ -110,11 +110,11 @@ bool Calibration::findExposureRange(Group& calib)
 			return true;
 		}
 		else{
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - camera.waitForFrame() Failed");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Image init logic checks failed");
 		}
 	}
 	else{
-		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Image init logic checks failed");
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - camera.waitForFrame() Failed");
 	}
 	return false;
 }
