@@ -180,7 +180,7 @@ int main() //int argc, char** argv
 	bool STANDBY = true;
 	while(STANDBY){
 		log(pat_health_port, textFileOut, "In main.cpp - Standing by for command...");
-		command = CMD_GET_IMAGE; //receive_packet_pat_control(pat_control_port);	
+		command = CMD_CALIB_TEST; //receive_packet_pat_control(pat_control_port);	
 		switch(command){
 			case CMD_START_PAT:
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop...");
