@@ -228,7 +228,8 @@ int main() //int argc, char** argv
 				{
 					log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
 				}				
-				break;
+				exit(-1);
+                break;
 				
 			default:
 				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
