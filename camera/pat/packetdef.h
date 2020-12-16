@@ -18,6 +18,8 @@
 #define CMD_START_PAT_BUS_FEEDBACK 0x05
 #define CMD_GET_IMAGE 0x06
 #define CMD_CALIB_TEST 0x07
+#define CMD_CALIB_LASER_TEST 0x08
+#define CMD_FSM_TEST 0x09
 
 // Packet Definitions
 struct fpga_request_packet_struct{

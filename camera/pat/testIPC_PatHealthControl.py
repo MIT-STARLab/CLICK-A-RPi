@@ -24,8 +24,10 @@ CMD_START_PAT_STATIC_POINT = 0x04
 CMD_START_PAT_BUS_FEEDBACK = 0x05
 CMD_GET_IMAGE = 0x06
 CMD_CALIB_TEST = 0x07
+CMD_CALIB_LASER_TEST = 0x08
+CMD_FSM_TEST = 0x09
 
-cmd_list = (CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST) 
+cmd_list = (CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST) 
 
 class IpcPacket:
     def __init__(self): pass
@@ -146,6 +148,8 @@ while True:
                 print "CMD_START_PAT_BUS_FEEDBACK = ", CMD_START_PAT_BUS_FEEDBACK
                 print "CMD_GET_IMAGE = ", CMD_GET_IMAGE
                 print "CMD_CALIB_TEST = ", CMD_CALIB_TEST
+                print "CMD_CALIB_LASER_TEST = ", CMD_CALIB_LASER_TEST
+                print "CMD_FSM_TEST = ", CMD_FSM_TEST
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if((user_cmd >= min(cmd_list)) & (user_cmd <= max(cmd_list))):
                         print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))

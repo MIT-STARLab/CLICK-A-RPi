@@ -138,34 +138,6 @@ int main() //int argc, char** argv
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	uint16_t command; 
 	
-    /*	
-    //Test Laser Control
-	log(pat_health_port, textFileOut, "Testing Laser Commands...");
-	for(int i = 0;;i++){
-		log(pat_health_port, textFileOut, "Laser ON...");
-		laserOn(fpga_map_request_port, i);
-		std::this_thread::sleep_for(std::chrono::seconds(10));
-		log(pat_health_port, textFileOut, "Laser OFF...");
-		laserOff(fpga_map_request_port, i);
-		std::this_thread::sleep_for(std::chrono::seconds(10));
-	}
-	*/
-    /*
-    //Test FSM Control
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	log(pat_health_port, textFileOut, "Turning Laser On...");
-	laserOn(fpga_map_request_port, 0);
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	for(;;){
-		log(pat_health_port, textFileOut, "Moving FSM to (0.1,0)...");
-		fsm.setNormalizedAngles(0.1, 0);
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-		log(pat_health_port, textFileOut, "Moving FSM to (-0.1,0)...");
-		fsm.setNormalizedAngles(-0.1, 0);
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
-	*/
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -232,7 +204,7 @@ int main() //int argc, char** argv
 					
 				case CMD_GET_IMAGE:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
-					camera.config->expose_us.write(MAX_EXPOSURE/2);
+					camera.config->expose_us.write(10*MIN_EXPOSURE);
 					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, true); 
 					break;		
 							
@@ -249,6 +221,27 @@ int main() //int argc, char** argv
 					{
 						log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
 					}				
+					break;
+				
+				case CMD_CALIB_LASER_TEST:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command.");
+					laserOn(fpga_map_request_port, 0);
+					camera.config->expose_us.write(10*MIN_EXPOSURE); 
+					logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port, true); 
+					break;
+
+				case CMD_FSM_TEST:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_FSM_TEST command.");
+					laserOn(fpga_map_request_port, 0);
+					camera.config->expose_us.write(10*MIN_EXPOSURE); 
+					fsm.setNormalizedAngles(0,0);
+					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
+					fsm.setNormalizedAngles(0.1,0);
+					logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
+					fsm.setNormalizedAngles(0,0.1);
+					logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
+					fsm.setNormalizedAngles(0.1,0.1);
+					logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
 					break;
 					
 				default:
