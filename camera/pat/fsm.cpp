@@ -100,6 +100,6 @@ void FSM::sendCommand(uint32_t cmd)
 void FSM::fsmWrite(uint16_t channel, uint8_t data)
 //-----------------------------------------------------------------------------
 {
-	log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
+	//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
 	send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, 0); //TBR request_number
 }

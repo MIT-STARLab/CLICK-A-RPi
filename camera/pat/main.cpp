@@ -107,6 +107,9 @@ int main() //int argc, char** argv
     rx_pat_packets_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	*/
 	
+	// to use zmq_poll correctly, we construct this vector of pollitems (based on: https://ogbe.net/blog/zmq_helloworld.html)
+	std::vector<zmq::pollitem_t> p = {{pat_control_port, 0, ZMQ_POLLIN, 0}};
+	
 	//Allow sockets some time (otherwise you get dropped packets)
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 		
@@ -122,7 +125,7 @@ int main() //int argc, char** argv
 	enum Phase { START, CALIBRATION, ACQUISITION, STATIC_POINT, OPEN_LOOP, CL_INIT, CL_BEACON, CL_CALIB };
 	const char *phaseNames[8] = {"START","CALIBRATION","ACQUISITION","STATIC_POINT","OPEN_LOOP","CL_INIT","CL_BEACON","CL_CALIB"};
 	
-	// Tracking variables
+	// Initialize execution variables
 	Phase phase = START;
 	Group beacon, calib;
 	AOI beaconWindow, calibWindow;
@@ -133,8 +136,10 @@ int main() //int argc, char** argv
 	int centerOffsetX = OFFSET_X; 
 	int centerOffsetY = OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
+	uint16_t command; 
 	
     /*	
+    //Test Laser Control
 	log(pat_health_port, textFileOut, "Testing Laser Commands...");
 	for(int i = 0;;i++){
 		log(pat_health_port, textFileOut, "Laser ON...");
@@ -146,6 +151,7 @@ int main() //int argc, char** argv
 	}
 	*/
     /*
+    //Test FSM Control
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 	log(pat_health_port, textFileOut, "Turning Laser On...");
@@ -163,12 +169,22 @@ int main() //int argc, char** argv
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
-	bool camera_initialized = camera.initialize();
+	bool camera_initialized = camera.initialize();	
 	while(!camera_initialized){
 		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		// Listen for exit command 		
+		zmq::poll(p.data(), 1, 1000); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(p[0].revents & ZMQ_POLLIN){
+			// received something on the first (only) socket
+			command = receive_packet_pat_control(pat_control_port);
+			if(command == CMD_END_PAT){
+				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
+				exit(-1);
+			}
+		}
+		//Try to initialize again
 		camera_initialized = camera.initialize();
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
+	}	
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
 
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
@@ -176,65 +192,70 @@ int main() //int argc, char** argv
 	Tracking track(camera, calibration, textFileOut, pat_health_port);
 	
 	// Standby for command:
-	uint16_t command; 
 	bool STANDBY = true;
 	while(STANDBY){
-		log(pat_health_port, textFileOut, "In main.cpp - Standing by for command...");
-		command = CMD_CALIB_TEST; //receive_packet_pat_control(pat_control_port);	
-		switch(command){
-			case CMD_START_PAT:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop...");
-				STANDBY = false;
-				break;
+		log(pat_health_port, textFileOut, "In main.cpp - Standing by for command..."); //health heartbeat		
+		// Listen for command 		
+		zmq::poll(p.data(), 1, 1000); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(p[0].revents & ZMQ_POLLIN)
+		{
+			// received something on the first (only) socket
+			command = receive_packet_pat_control(pat_control_port);
+			switch(command)
+			{
+				case CMD_START_PAT:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop...");
+					STANDBY = false;
+					break;
+					
+				case CMD_END_PAT:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
+					exit(-1);
+					
+				case CMD_START_PAT_OPEN_LOOP:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_OPEN_LOOP command. Proceeding to main PAT loop...");
+					openLoop = true;
+					STANDBY = false;
+					break;
 				
-			case CMD_END_PAT:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
-				exit(-1);
-				
-			case CMD_START_PAT_OPEN_LOOP:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_OPEN_LOOP command. Proceeding to main PAT loop...");
-				openLoop = true;
-				STANDBY = false;
-				break;
-			
-			case CMD_START_PAT_STATIC_POINT:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
-				staticPoint = true;
-				STANDBY = false;
-				break;
-				
-			case CMD_START_PAT_BUS_FEEDBACK:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_BUS_FEEDBACK command. Proceeding to main PAT loop...");
-				sendBusFeedback = true;
-				STANDBY = false;
-				break;		
-				
-			case CMD_GET_IMAGE:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
-				camera.config->expose_us.write(MAX_EXPOSURE/2);
-				logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, true); 
-				break;		
-						
-			case CMD_CALIB_TEST:
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_TEST command.");
-				//Run calibration:
-				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on	
-				if(calibration.run(calib)) //sets calib exposure
-				{
-					calibExposure = camera.config->expose_us.read(); //save calib exposure
-					log(pat_health_port, textFileOut, "In main.cpp CMD_CALIB_TEST - Calibration complete. Calib Exposure = ", calibExposure, " us.");
-				}
-				else
-				{
-					log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
-				}				
-				exit(-1);
-                break;
-				
-			default:
-				log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-		}	
+				case CMD_START_PAT_STATIC_POINT:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
+					staticPoint = true;
+					STANDBY = false;
+					break;
+					
+				case CMD_START_PAT_BUS_FEEDBACK:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_BUS_FEEDBACK command. Proceeding to main PAT loop...");
+					sendBusFeedback = true;
+					STANDBY = false;
+					break;		
+					
+				case CMD_GET_IMAGE:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
+					camera.config->expose_us.write(MAX_EXPOSURE/2);
+					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, true); 
+					break;		
+							
+				case CMD_CALIB_TEST:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_TEST command.");
+					//Run calibration:
+					laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on	
+					if(calibration.run(calib)) //sets calib exposure
+					{
+						calibExposure = camera.config->expose_us.read(); //save calib exposure
+						log(pat_health_port, textFileOut, "In main.cpp CMD_CALIB_TEST - Calibration complete. Calib Exposure = ", calibExposure, " us.");
+					}
+					else
+					{
+						log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
+					}				
+					break;
+					
+				default:
+					log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+			}	
+		}
 	}		
 	// END of STANDBY loop
 	
@@ -248,9 +269,6 @@ int main() //int argc, char** argv
 	
 	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
 	signal(SIGINT, [](int signum) { stop = true; });
-	
-	// to use zmq_poll correctly, we construct this vector of pollitems (based on: https://ogbe.net/blog/zmq_helloworld.html)
-	std::vector<zmq::pollitem_t> p = {{pat_control_port, 0, ZMQ_POLLIN, 0}};
 		
 	// Main PAT Loop
 	for(int i = 1; ; i++)
@@ -259,7 +277,7 @@ int main() //int argc, char** argv
 		if(stop) break;
 		
 		// Listen for CMD_END_PAT 		
-		zmq::poll(p.data(), 1, -1); // when timeout (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		zmq::poll(p.data(), 1, 10); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(p[0].revents & ZMQ_POLLIN) {
 			// received something on the first (only) socket
 			command = receive_packet_pat_control(pat_control_port);
