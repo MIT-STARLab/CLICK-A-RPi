@@ -22,10 +22,13 @@ bool Calibration::findExposureRange(Group& calib)
 	camera.config->binningMode.write(cbmOff);
 	camera.config->expose_us.write(exposure);
 	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
-	camera.requestFrame();
+	
+    logImage(string("CALIBRATION_debug"), camera, fileStream, pat_health_port);
+    
+    camera.requestFrame();
 
 	// Skip pre-queued old frames
-	camera.ignoreNextFrames(skip);
+	//camera.ignoreNextFrames(skip);
 
 	if(camera.waitForFrame())
 	{
