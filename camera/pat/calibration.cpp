@@ -57,7 +57,9 @@ bool Calibration::findExposureRange(Group& calib)
 
 		if(init.histBrightest - init.histPeak <= TRACK_GOOD_PEAKTOMAX_DISTANCE){
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
-			"(init.histBrightest - init.histPeak = ", init.histBrightest - init.histPeak, ") <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE, ")");
+			"(init.histBrightest = ", init.histBrightest, ") - ",
+			"(init.histPeak = ", init.histPeak, ") = ", init.histBrightest - init.histPeak, 
+			" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE, ")");
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
 			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
