@@ -106,8 +106,13 @@ bool Calibration::findExposureRange(Group& calib)
 			calib.pixelCount = spot.pixelCount;
 			return true;
 		}
+		else{
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - camera.waitForFrame() Failed");
+		}
 	}
-
+	else{
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Image init logic checks failed");
+	}
 	return false;
 }
 
@@ -128,7 +133,7 @@ bool Calibration::run(Group& calib)
 	// Find the exposure setting range
 	smoothing = 0;
 	bool success = findExposureRange(calib);
-	if(smoothing != 0) success = findExposureRange(calib);
+	//if(smoothing != 0) success = findExposureRange(calib);
 
 	if(success)
 	{
@@ -182,9 +187,8 @@ bool Calibration::run(Group& calib)
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Calculated sensitivity matrix [", s00, s01, ";", s10, s11, "]");
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Calculated affine transform [", a00, a01, ";", a10, a11, "] + [", t0, ";", t1, "]");
 		return true;
-
 	}
-
+	log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - findExposureRange Failed");
 	return false;
 }
 
