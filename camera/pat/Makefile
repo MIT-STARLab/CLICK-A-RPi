@@ -17,7 +17,10 @@ all: $(POINTING_OUT)
 	$(CXX) -c -o $@ $< $(CXXFLAGS) -I$(mvINC) 
 
 $(POINTING_OUT): $(POINTING_OBJ)
-	$(CXX) -o $@ $^ $(CXXFLAGS) -L$(mvLIB) $(LIBS) 
+	$(CXX) -o $@ $^ $(CXXFLAGS) -L$(mvLIB) $(LIBS)
+
+enumerate : enumerate.o
+	$(CXX) -o $@ $^ $(CXXFLAGS) -L$(mvLIB) -lmvDeviceManager
 
 debug: CXXFLAGS += -DDEBUG -g
 debug: all
