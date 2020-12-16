@@ -1,0 +1,38 @@
+[0.40] In camera.cpp Camera::Initialize - device found 
+[0.41] In main.cpp Camera Connection Initialized 
+[0.41] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.41] fsmWrite - channel =  8 , data =  40 
+[0.41] fsmWrite - channel =  9 , data =  0 
+[0.41] fsmWrite - channel =  10 , data =  1 
+[0.41] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.41] fsmWrite - channel =  8 , data =  56 
+[0.41] fsmWrite - channel =  9 , data =  0 
+[0.41] fsmWrite - channel =  10 , data =  1 
+[0.41] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.41] fsmWrite - channel =  8 , data =  32 
+[0.41] fsmWrite - channel =  9 , data =  0 
+[0.41] fsmWrite - channel =  10 , data =  15 
+[0.41] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.41] fsmWrite - channel =  8 , data =  48 
+[0.41] fsmWrite - channel =  9 , data =  0 
+[0.41] fsmWrite - channel =  10 , data =  0 
+[0.41] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.41] fsmWrite - channel =  8 , data =  0 
+[0.41] fsmWrite - channel =  9 , data =  85 
+[0.41] fsmWrite - channel =  10 , data =  240 
+[0.42] fsmWrite - channel =  8 , data =  1 
+[0.42] fsmWrite - channel =  9 , data =  85 
+[0.42] fsmWrite - channel =  10 , data =  240 
+[0.42] fsmWrite - channel =  8 , data =  3 
+[0.42] fsmWrite - channel =  9 , data =  85 
+[0.42] fsmWrite - channel =  10 , data =  240 
+[0.42] fsmWrite - channel =  8 , data =  18 
+[0.42] fsmWrite - channel =  9 , data =  85 
+[0.42] fsmWrite - channel =  10 , data =  240 
+[0.42] In main.cpp - Standing by for command... 
+[0.42] In main.cpp - Received CMD_CALIB_TEST command. 
+[0.63] In processing.cpp Image::performPixelGrouping - Frame has too many groups! 
+[0.65] In calibration.cpp Calibration::findExposureRange - Error: (num_groups =  -1 ) <= 0 
+[0.65] In processing.cpp logImage - Saving image telemetry as:  2020-12-15-21-03-51_DEBUG_findExposureRange_exp_1000.png 
+[1.39] In calibration.cpp Calibration::run - findExposureRange Failed 
+[1.39] In main.cpp CMD_CALIB_TEST - Calibration failed! 
