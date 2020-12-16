@@ -99,6 +99,29 @@ uint16_t receive_packet_pat_control(zmq::socket_t& pat_control_port, char* data_
 	return packet_struct.command;
 }
 
-// TODO: fpga_map_answer packet parsing
+uint8_t receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port)
+{
+	zmq::message_t message;
+	fpga_map_answer_port.recv(message, zmq::recv_flags::none);
+	
+	char packet[sizeof(fpga_answer_packet_struct)];
+	memcpy(packet, message.data(), message.size());
+	
+	fpga_answer_packet_struct packet_struct = fpga_answer_packet_struct(); //initialize
+	memcpy(&packet_struct, packet, sizeof(packet));
+	
+	//printf("\nFPGA Answer Packet Received (Internal): \nHeader: %s \nCommand: %d \nSize: %d \nData: %s \n", packet_struct.header, packet_struct.command, packet_struct.data_size, packet_struct.data_to_read);
+	
+	std::cout << "packetdef - packet size: " << sizeof(fpga_answer_packet_struct) << std::endl;
+	std::cout << "packetdef - return_address: " << packet_struct.header << std::endl;
+	std::cout << "packetdef - return_address: " << packet_struct.return_address << std::endl;
+	std::cout << "packetdef - request_number: " << unsigned(packet_struct.request_number) << std::endl;
+	std::cout << "packetdef - read_write_flag: " << packet_struct.read_write_flag << std::endl;
+	std::cout << "packetdef - start_address: " << packet_struct.start_address << std::endl;
+	std::cout << "packetdef - data_size: " << packet_struct.data_size << std::endl;
+	std::cout << "packetdef - data_to_write: " << unsigned(packet_struct.data_to_read[3]) << std::endl;
+	
+	return packet_struct.data_to_read[3];
+}
 
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
