@@ -13,7 +13,7 @@
 bool Calibration::findExposureRange(Group& calib)
 //-----------------------------------------------------------------------------
 {
-	int gain = 0, exposure = CALIB_MAX_EXPOSURE, skip = camera.queuedCount;
+	int gain = 0, exposure = CALIB_MAX_EXPOSURE/10, skip = camera.queuedCount;
 	preferredExpo = CALIB_MAX_EXPOSURE + 1;
 	lowestExpoNoGain = 0;
 

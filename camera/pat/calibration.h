@@ -11,7 +11,7 @@
 #define CALIB_FSM_RISE_TIME 15		// FSM rise time in ms
 #define CALIB_FSM_MAX_DELTA 0.003f	// Max difference in FSM output per step -> equivalent of moving ~3px on detector
 
-#define CALIB_BIG_WINDOW 400		// Initial camera window for FSM 0,0 acquisition
+#define CALIB_BIG_WINDOW 800		// Initial camera window for FSM 0,0 acquisition
 #define CALIB_SMALL_WINDOW 300		// Camera window for calibration pattern tracking
 
 #define CALIB_MIN_BRIGHTNESS 400	// Minimum brightness of calib laser spot to work with
