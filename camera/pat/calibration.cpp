@@ -33,10 +33,32 @@ bool Calibration::findExposureRange(Group& calib)
 	if(camera.waitForFrame())
 	{
 		Image init(camera, fileStream, pat_health_port, smoothing);
-		if(init.histBrightest > CALIB_MIN_BRIGHTNESS &&
-		   init.histBrightest > init.histPeak &&
-		   init.histBrightest - init.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
-		   init.performPixelGrouping() > 0)
+		if(init.histBrightest <= CALIB_MIN_BRIGHTNESS){
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+			"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+			return false;
+		}
+
+		if(init.histBrightest <= init.histPeak){
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+			"(init.histBrightest = ", init.histBrightest, ") <= (init.histPeak = ", init.histPeak, ")");
+			return false;
+		}
+
+		if(init.histBrightest - init.histPeak <= TRACK_GOOD_PEAKTOMAX_DISTANCE){
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+			"(init.histBrightest - init.histPeak = ", init.histBrightest - init.histPeak, ") <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE, ")");
+			return false;
+		}
+
+		/*
+		init.histBrightest > CALIB_MIN_BRIGHTNESS &&
+		init.histBrightest > init.histPeak &&
+		init.histBrightest - init.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
+		init.performPixelGrouping() > 0
+		*/
+		int num_groups = init.performPixelGrouping();
+		if(num_groups > 0)
 		{
 			// Check initial image values
 			Group& spot = init.groups[0];
@@ -110,7 +132,7 @@ bool Calibration::findExposureRange(Group& calib)
 			return true;
 		}
 		else{
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Image init logic checks failed");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: (num_groups = ", num_groups,") <= 0");
 		}
 	}
 	else{
