@@ -211,7 +211,8 @@ int main() //int argc, char** argv
 				
 			case CMD_GET_IMAGE:
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
-				logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, false); 
+				camera.config->expose_us.write(MAX_EXPOSURE/2);
+				logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, true); 
 				break;		
 						
 			case CMD_CALIB_TEST:

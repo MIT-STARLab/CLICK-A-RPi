@@ -8,13 +8,12 @@
 #include "lodepng.h"
 
 #define LINK_MAX_FRAME_HEIGHT 640
-
 #define MAX_GROUPS 50					// Failsafe - max allowed pixel groups to process
 #define MAX_ACTIVE_PIXELS 100000		// Failsafe - max allowed active pixels in frame
 #define MIN_PIXELS_PER_GROUP 5			// Failsafe - minimum, in order to avoid grouping potential hot pixels
-
 #define THRESHOLD_SAFETY_OFFSET 50		// Offset to add to histogram mean for thresholding
-
+#define MAX_EXPOSURE 1000000			// max telemetry exposure - us
+#define MIN_EXPOSURE 10					// min telemetry exposure - us
 using namespace std;
 
 // A group/centroid of active pixels
