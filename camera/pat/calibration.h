@@ -14,7 +14,7 @@
 #define CALIB_BIG_WINDOW 800		// Initial camera window for FSM 0,0 acquisition
 #define CALIB_SMALL_WINDOW 300		// Camera window for calibration pattern tracking
 
-#define CALIB_MIN_BRIGHTNESS 400	// Minimum brightness of calib laser spot to work with
+#define CALIB_MIN_BRIGHTNESS 300	// Minimum brightness of calib laser spot to work with
 #define CALIB_MAX_EXPOSURE 1000	// Max exposure in us to check for range tuning
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow
 #define CALIB_EXP_DIVIDER 15		// Exposure tuning division factor, the higher the finer tuning, but slower; for range search
