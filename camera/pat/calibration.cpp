@@ -36,18 +36,33 @@ bool Calibration::findExposureRange(Group& calib)
 		if(init.histBrightest <= CALIB_MIN_BRIGHTNESS){
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
 			"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
 			return false;
 		}
 
 		if(init.histBrightest <= init.histPeak){
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
 			"(init.histBrightest = ", init.histBrightest, ") <= (init.histPeak = ", init.histPeak, ")");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
 			return false;
 		}
 
 		if(init.histBrightest - init.histPeak <= TRACK_GOOD_PEAKTOMAX_DISTANCE){
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
 			"(init.histBrightest - init.histPeak = ", init.histBrightest - init.histPeak, ") <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE, ")");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
 			return false;
 		}
 
@@ -133,6 +148,11 @@ bool Calibration::findExposureRange(Group& calib)
 		}
 		else{
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: (num_groups = ", num_groups,") <= 0");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
 		}
 	}
 	else{
