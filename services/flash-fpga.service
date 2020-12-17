@@ -1,0 +1,10 @@
+[Unit]
+Description=Flash FPGA
+
+[Service]
+Type=oneshot
+ExecStart=/bin/python /root/fpga/driver/fpgadriver.py -i 04b4:8613 -v 1d50:602b:0002
+ExecStartPost=/bin/python /root/fpga/driver/fpgadriver.py -i 04b4:8613 -v 1d50:602b:0002 -p J:A7A0A3A1:/root/bin/fpga.xsvf
+
+[Install]
+WantedBy=default.target
