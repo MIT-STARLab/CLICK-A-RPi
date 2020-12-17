@@ -205,7 +205,7 @@ bool Calibration::run(Group& calib)
 				{
 					Group& spot = frame.groups[0];
 					points.emplace_back(frame.area.x + spot.x, frame.area.y + spot.y, x, y);
-					if(i % 10 == 0){
+					if(i % 5 == 0){
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y, "] for FSM [", x, ",", y, "]");
 					}
 

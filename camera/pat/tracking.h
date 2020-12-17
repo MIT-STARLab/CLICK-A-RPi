@@ -8,9 +8,9 @@
 #include "calibration.h"
 #include "log.h"
 
-#define TRACK_MIN_EXPOSURE 1000 //minimum exposure limit, pg-comment
-#define TRACK_MAX_EXPOSURE 10000 //maximum exposure limit, pg
-#define TRACK_ACQUISITION_EXP_INCREMENT 1000 //exposure increment during acquisition, pg
+#define TRACK_MIN_EXPOSURE 100 //minimum exposure limit, pg-comment
+#define TRACK_MAX_EXPOSURE 1000000 //maximum exposure limit, pg
+#define TRACK_ACQUISITION_EXP_INCREMENT 100 //exposure increment during acquisition, pg
 
 #define TRACK_ACQUISITION_BRIGHTNESS 300		// Minimum spot brightness to work with for acquisition
 #define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared
