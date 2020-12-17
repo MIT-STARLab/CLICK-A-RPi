@@ -204,8 +204,8 @@ int main() //int argc, char** argv
 					
 				case CMD_GET_IMAGE:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
-					camera.config->expose_us.write(10*MIN_EXPOSURE);
-					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port, true); 
+					camera.config->expose_us.write(100*MIN_EXPOSURE);
+					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
 					break;		
 							
 				case CMD_CALIB_TEST:
@@ -226,14 +226,14 @@ int main() //int argc, char** argv
 				case CMD_CALIB_LASER_TEST:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command.");
 					laserOn(fpga_map_request_port, 0);
-					camera.config->expose_us.write(10*MIN_EXPOSURE); 
-					logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port, true); 
+					camera.config->expose_us.write(100*MIN_EXPOSURE); 
+					logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port); 
 					break;
 
 				case CMD_FSM_TEST:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_FSM_TEST command.");
 					laserOn(fpga_map_request_port, 0);
-					camera.config->expose_us.write(10*MIN_EXPOSURE); 
+					camera.config->expose_us.write(100*MIN_EXPOSURE); 
 					fsm.setNormalizedAngles(0,0);
 					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
 					fsm.setNormalizedAngles(0.1,0);
