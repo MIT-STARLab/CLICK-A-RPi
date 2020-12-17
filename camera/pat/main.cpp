@@ -229,7 +229,8 @@ int main() //int argc, char** argv
 					else
 					{
 						log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
-					}				
+					}	
+					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on				
 					break;
 				
 				case CMD_CALIB_LASER_TEST:
