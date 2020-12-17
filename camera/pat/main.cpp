@@ -324,18 +324,25 @@ int main() //int argc, char** argv
 		// Periodic health update
 		if(i % 100 == 0) //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 100x to 0.25Hz (one every 4 seconds < 5 second housekeeping aliveness check)
 		{
-			if(phase == OPEN_LOOP)
-			{
-				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - ", 
-				haveBeaconKnowledge ? "Beacon is at [", beacon.x, ",", beacon.y, "]" : "No idea where beacon is");
-			}
-			else
-			{
+			if(phase == OPEN_LOOP){
+				if(haveBeaconKnowledge){
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x, ",", beacon.y, "]");
+				} else{
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where beacon is.");
+				}
+			} else{
 				if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
 				if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
-				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - ", 
-				haveBeaconKnowledge ? "Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]" : "No idea where beacon is",				
-				haveCalibKnowledge ? "Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, "]" : "No idea where calib is"); //included exposure updates, pg
+				if(haveBeaconKnowledge){
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]");
+				} else{
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where beacon is.");
+				}
+				if(haveCalibKnowledge){
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, "]");
+				} else{
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where calib is.");
+				}
 			}			
 			i = 0;
 		}
@@ -547,9 +554,9 @@ int main() //int argc, char** argv
 							// Update values if confident
 							calib.x = frame.area.x + spot.x;
 							calib.y = frame.area.y + spot.y;
-							// calib.valueMax = spot.valueMax;
-							// calib.valueSum = spot.valueSum;
-							// calib.pixelCount = spot.pixelCount;
+							calib.valueMax = spot.valueMax;
+							calib.valueSum = spot.valueSum;
+							calib.pixelCount = spot.pixelCount;
 							track.updateTrackingWindow(frame, spot, calibWindow);
 							// Control in closed loop!
 							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
@@ -569,7 +576,7 @@ int main() //int argc, char** argv
 						}
 						else
 						{
-							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid beacon spot property change: ",
+							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
 									"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 									"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
 									"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
@@ -621,9 +628,9 @@ int main() //int argc, char** argv
 							// Update values if confident
 							calib.x = frame.area.x + spot.x;
 							calib.y = frame.area.y + spot.y;
-							// calib.valueMax = spot.valueMax;
-							// calib.valueSum = spot.valueSum;
-							// calib.pixelCount = spot.pixelCount;
+							calib.valueMax = spot.valueMax;
+							calib.valueSum = spot.valueSum;
+							calib.pixelCount = spot.pixelCount;
 							track.updateTrackingWindow(frame, spot, calibWindow);
 							// Set Point is defined as the center with any measured biases
 							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX);
@@ -640,8 +647,10 @@ int main() //int argc, char** argv
 						}
 						else
 						{
-							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
-								calib.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
+							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Rapid calib spot property change: ",
+									"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+									"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
+									"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
 							haveCalibKnowledge = false;
 						}
 					}
@@ -649,7 +658,7 @@ int main() //int argc, char** argv
 					{
 						if(haveCalibKnowledge)
 						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Panic, calib spot vanished!");
+							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Calib spot vanished! Try FSM SPI forceTransfer().");
 							// Try forced FSM SPI transfer? Maybe data corruption
 							fsm.forceTransfer();
 						}
@@ -706,14 +715,16 @@ int main() //int argc, char** argv
 						}
 						else
 						{
-							if(haveBeaconKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, rapid beacon spot property change, old", beacon.x, beacon.y, beacon.pixelCount,
-								beacon.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
+								"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+								"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+								"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
 							haveBeaconKnowledge = false;
 						}
 					}
 					else
 					{
-						if(haveBeaconKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Panic, beacon spot vanished!");
+						if(haveBeaconKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon spot vanished!");
 						haveBeaconKnowledge = false;
 					}
 
