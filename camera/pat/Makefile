@@ -25,10 +25,6 @@ enumerate : enumerate.o
 debug: CXXFLAGS += -DDEBUG -g
 debug: all
 
-run:
-	# ./$(OUT)
-	# scp main.cpp pi@10.0.5.2:/home/pi/closed_loop/
-
 .PHONY: clean
 
 clean:
