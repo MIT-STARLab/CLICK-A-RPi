@@ -39,13 +39,13 @@ public:
 //Turn on Calibration Laser
 void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
-	std::this_thread::sleep_for(std::chrono::seconds(0.003));
+	std::this_thread::sleep_for(std::chrono::milliseconds(3));
 }
 
 //Turn Off Calibration Laser
 void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
-	std::this_thread::sleep_for(std::chrono::seconds(0.003));
+	std::this_thread::sleep_for(std::chrono::milliseconds(3));
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
