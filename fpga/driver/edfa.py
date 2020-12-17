@@ -15,10 +15,3 @@ def edfa_write_cmd(handle, cmd):
 			i+=1 
 	return
 
-def edfa_read(handle):
-	status = fl.flReadChannel(handle, 63)
-	status = status & 0x20
-	if status==0x20:
-		return fl.flReadChannel(handle, 65)
-	else:	
-		return None
