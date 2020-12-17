@@ -11,11 +11,11 @@
 #define CALIB_FSM_RISE_TIME 15		// FSM rise time in ms
 #define CALIB_FSM_MAX_DELTA 0.003f	// Max difference in FSM output per step -> equivalent of moving ~3px on detector
 
-#define CALIB_BIG_WINDOW 800		// Initial camera window for FSM 0,0 acquisition
+#define CALIB_BIG_WINDOW 600		// Initial camera window for FSM 0,0 acquisition
 #define CALIB_SMALL_WINDOW 300		// Camera window for calibration pattern tracking
 
 #define CALIB_MIN_BRIGHTNESS 300	// Minimum brightness of calib laser spot to work with
-#define CALIB_MAX_EXPOSURE 1000	// Max exposure in us to check for range tuning
+#define CALIB_MAX_EXPOSURE 10000	// Max exposure in us to check for range tuning
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow
 #define CALIB_EXP_DIVIDER 15		// Exposure tuning division factor, the higher the finer tuning, but slower; for range search
 #define CALIB_MAX_SMOOTHING 3		// Maximum blurring of frames allowed

@@ -22,7 +22,6 @@
 #define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0 //user input from calibration
-#define DEFAULT_EXPOSURE 10000 //default exposure for debugging tests during standby
 
 using namespace std;
 using namespace std::chrono;
@@ -138,6 +137,7 @@ int main() //int argc, char** argv
 	int centerOffsetY = OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	uint16_t command; 
+	int command_exposure; 
 	
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
@@ -159,7 +159,7 @@ int main() //int argc, char** argv
 		camera_initialized = camera.initialize();
 	}	
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
-
+	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
 	Tracking track(camera, calibration, textFileOut, pat_health_port);
@@ -173,7 +173,8 @@ int main() //int argc, char** argv
 		if(p[0].revents & ZMQ_POLLIN)
 		{
 			// received something on the first (only) socket
-			command = receive_packet_pat_control(pat_control_port);
+			char command_data[CMD_PAYLOAD_SIZE];
+			command = receive_packet_pat_control(pat_control_port, command_data);
 			switch(command)
 			{
 				case CMD_START_PAT:
@@ -204,8 +205,15 @@ int main() //int argc, char** argv
 					break;		
 					
 				case CMD_GET_IMAGE:
-					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command.");
-					camera.config->expose_us.write(DEFAULT_EXPOSURE);
+					//set to commanded exposure
+					command_exposure = atoi(command_data); 
+					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
+					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
+					camera.config->expose_us.write(command_exposure);
+					//set to sufficiently large window size (but not too large)
+					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+					//save image
 					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
 					break;		
 							
@@ -225,16 +233,39 @@ int main() //int argc, char** argv
 					break;
 				
 				case CMD_CALIB_LASER_TEST:
-					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command.");
+					//set to commanded exposure
+					command_exposure = atoi(command_data); 
+					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
+					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
+					camera.config->expose_us.write(command_exposure);
+					
+					//set to sufficiently large window size (but not too large)
+					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+					
+					//switch laser on and ensure FSM is centered
 					laserOn(fpga_map_request_port, 0);
-					camera.config->expose_us.write(DEFAULT_EXPOSURE); 
+					fsm.setNormalizedAngles(0,0); 
+					
+					//save image
 					logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port); 
 					break;
 
 				case CMD_FSM_TEST:
-					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_FSM_TEST command.");
+					//set to commanded exposure
+					command_exposure = atoi(command_data); 
+					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
+					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_FSM_TEST command with exposure = ", command_exposure);
+					camera.config->expose_us.write(command_exposure);
+					
+					//set to sufficiently large window size (but not too large)
+					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+					
+					//switch laser on
 					laserOn(fpga_map_request_port, 0);
-					camera.config->expose_us.write(DEFAULT_EXPOSURE); 
+					
+					//save images at various FSM settings
 					fsm.setNormalizedAngles(0,0);
 					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
 					fsm.setNormalizedAngles(0.1,0);
@@ -247,7 +278,6 @@ int main() //int argc, char** argv
 					
 				default:
 					log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
-					std::this_thread::sleep_for(std::chrono::seconds(1));
 			}	
 		}
 	}		

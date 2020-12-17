@@ -357,8 +357,8 @@ void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn,
 	exposures[0] = exposure_init;
 	int num_images = 1;
 	if(save_extra_exposures){
-		exposures[1] = (exposure_init + MIN_EXPOSURE)/2; num_images++;
-		exposures[2] = (exposure_init + MAX_EXPOSURE)/2; num_images++;
+		exposures[1] = exposure_init/2; num_images++;
+		exposures[2] = exposure_init*2; num_images++;
 		if(exposures[1] < MIN_EXPOSURE){exposures[1] = MIN_EXPOSURE;}
 		if(exposures[1] > MAX_EXPOSURE){exposures[1] = MAX_EXPOSURE;}
 		if(exposures[2] < MIN_EXPOSURE){exposures[2] = MIN_EXPOSURE;}

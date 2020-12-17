@@ -27,7 +27,7 @@ CMD_CALIB_TEST = 0x07
 CMD_CALIB_LASER_TEST = 0x08
 CMD_FSM_TEST = 0x09
 
-cmd_list = (CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST) 
+cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]
 
 class IpcPacket:
     def __init__(self): pass
@@ -87,7 +87,7 @@ def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
         assert len(CMD_PAYLOAD) <= CMD_PAYLOAD_SIZE #Ensure CMD_PAYLOAD is the right length
         if(len(CMD_PAYLOAD) < CMD_PAYLOAD_SIZE):
                 for i in range(CMD_PAYLOAD_SIZE - len(CMD_PAYLOAD)):
-                        CMD_PAYLOAD = CMD_PAYLOAD + '\0' #append null padding
+                        CMD_PAYLOAD = CMD_PAYLOAD + '\0'   #append null padding
         assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
         CMD_PAYLOAD = str(CMD_PAYLOAD).encode('ascii') #format to ascii
 
@@ -151,9 +151,21 @@ while True:
                 print "CMD_CALIB_LASER_TEST = ", CMD_CALIB_LASER_TEST
                 print "CMD_FSM_TEST = ", CMD_FSM_TEST
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
-                if((user_cmd >= min(cmd_list)) & (user_cmd <= max(cmd_list))):
-                        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-                        ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
+                if(user_cmd in cmd_list):
+                        if(user_cmd == CMD_GET_IMAGE):
+                                exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))
+                                if(exp_cmd < 10):
+                                        print "Exposure below minimum of 10 us entered. Using 10 us."
+                                        exp_cmd = 10
+                                elif(exp_cmd > 10000000):
+                                        print "Exposure above maximum of 10000000 us entered. Using 10000000 us."
+                                        exp_cmd = 10000000
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(exp_cmd))     
+                        else:
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
+                        
                         print(ipc_patControlPacket)
                         
                         if(user_cmd == CMD_END_PAT):
