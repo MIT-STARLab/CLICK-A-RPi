@@ -1,0 +1,135 @@
+[0.35] In camera.cpp Camera::Initialize - device found 
+[0.36] In main.cpp Camera Connection Initialized 
+[0.36] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.36] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.36] In main.cpp - Standing by for command... 
+[0.37] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Standing by for command... 
+[0.42] In main.cpp - Standing by for command... 
+[0.42] In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop... 
+[0.42] In main.cpp phase START - Calibration Starting... 
+[0.47] In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max 1000 us at [ 1378.99069 , 883.13048 ] with smoothing 0 
+[0.60] In calibration.cpp Calibration::findExposureRange - Found preferred exposure: 48 us, 0 dB 
+[0.60] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-14-11-11_CALIBRATION_Start_exp_48.png 
+[0.77] In calibration.cpp Calibration::run - Pair 0 [ 1379.07124 , 883.19044 ] for FSM [ 0.00000 , 0.00000 ] 
+[0.82] In calibration.cpp Calibration::run - Pair 5 [ 1379.58907 , 876.15838 ] for FSM [ -0.00000 , 0.01500 ] 
+[0.86] In calibration.cpp Calibration::run - Pair 10 [ 1399.76457 , 883.49702 ] for FSM [ -0.03000 , -0.00000 ] 
+[0.90] In calibration.cpp Calibration::run - Pair 15 [ 1378.81346 , 904.25321 ] for FSM [ 0.00000 , -0.04500 ] 
+[0.95] In calibration.cpp Calibration::run - Pair 20 [ 1338.59788 , 882.65609 ] for FSM [ 0.06000 , 0.00000 ] 
+[1.00] In calibration.cpp Calibration::run - Pair 25 [ 1380.21548 , 847.69929 ] for FSM [ -0.00000 , 0.07500 ] 
+[1.05] In calibration.cpp Calibration::run - Pair 30 [ 1440.96796 , 883.91686 ] for FSM [ -0.09000 , -0.00000 ] 
+[1.10] In calibration.cpp Calibration::run - Pair 35 [ 1378.11779 , 932.59338 ] for FSM [ 0.00000 , -0.10500 ] 
+[1.14] In calibration.cpp Calibration::run - Pair 40 [ 1296.65175 , 882.34658 ] for FSM [ 0.12000 , 0.00000 ] 
+[1.18] In calibration.cpp Calibration::run - Pair 45 [ 1381.25798 , 819.42869 ] for FSM [ -0.00000 , 0.13500 ] 
+[1.22] In calibration.cpp Calibration::run - Pair 50 [ 1482.64098 , 884.35916 ] for FSM [ -0.15000 , -0.00000 ] 
+[1.27] In calibration.cpp Calibration::run - Pair 55 [ 1377.67907 , 961.15252 ] for FSM [ 0.00000 , -0.16500 ] 
+[1.32] In calibration.cpp Calibration::run - Pair 60 [ 1255.23028 , 881.85237 ] for FSM [ 0.18000 , 0.00000 ] 
+[1.36] In calibration.cpp Calibration::run - Pair 65 [ 1382.09733 , 791.30510 ] for FSM [ -0.00000 , 0.19500 ] 
+[1.41] In calibration.cpp Calibration::run - Pair 70 [ 1523.88467 , 884.62266 ] for FSM [ -0.21000 , -0.00000 ] 
+[1.45] In calibration.cpp Calibration::run - Pair 75 [ 1377.11436 , 989.47702 ] for FSM [ 0.00000 , -0.22500 ] 
+[1.50] In calibration.cpp Calibration::run - Pair 80 [ 1214.32646 , 881.27563 ] for FSM [ 0.24000 , 0.00000 ] 
+[1.54] In calibration.cpp Calibration::run - Pair 85 [ 1383.04457 , 763.63478 ] for FSM [ -0.00000 , 0.25500 ] 
+[1.58] In calibration.cpp Calibration::run - Pair 90 [ 1563.97243 , 885.13938 ] for FSM [ -0.27000 , -0.00000 ] 
+[1.62] In calibration.cpp Calibration::run - Pair 95 [ 1376.72857 , 1016.77149 ] for FSM [ 0.00000 , -0.28500 ] 
+[1.67] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-14-11-15_CALIBRATION_End_exp_48.png 
+[1.84] In calibration.cpp Calibration::run - Calculated sensitivity matrix [ -0.00145 -0.00002 ; 0.00003 -0.00212 ] 
+[1.84] In calibration.cpp Calibration::run - Calculated affine transform [ -0.00145 -0.00004 ; 0.00002 -0.00212 ] + [ 2.03815 ; 1.84309 ] 
+[1.84] In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure =  48  us. 
+[1.84] In main.cpp phase ACQUISITION - Beacon Acquisition Beginning 
+[2.13] In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters 
+[2.13] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1728 , 1048 ] 
+[2.20] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1728 , 1048 ] 
+[2.26] In main.cpp phase ACQUISITION - Acquisition complete: 887 us ; beacon: 0 dB smoothing 0 ; calib: 0 dB smoothing 3 
+[2.26] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-14-11-16_ACQUISITION_exp_887.png 
+[2.34] In main.cpp phase CL_INIT - Double window tracking set up! Queued 2 requests 
+[2.34] In main.cpp phase CL_INIT - Calibration Laser On and Tracking Beginning 
+[2.59] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1728 , 1048 ] 
+[2.66] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.11526 1079.23554 11 758 new 1757.10961 1079.28416 11 620 
+[2.74] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.17065 1079.38079 11 629 new 1757.12119 1079.24661 11 793 
+[2.81] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11918 , 1079.24830 , exp =  853 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[2.82] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.11918 1079.24830 11 632 new 1757.12494 1079.20400 11 769 
+[3.05] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.13639 1079.32809 12 621 new 1757.11474 1079.23850 11 777 
+[3.13] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12060 , 1079.25084 , exp =  836 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[3.38] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12946 1079.30910 11 628 new 1757.12371 1079.27588 11 755 
+[3.46] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11146 , 1079.27910 , exp =  909 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[3.79] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12914 , 1079.24805 , exp =  819 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[4.13] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12047 , 1079.20813 , exp =  810 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[4.48] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12641 , 1079.24247 , exp =  882 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[4.57] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12360 1079.24517 11 644 new 1757.13478 1079.21167 11 765 
+[4.83] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14455 , 1079.21517 , exp =  864 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[5.17] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12672 , 1079.25834 , exp =  940 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[5.45] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12633 1079.29801 11 640 new 1757.15565 1079.29919 12 770 
+[5.52] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14172 , 1079.32848 , exp =  911 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[5.87] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12649 , 1079.24244 , exp =  893 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[6.21] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13572 , 1079.20892 , exp =  804 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[6.56] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14119 , 1079.32329 , exp =  884 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[6.90] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12845 , 1079.28116 , exp =  866 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[7.24] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14578 , 1079.18152 , exp =  848 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[7.58] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13216 , 1079.21613 , exp =  839 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[7.92] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12034 , 1079.22416 , exp =  831 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[7.97] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12697 1079.25689 11 642 new 1757.12887 1079.23840 11 790 
+[8.06] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.13959 1079.31615 12 613 new 1757.12645 1079.25111 11 730 
+[8.27] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11724 , 1079.26577 , exp =  815 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[8.62] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11989 , 1079.26852 , exp =  896 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[8.96] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12656 , 1079.26213 , exp =  878 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[9.31] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13779 , 1079.26122 , exp =  878 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[9.66] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11866 , 1079.26198 , exp =  870 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[10.00] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.10989 , 1079.23626 , exp =  854 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[10.29] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12279 1079.31814 11 620 new 1757.14947 1079.31777 12 766 
+[10.35] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12593 , 1079.24967 , exp =  812 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[10.69] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11872 , 1079.28539 , exp =  884 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[11.03] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13066 , 1079.25105 , exp =  875 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[11.38] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14335 , 1079.28498 , exp =  952 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[11.72] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12625 , 1079.26382 , exp =  942 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[12.07] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12458 , 1079.25589 , exp =  830 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[12.14] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.11805 1079.29318 11 633 new 1757.11670 1079.23689 11 758 
+[12.41] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11853 , 1079.26249 , exp =  895 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[12.76] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13221 , 1079.24911 , exp =  877 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[13.10] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12922 , 1079.23459 , exp =  790 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[13.45] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13764 , 1079.27294 , exp =  869 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[13.81] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11452 , 1079.23104 , exp =  783 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[14.17] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13222 , 1079.23061 , exp =  852 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[14.19] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.13222 1079.23061 11 617 new 1757.14676 1079.21759 11 743 
+[14.52] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13283 , 1079.26423 , exp =  834 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[14.77] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.14446 1079.30934 12 626 new 1757.13244 1079.22998 11 748 
+[14.86] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12569 , 1079.23812 , exp =  891 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[15.20] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.13078 1079.21316 11 785 new 1757.12601 1079.25353 11 636 
+[15.21] In main.cpp phase  CL_CALIB  -  No idea where beacon is [ 1757.13078 , 1079.21316 , exp =  873 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[15.56] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12996 , 1079.19443 , exp =  778 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[15.90] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12948 , 1079.19821 , exp =  763 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[16.25] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13741 , 1079.21717 , exp =  823 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[16.59] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14266 , 1079.18597 , exp =  815 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[16.94] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11954 , 1079.21363 , exp =  807 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[16.99] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.13596 1079.19316 11 753 new 1757.06344 1079.22760 10 615 
+[17.29] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12262 , 1079.22277 , exp =  799 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[17.45] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12275 1079.22212 11 769 new 1757.12354 1079.26436 11 639 
+[17.63] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11641 , 1079.20243 , exp =  843 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[17.98] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12309 , 1079.21379 , exp =  843 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[18.32] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13965 , 1079.21065 , exp =  818 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[18.67] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12620 , 1079.21917 , exp =  810 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[18.84] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12488 1079.26155 11 646 new 1757.12945 1079.22153 11 768 
+[18.90] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12656 1079.28164 11 607 new 1757.12770 1079.25989 11 728 
+[19.02] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14763 , 1079.25282 , exp =  882 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[19.36] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14299 , 1079.19217 , exp =  778 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[19.41] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.14002 1079.21487 11 633 new 1757.14439 1079.19669 11 768 
+[19.70] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14199 , 1079.22139 , exp =  847 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[19.73] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.14474 1079.19254 11 767 new 1757.14176 1079.23164 11 642 
+[20.05] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.13596 , 1079.22316 , exp =  831 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[20.40] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.14000 , 1079.21043 , exp =  823 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[20.44] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.15457 1079.30019 12 649 new 1757.14199 1079.22313 11 774 
+[20.74] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12838 , 1079.25586 , exp =  896 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[21.09] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11636 , 1079.21860 , exp =  799 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[21.40] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.11877 1079.23665 11 762 new 1757.11583 1079.27209 11 638 
+[21.43] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.11507 , 1079.23105 , exp =  861 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[21.46] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12235 1079.21986 11 763 new 1757.11117 1079.28020 11 623 
+[21.75] In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old 1757.12315 1079.21574 11 753 new 1757.11351 1079.25270 11 623 
+[21.78] In main.cpp phase  CL_CALIB  -  Beacon is at [ 1757.12629 , 1079.23568 , exp =  834 ] No idea where calib is [ 834.88386 , 864.71502 , exp =  48 ] 
+[21.99] 
+In main.cpp - Saving telemetry files and ending process. 

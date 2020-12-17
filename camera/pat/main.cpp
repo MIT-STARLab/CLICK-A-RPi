@@ -212,7 +212,7 @@ int main() //int argc, char** argv
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
 					camera.config->expose_us.write(command_exposure);
 					//set to sufficiently large window size (but not too large)
-					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CAMERA_HEIGHT);
 					//save image
 					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
 					break;		
