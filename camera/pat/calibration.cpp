@@ -39,7 +39,7 @@ bool Calibration::findExposureRange(Group& calib)
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
 			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 			return false;
 		}
@@ -50,7 +50,7 @@ bool Calibration::findExposureRange(Group& calib)
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
 			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 			return false;
 		}
@@ -63,7 +63,7 @@ bool Calibration::findExposureRange(Group& calib)
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
 			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 			return false;
 		}

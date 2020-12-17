@@ -39,11 +39,13 @@ public:
 //Turn on Calibration Laser
 void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
+	std::this_thread::sleep_for(std::chrono::seconds(0.003));
 }
 
 //Turn Off Calibration Laser
 void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
+	std::this_thread::sleep_for(std::chrono::seconds(0.003));
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -211,8 +213,10 @@ int main() //int argc, char** argv
 					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
 					camera.config->expose_us.write(command_exposure);
+
 					//set to sufficiently large window size (but not too large)
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CAMERA_HEIGHT);
+
 					//save image
 					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
 					break;		
@@ -230,7 +234,7 @@ int main() //int argc, char** argv
 					{
 						log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
 					}	
-					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on				
+					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off				
 					break;
 				
 				case CMD_CALIB_LASER_TEST:
@@ -239,17 +243,20 @@ int main() //int argc, char** argv
 					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
-					camera.config->expose_us.write(command_exposure);
-					
+					camera.config->expose_us.write(command_exposure);		
+
 					//set to sufficiently large window size (but not too large)
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
-					
+
 					//switch laser on and ensure FSM is centered
 					laserOn(fpga_map_request_port, 0);
-					fsm.setNormalizedAngles(0,0); 
-					
+					fsm.setNormalizedAngles(0,0); 	
+
 					//save image
-					logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port); 
+					logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port);
+
+					//switch laser off
+					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
 					break;
 
 				case CMD_FSM_TEST:
@@ -258,14 +265,14 @@ int main() //int argc, char** argv
 					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_FSM_TEST command with exposure = ", command_exposure);
-					camera.config->expose_us.write(command_exposure);
-					
+					camera.config->expose_us.write(command_exposure);		
+
 					//set to sufficiently large window size (but not too large)
-					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
-					
+					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);	
+
 					//switch laser on
 					laserOn(fpga_map_request_port, 0);
-					
+
 					//save images at various FSM settings
 					fsm.setNormalizedAngles(0,0);
 					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
@@ -275,6 +282,9 @@ int main() //int argc, char** argv
 					logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
 					fsm.setNormalizedAngles(0.1,0.1);
 					logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
+
+					//switch laser off
+					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
 					break;
 					
 				default:
@@ -312,23 +322,20 @@ int main() //int argc, char** argv
 		}
 		
 		// Periodic health update
-		if(i % 50 == 0) //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 50x to 0.5Hz (one every 2 seconds < 5 second housekeeping aliveness check)
+		if(i % 100 == 0) //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 100x to 0.25Hz (one every 4 seconds < 5 second housekeeping aliveness check)
 		{
 			if(phase == OPEN_LOOP)
 			{
 				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - ", 
-				haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
-				"[", beacon.x, ",", beacon.y, "]");
+				haveBeaconKnowledge ? "Beacon is at [", beacon.x, ",", beacon.y, "]" : "No idea where beacon is");
 			}
 			else
 			{
 				if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
 				if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
 				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - ", 
-				haveBeaconKnowledge ? "Beacon is at" : "No idea where beacon is",
-				"[", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]",
-				haveCalibKnowledge ? "Calib is at" : "No idea where calib is",
-				"[", calib.x, ",", calib.y, ", exp = ", calibExposure, "]"); //included exposure updates, pg
+				haveBeaconKnowledge ? "Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "]" : "No idea where beacon is",				
+				haveCalibKnowledge ? "Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, "]" : "No idea where calib is"); //included exposure updates, pg
 			}			
 			i = 0;
 		}
@@ -338,12 +345,12 @@ int main() //int argc, char** argv
 		{
 			case START:
 				log(pat_health_port, textFileOut, "In main.cpp phase START - Calibration Starting...");
-				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
 				phase = CALIBRATION;
 				break;
 
 			// Calibration phase, internal laser has to be turned on, ran just once
 			case CALIBRATION:
+				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
 				if(calibration.run(calib)) //sets calib exposure, pg-comment
 				{
 					calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
@@ -354,7 +361,6 @@ int main() //int argc, char** argv
 					}
 					else
 					{
-						laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
 						phase = ACQUISITION;
 					}
 				}
@@ -367,7 +373,8 @@ int main() //int argc, char** argv
 
 			// Beacon acquisition phase, internal laser has to be off!
 			case ACQUISITION:
-				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning");
+				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser.");
+				laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
 				if(track.runAcquisition(beacon) && beacon.pixelCount > MIN_PIXELS_PER_GROUP) //sets beacon exposure, pg-comment
 				{
 					// Acquisition passed!
@@ -377,13 +384,12 @@ int main() //int argc, char** argv
 					beaconExposure = camera.config->expose_us.read(); //save beacon exposure, pg-comment
 					beaconGain = camera.config->gain_dB.read();
 					calibGain = calibration.gainForExposure(beaconExposure);
-					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete:", beaconExposure, "us ; beacon:",
-						beaconGain, "dB smoothing", track.beaconSmoothing, "; calib:",
-						calibGain, "dB smoothing", calibration.smoothing);
-					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); //save image
 					// Set initial pointing in open-loop
 					calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
+						"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "] ", beaconGain, "dB smoothing", track.beaconSmoothing, 
+						". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "] ", calibGain, "dB smoothing", calibration.smoothing);
 					track.controlOpenLoop(fsm, calib.x, calib.y);
 					if(openLoop)
 					{
@@ -402,8 +408,203 @@ int main() //int argc, char** argv
 				}
 				break;
 
+			// Initialize closed-loop double window tracking
+			case CL_INIT:
+				camera.ignoreNextFrames(camera.queuedCount);
+				// Init flipping windows - first window
+				//camera.config->gain_dB.write(beaconGain);
+				camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
+				camera.setWindow(beaconWindow);
+				camera.requestFrame(); //queue beacon frame, pg-comment
+				// Request second window
+				//camera.config->gain_dB.write(calibGain);
+				camera.config->expose_us.write(calibExposure); //set cam to calib exposure, pg
+				calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
+				calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
+				calibWindow.w = TRACK_ACQUISITION_WINDOW;
+				calibWindow.h = TRACK_ACQUISITION_WINDOW;
+				// Initial values will be uncertain
+				calib.pixelCount = 0;
+				camera.setWindow(calibWindow);
+				camera.requestFrame(); //queue calib frame, pg-comment
+				log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - Double window tracking set up! Queued", camera.queuedCount, "requests");
+				// Next up is beacon spot frame
+				phase = CL_BEACON;
+				// Save time
+				beginTime = steady_clock::now();
+				break;
+
+			// Process new frame of beacon spot
+			case CL_BEACON:
+				laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for beacon
+				if(camera.waitForFrame())
+				{
+					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
+					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
+					   frame.performPixelGrouping() > 0 && (
+					   spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference)) >= 0 &&
+					   frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+					{
+						Group& spot = frame.groups[spotIndex];
+						// Check spot properties
+						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+						{
+							haveBeaconKnowledge = true;
+							// Update values if confident
+							beacon.x = frame.area.x + spot.x;
+							beacon.y = frame.area.y + spot.y;
+							beacon.valueMax = spot.valueMax;
+							beacon.valueSum = spot.valueSum;
+							beacon.pixelCount = spot.pixelCount;
+							track.updateTrackingWindow(frame, spot, beaconWindow);
+							// If running open-loop
+							if(openLoop)
+							{
+								double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
+								double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+								track.controlOpenLoop(fsm, setPointX, setPointY);
+							}
+							// If sending beacon angle errors to the bus adcs
+							//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
+							if(sendBusFeedback && (i % 25 == 0))
+							{
+								error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
+								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
+								"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
+								"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
+								send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+							}
+						}
+						else
+						{
+							if(haveBeaconKnowledge) //Rapid spot change -> loss scenario, pg
+							{
+								log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
+									"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+									"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+									"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+								haveBeaconKnowledge = false; // This variable is false if timeout has started, pg
+								startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
+						  }
+						}
+					}
+					else
+					{
+						if(haveBeaconKnowledge) // Beacon Loss Scenario, pg
+						{
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon spot vanished! Timeout started..."); //pg
+							haveBeaconKnowledge = false;
+							startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
+						}
+					}
+
+					if(!haveBeaconKnowledge) //Check timeout and return to acquisition if loss criterion met, pg
+					{
+						time_point<steady_clock> checkBeaconLoss = steady_clock::now(); // Record current time, pg
+						duration<double> elapsedBeaconLoss = checkBeaconLoss - startBeaconLoss; // Calculate time since beacon loss, pg
+						if(elapsedBeaconLoss > waitBeaconLoss) //pg
+						{
+							phase = ACQUISITION; // Beacon completely lost, return to ACQUISITION, pg
+							break; //pg
+						}
+					}
+
+					// nonflight, Send image to GUI
+					//link.setBeacon(frame);
+
+					// Request new frame
+					camera.setWindow(beaconWindow);
+					//camera.config->gain_dB.write(beaconGain);
+					//beaconExposure = track.controlExposure(frame, beaconExposure); //control beacon exposure, pg
+					camera.config->expose_us.write(beaconExposure); //set frame exposure, pg
+					camera.requestFrame(); //queue beacon frame, pg-comment
+					// Next up is calibration laser frame
+					phase = CL_CALIB;
+				}
+				else
+				{
+					log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
+					phase = CL_INIT;
+				}
+				break;
+
+			// Process new frame of calib laser spot
+			case CL_CALIB:
+				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on for calib
+				if(camera.waitForFrame())
+				{
+					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
+					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
+					   frame.performPixelGrouping() > 0 && (
+					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
+					   frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
+					{
+						Group& spot = frame.groups[spotIndex];
+						// Check spot properties
+						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+						{
+							haveCalibKnowledge = true;
+							// Update values if confident
+							calib.x = frame.area.x + spot.x;
+							calib.y = frame.area.y + spot.y;
+							// calib.valueMax = spot.valueMax;
+							// calib.valueSum = spot.valueSum;
+							// calib.pixelCount = spot.pixelCount;
+							track.updateTrackingWindow(frame, spot, calibWindow);
+							// Control in closed loop!
+							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
+							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+							if(!openLoop)
+							{
+								track.control(fsm, calib.x, calib.y, setPointX, setPointY);
+							}
+							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+								// Save for CSV
+								time_point<steady_clock> now = steady_clock::now();
+								duration<double> diff = now - beginTime;
+								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
+									calib.x, calib.y, setPointX, setPointY, calibExposure)));
+								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							}
+						}
+						else
+						{
+							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid beacon spot property change: ",
+									"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+									"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
+									"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+							haveCalibKnowledge = false;
+						}
+					}
+					else
+					{
+						if(haveCalibKnowledge)
+						{
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished! Executing FSM SPI forceTransfer().");
+							// Try forced FSM SPI transfer? Maybe data corruption
+							fsm.forceTransfer();
+						}
+						haveCalibKnowledge = false;
+					}
+
+					// Request new frame
+					camera.setWindow(calibWindow);
+					//camera.config->gain_dB.write(calibGain);
+					camera.config->expose_us.write(calibExposure); //set frame exposure, pg
+					camera.requestFrame(); //queue calib frame, pg-comment
+					// Next up is beacon laser frame
+					phase = CL_BEACON;
+				}
+				else
+				{
+					log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
+					phase = CL_INIT;
+				}
+				break;
+
 			// Graceful failure mode for when beacon is not detected: command the FSM to point the laser straight & rely on bus pointing.
 			case STATIC_POINT:
+				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
 				if(camera.waitForFrame())
 				{
 					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
@@ -469,6 +670,7 @@ int main() //int argc, char** argv
 
 			// Control in open-loop, sampling only beacon spot!
 			case OPEN_LOOP:
+				laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for open-loop
 				if(camera.waitForFrame())
 				{
 					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
@@ -523,198 +725,6 @@ int main() //int argc, char** argv
 				{
 					log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - camera.waitForFrame() Failed! Trying again. camera.error: ", camera.error);
 				}				
-				break;
-
-			// Initialize closed-loop double window tracking
-			case CL_INIT:
-				camera.ignoreNextFrames(camera.queuedCount);
-				// Init flipping windows - first window
-				//camera.config->gain_dB.write(beaconGain);
-				camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
-				camera.setWindow(beaconWindow);
-				camera.requestFrame(); //queue beacon frame, pg-comment
-				// Request second window
-				//camera.config->gain_dB.write(calibGain);
-				camera.config->expose_us.write(calibExposure); //set cam to calib exposure, pg
-				calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
-				calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
-				calibWindow.w = TRACK_ACQUISITION_WINDOW;
-				calibWindow.h = TRACK_ACQUISITION_WINDOW;
-				// Initial values will be uncertain
-				calib.pixelCount = 0;
-				camera.setWindow(calibWindow);
-				camera.requestFrame(); //queue calib frame, pg-comment
-				log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - Double window tracking set up! Queued", camera.queuedCount, "requests");
-				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on
-				log(pat_health_port, textFileOut, "In main.cpp phase CL_INIT - Calibration Laser On and Tracking Beginning");
-				// Next up is beacon spot frame
-				phase = CL_BEACON;
-				// Save time
-				beginTime = steady_clock::now();
-				break;
-
-			// Process new frame of beacon spot
-			case CL_BEACON:
-				if(camera.waitForFrame())
-				{
-					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
-					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
-					   frame.performPixelGrouping() > 0 && (
-					   spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference)) >= 0 &&
-					   frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
-					{
-						Group& spot = frame.groups[spotIndex];
-						// Check spot properties
-						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
-						{
-							haveBeaconKnowledge = true;
-							// Update values if confident
-							beacon.x = frame.area.x + spot.x;
-							beacon.y = frame.area.y + spot.y;
-							beacon.valueMax = spot.valueMax;
-							beacon.valueSum = spot.valueSum;
-							beacon.pixelCount = spot.pixelCount;
-							track.updateTrackingWindow(frame, spot, beaconWindow);
-							// If running open-loop
-							if(openLoop)
-							{
-								double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-								double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
-								track.controlOpenLoop(fsm, setPointX, setPointY);
-							}
-							// If sending beacon angle errors to the bus adcs
-							//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
-							if(sendBusFeedback && (i % 25 == 0))
-							{
-								error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
-								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
-								"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
-								"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
-								send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
-							}
-						}
-						else
-						{
-							if(haveBeaconKnowledge) //Rapid spot change -> loss scenario, pg
-							{
-								log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Panic, rapid beacon spot property change, old", beacon.x, beacon.y, beacon.pixelCount,
-								beacon.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
-								haveBeaconKnowledge = false; // This variable is false if timeout has started, pg
-								startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
-						  }
-						}
-					}
-					else
-					{
-						if(haveBeaconKnowledge) // Beacon Loss Scenario, pg
-						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon spot vanished! Timeout started..."); //pg
-							haveBeaconKnowledge = false;
-							startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
-						}
-					}
-
-					if(!haveBeaconKnowledge) //Check timeout and return to acquisition if loss criterion met, pg
-					{
-						time_point<steady_clock> checkBeaconLoss = steady_clock::now(); // Record current time, pg
-						duration<double> elapsedBeaconLoss = checkBeaconLoss - startBeaconLoss; // Calculate time since beacon loss, pg
-						if(elapsedBeaconLoss > waitBeaconLoss) //pg
-						{
-							phase = ACQUISITION; // Beacon completely lost, return to ACQUISITION, pg
-							break; //pg
-						}
-					}
-
-					// nonflight, Send image to GUI
-					//link.setBeacon(frame);
-
-					// Request new frame
-					camera.setWindow(beaconWindow);
-					//camera.config->gain_dB.write(beaconGain);
-					beaconExposure = track.controlExposure(frame, beaconExposure); //control beacon exposure, pg
-					camera.config->expose_us.write(beaconExposure); //set frame exposure, pg
-					camera.requestFrame(); //queue beacon frame, pg-comment
-					// Next up is calibration laser frame
-					phase = CL_CALIB;
-				}
-				else
-				{
-					log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
-					phase = CL_INIT;
-				}
-				break;
-
-			// Process new frame of calib laser spot
-			case CL_CALIB:
-				if(camera.waitForFrame())
-				{
-					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
-					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
-					   frame.performPixelGrouping() > 0 && (
-					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
-					   frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
-					{
-						Group& spot = frame.groups[spotIndex];
-						// Check spot properties
-						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
-						{
-							haveCalibKnowledge = true;
-							// Update values if confident
-							calib.x = frame.area.x + spot.x;
-							calib.y = frame.area.y + spot.y;
-							// calib.valueMax = spot.valueMax;
-							// calib.valueSum = spot.valueSum;
-							// calib.pixelCount = spot.pixelCount;
-							track.updateTrackingWindow(frame, spot, calibWindow);
-							// Control in closed loop!
-							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
-							if(!openLoop)
-							{
-								track.control(fsm, calib.x, calib.y, setPointX, setPointY);
-							}
-							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
-								// Save for CSV
-								time_point<steady_clock> now = steady_clock::now();
-								duration<double> diff = now - beginTime;
-								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
-									calib.x, calib.y, setPointX, setPointY, calibExposure)));
-								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
-							}
-						}
-						else
-						{
-							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Panic, rapid calib spot property change, old", calib.x, calib.y, calib.pixelCount,
-								calib.valueMax, "new", frame.area.x + spot.x, frame.area.y + spot.y, spot.pixelCount, spot.valueMax);
-							haveCalibKnowledge = false;
-						}
-					}
-					else
-					{
-						if(haveCalibKnowledge)
-						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Panic, calib spot vanished!");
-							// Try forced FSM SPI transfer? Maybe data corruption
-							fsm.forceTransfer();
-						}
-						haveCalibKnowledge = false;
-					}
-					// nonflight, Send image to GUI
-					//link.setCalib(frame);
-
-					// Request new frame
-					camera.setWindow(calibWindow);
-					//camera.config->gain_dB.write(calibGain);
-					camera.config->expose_us.write(calibExposure); //set frame exposure, pg
-					camera.requestFrame(); //queue calib frame, pg-comment
-					// Next up is beacon laser frame
-					phase = CL_BEACON;
-				}
-				else
-				{
-					log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
-					phase = CL_INIT;
-				}
 				break;
 
 			// Fail-safe

@@ -27,7 +27,20 @@ bool Tracking::runAcquisition(Group& beacon)
 		if(camera.waitForFrame())
 		{
 			Image frame(camera, fileStream, pat_health_port);
-			if(verifyFrame(frame) && windowAndTune(frame, beacon)) return true;
+			if(verifyFrame(frame) && windowAndTune(frame, beacon)){
+				//save image telemetry
+				std::string nameTag = std::string("ACQUISITION");
+				std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Acquisition frame tuning converged. Saving image telemetry as: ", imageFileName);
+				init.savePNG(imageFileName);
+
+				if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
+					"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
+				}
+
+				return true;
+			}
 			camera.config->expose_us.write(exposure);
 			camera.requestFrame();
 		}
@@ -87,7 +100,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 		camera.requestFrame();
 
 		// Try tuning the windowed frame
-		// log(pat_health_port, fileStream, "Prepared windowed tuning frame at [", fullX, fullY, "]");
+		log(pat_health_port, fileStream, "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [", fullX, fullY, "]");
 		bool success = autoTuneExposure(beacon);
 
 		// Switch back to full frame
