@@ -32,7 +32,7 @@ bool Tracking::runAcquisition(Group& beacon)
 				std::string nameTag = std::string("ACQUISITION");
 				std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Acquisition frame tuning converged. Saving image telemetry as: ", imageFileName);
-				init.savePNG(imageFileName);
+				frame.savePNG(imageFileName);
 
 				if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
 					log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",

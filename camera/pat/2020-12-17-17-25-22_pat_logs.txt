@@ -1,0 +1,96 @@
+[0.35] In camera.cpp Camera::Initialize - device found 
+[0.36] In main.cpp Camera Connection Initialized 
+[0.36] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.36] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.36] In main.cpp - Standing by for command... 
+[0.37] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop... 
+[0.40] In main.cpp phase START - Calibration Starting... 
+[0.44] In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max 1000 us at [ 1379.30522 , 883.51039 ] with smoothing 0 
+[0.58] In calibration.cpp Calibration::findExposureRange - Found preferred exposure: 45 us, 0 dB 
+[0.58] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-17-25-29_CALIBRATION_Start_exp_45.png 
+[0.75] In calibration.cpp Calibration::run - Pair 0 [ 1379.76887 , 883.58048 ] for FSM [ 0.00000 , 0.00000 ] 
+[0.79] In calibration.cpp Calibration::run - Pair 5 [ 1379.77360 , 876.63581 ] for FSM [ -0.00000 , 0.01500 ] 
+[0.82] In calibration.cpp Calibration::run - Pair 10 [ 1400.05655 , 884.01031 ] for FSM [ -0.03000 , -0.00000 ] 
+[0.86] In calibration.cpp Calibration::run - Pair 15 [ 1379.09470 , 904.72134 ] for FSM [ 0.00000 , -0.04500 ] 
+[0.90] In calibration.cpp Calibration::run - Pair 20 [ 1338.57385 , 883.23029 ] for FSM [ 0.06000 , 0.00000 ] 
+[0.94] In calibration.cpp Calibration::run - Pair 25 [ 1380.47335 , 848.20666 ] for FSM [ -0.00000 , 0.07500 ] 
+[0.98] In calibration.cpp Calibration::run - Pair 30 [ 1441.24070 , 884.28906 ] for FSM [ -0.09000 , -0.00000 ] 
+[1.02] In calibration.cpp Calibration::run - Pair 35 [ 1378.42016 , 933.10810 ] for FSM [ 0.00000 , -0.10500 ] 
+[1.06] In calibration.cpp Calibration::run - Pair 40 [ 1296.74700 , 882.66464 ] for FSM [ 0.12000 , 0.00000 ] 
+[1.10] In calibration.cpp Calibration::run - Pair 45 [ 1381.56396 , 819.93710 ] for FSM [ -0.00000 , 0.13500 ] 
+[1.14] In calibration.cpp Calibration::run - Pair 50 [ 1482.89725 , 884.67938 ] for FSM [ -0.15000 , -0.00000 ] 
+[1.18] In calibration.cpp Calibration::run - Pair 55 [ 1378.15869 , 961.63001 ] for FSM [ 0.00000 , -0.16500 ] 
+[1.22] In calibration.cpp Calibration::run - Pair 60 [ 1255.83863 , 882.08753 ] for FSM [ 0.18000 , 0.00000 ] 
+[1.27] In calibration.cpp Calibration::run - Pair 65 [ 1382.64410 , 791.65757 ] for FSM [ -0.00000 , 0.19500 ] 
+[1.30] In calibration.cpp Calibration::run - Pair 70 [ 1524.29880 , 885.01236 ] for FSM [ -0.21000 , -0.00000 ] 
+[1.35] In calibration.cpp Calibration::run - Pair 75 [ 1377.72906 , 990.00751 ] for FSM [ 0.00000 , -0.22500 ] 
+[1.39] In calibration.cpp Calibration::run - Pair 80 [ 1214.79718 , 881.70356 ] for FSM [ 0.24000 , 0.00000 ] 
+[1.43] In calibration.cpp Calibration::run - Pair 85 [ 1383.60223 , 764.10222 ] for FSM [ -0.00000 , 0.25500 ] 
+[1.47] In calibration.cpp Calibration::run - Pair 90 [ 1565.41743 , 885.61474 ] for FSM [ -0.27000 , -0.00000 ] 
+[1.51] In calibration.cpp Calibration::run - Pair 95 [ 1377.30099 , 1011.57026 ] for FSM [ 0.00000 , -0.28500 ] 
+[1.55] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-17-25-33_CALIBRATION_End_exp_45.png 
+[1.69] In calibration.cpp Calibration::run - Calculated sensitivity matrix [ -0.00146 -0.00004 ; 0.00002 -0.00212 ] 
+[1.69] In calibration.cpp Calibration::run - Calculated affine transform [ -0.00145 -0.00004 ; 0.00002 -0.00213 ] + [ 2.03728 ; 1.84814 ] 
+[1.69] In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure =  45  us. 
+[1.69] In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser. 
+[1.83] In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters 
+[1.83] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1732.46548 1045.76726 ] 
+[1.84] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 56 at [ 1696 , 1016 ] 
+[1.92] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1732.64195 1045.89571 ] 
+[1.93] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1696 , 1016 ] 
+[1.98] In tracking.cpp Tracking::runAcquisition - Acquisition frame tuning converged. Saving image telemetry as:  2020-12-17-17-25-34_ACQUISITION_exp_443.png 
+[4.65] In main.cpp phase ACQUISITION - Acquisition complete.  Beacon is at [ 1733.96144 , 1046.97087 , exp =  443 ]  0 dB smoothing 0 . Setting Calib to: [ 858.03856 , 897.02913 , exp =  45 ]  0 dB smoothing 3 
+[4.65] In main.cpp phase CL_INIT - Double window tracking set up! Queued 2 requests 
+[4.85] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 56 at [ 1696 , 1016 ] 
+[5.50] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.97012 , 1046.97627 , exp =  443 ] 
+[5.50] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[6.26] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96632 , 1046.89334 , exp =  443 ] 
+[6.26] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[7.02] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92027 , 1046.93978 , exp =  443 ] 
+[7.02] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[7.70] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1696 , 1016 ] 
+[7.80] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96460 , 1046.88415 , exp =  443 ] 
+[7.80] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[8.56] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.90508 , 1046.91923 , exp =  443 ] 
+[8.56] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[9.33] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96889 , 1046.97321 , exp =  443 ] 
+[9.33] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[10.08] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92016 , 1046.92339 , exp =  443 ] 
+[10.08] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[10.80] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96889 , 1046.96889 , exp =  443 ] 
+[10.80] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[11.53] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92778 , 1046.92863 , exp =  443 ] 
+[11.54] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[12.30] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.93583 , 1046.93083 , exp =  443 ] 
+[12.30] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[13.07] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92352 , 1046.91771 , exp =  443 ] 
+[13.07] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[13.81] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96902 , 1046.88324 , exp =  443 ] 
+[13.81] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[14.58] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.91890 , 1046.89967 , exp =  443 ] 
+[14.58] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[15.30] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.97813 , 1046.97288 , exp =  443 ] 
+[15.30] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[16.05] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96753 , 1046.87581 , exp =  443 ] 
+[16.05] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[16.81] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96651 , 1046.88437 , exp =  443 ] 
+[16.81] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[17.56] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.96365 , 1046.96720 , exp =  443 ] 
+[17.56] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[18.30] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.97992 , 1046.88032 , exp =  443 ] 
+[18.30] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[19.02] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92450 , 1046.91527 , exp =  443 ] 
+[19.02] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[19.77] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92905 , 1046.92145 , exp =  443 ] 
+[19.77] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[20.53] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.92562 , 1046.93223 , exp =  443 ] 
+[20.53] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[21.24] 
+In main.cpp - Saving telemetry files and ending process. 
