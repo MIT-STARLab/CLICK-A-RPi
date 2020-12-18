@@ -16,8 +16,8 @@
 #define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
 #define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
 #define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
-#define OFFSET_X 0 //user input from calibration
-#define OFFSET_Y 0 //user input from calibration
+#define OFFSET_X 36 //user input from calibration
+#define OFFSET_Y 71 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_X 1 //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
@@ -690,7 +690,7 @@ int main() //int argc, char** argv
 
 						exit(-1);
 						*/
-											
+
 						if(haveCalibKnowledge)
 						{						
 							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
