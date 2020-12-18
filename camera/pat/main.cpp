@@ -16,8 +16,8 @@
 #define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
 #define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
 #define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
-#define OFFSET_X 36 //user input from calibration
-#define OFFSET_Y 71 //user input from calibration
+//#define OFFSET_X 36 //user input from calibration
+//#define OFFSET_Y 71 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_X 1 //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
@@ -135,8 +135,8 @@ int main() //int argc, char** argv
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
-	int centerOffsetX = OFFSET_X; 
-	int centerOffsetY = OFFSET_Y; 
+	//int centerOffsetX = OFFSET_X; 
+	//int centerOffsetY = OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	uint16_t command; 
 	int command_exposure;  
@@ -403,8 +403,8 @@ int main() //int argc, char** argv
 					beaconGain = camera.config->gain_dB.read();
 					calibGain = calibration.gainForExposure(beaconExposure);
 					// Set initial pointing in open-loop
-					calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-					calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+					calib.x = 2*((CAMERA_WIDTH/2) + calib.centerOffsetX) - beacon.x;
+					calib.y = 2*((CAMERA_HEIGHT/2) + calib.centerOffsetY) - beacon.y;
 					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
 						"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "] ", beaconGain, "dB smoothing", track.beaconSmoothing, 
 						". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "] ", calibGain, "dB smoothing", calibration.smoothing);
@@ -485,8 +485,8 @@ int main() //int argc, char** argv
 										/*
 										if(openLoop)
 										{
-											double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-											double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+											double setPointX = 2*((CAMERA_WIDTH/2) + calib.centerOffsetX) - beacon.x;
+											double setPointY = 2*((CAMERA_HEIGHT/2) + calib.centerOffsetY) - beacon.y;
 											track.controlOpenLoop(fsm, setPointX, setPointY);
 										}
 										*/
@@ -614,8 +614,8 @@ int main() //int argc, char** argv
 										calib.pixelCount = spot.pixelCount;
 										track.updateTrackingWindow(frame, spot, calibWindow);
 										// Control in closed loop!
-										double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-										double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+										double setPointX = 2*((CAMERA_WIDTH/2) + calib.centerOffsetX) - beacon.x;
+										double setPointY = 2*((CAMERA_HEIGHT/2) + calib.centerOffsetY) - beacon.y;
 										track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 										if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 100x to ~1/(400ms) = 2.5Hz
 											// Save for CSV
@@ -739,8 +739,8 @@ int main() //int argc, char** argv
 							calib.pixelCount = spot.pixelCount;
 							track.updateTrackingWindow(frame, spot, calibWindow);
 							// Set Point is defined as the center with any measured biases
-							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX);
-							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY);
+							double setPointX = 2*((CAMERA_WIDTH/2) + calib.centerOffsetX);
+							double setPointY = 2*((CAMERA_HEIGHT/2) + calib.centerOffsetY);
 							track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 							if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 								// Save for CSV
@@ -807,8 +807,8 @@ int main() //int argc, char** argv
 							beacon.pixelCount = spot.pixelCount;
 							track.updateTrackingWindow(frame, spot, beaconWindow);
 							// Control pointing in open-loop
-							calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-							calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+							calib.x = 2*((CAMERA_WIDTH/2) + calib.centerOffsetX) - beacon.x;
+							calib.y = 2*((CAMERA_HEIGHT/2) + calib.centerOffsetY) - beacon.y;
 							track.controlOpenLoop(fsm, calib.x, calib.y);
 							if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 								// Save for CSV

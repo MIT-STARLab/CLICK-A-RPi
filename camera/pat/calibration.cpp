@@ -205,6 +205,12 @@ bool Calibration::run(Group& calib)
 				{
 					Group& spot = frame.groups[0];
 					points.emplace_back(frame.area.x + spot.x, frame.area.y + spot.y, x, y);
+					if(i == 0){
+						centerOffsetX = (frame.area.x + spot.x) - CAMERA_WIDTH/2;
+						centerOffsetY = (frame.area.y + spot.y) - CAMERA_HEIGHT/2;
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - ",
+						"centerOffsetX = ", centerOffsetX, ", centerOffsetY = ", centerOffsetY);
+					}
 					if(i % 5 == 0){
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y, "] for FSM [", x, ",", y, "]");
 					}
@@ -222,8 +228,10 @@ bool Calibration::run(Group& calib)
 		logImage(string("CALIBRATION_End"), camera, fileStream, pat_health_port); 
 
 		// Reset FSM & Camera
-		camera.setFullWindow();
 		fsm.setNormalizedAngles(0, 0);
+
+		//Reset Camera
+		camera.setFullWindow();	
 
 		// Check pair count
 		if(points.size() < 50) return false;

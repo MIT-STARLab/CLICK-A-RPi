@@ -41,6 +41,13 @@ FSM::~FSM()
 void FSM::setNormalizedAngles(float x, float y)
 //-----------------------------------------------------------------------------
 {
+	if(abs(x) > 1.0f){
+		log(pat_health_port, fileStream,"In fsm.cpp FSM::setNormalizedAngles - Warning! FSM command (x_normalized = ", x, ") exceeds max range (+/- 1). Rounding to limit.");
+	}
+	if(abs(y) > 1.0f){
+		log(pat_health_port, fileStream,"In fsm.cpp FSM::setNormalizedAngles - Warning! FSM command (y_normalized = ", y, ") exceeds max range (+/- 1). Rounding to limit.");
+	}
+	
 	// Clamp to limits
 	x = std::max(-1.0f, std::min(x, 1.0f));
 	y = std::max(-1.0f, std::min(y, 1.0f));
@@ -51,7 +58,7 @@ void FSM::setNormalizedAngles(float x, float y)
 	// Write X+, X-, Y+, Y- & Update
 	if(newX != oldX || newY != oldY)
 	{
-		log(pat_health_port, fileStream,"Updating FSM position to: ", 
+		log(pat_health_port, fileStream,"In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to: ", 
 		"x_normalized = ", x, " -> voltageBias +/- newX = {", voltageBias + newX, ", ", voltageBias - newX,"}. ",
 		"y_normalized = ", y, " -> voltageBias +/- newY = {", voltageBias + newY, ", ", voltageBias - newY,"}. ");
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XP, voltageBias + newX);
