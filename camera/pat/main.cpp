@@ -481,13 +481,15 @@ int main() //int argc, char** argv
 										beacon.valueSum = spot.valueSum;
 										beacon.pixelCount = spot.pixelCount;
 										track.updateTrackingWindow(frame, spot, beaconWindow);
-										// If running open-loop
+										// If running open-loop]
+										/*
 										if(openLoop)
 										{
 											double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 											double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 											track.controlOpenLoop(fsm, setPointX, setPointY);
 										}
+										*/
 										// If sending beacon angle errors to the bus adcs
 										//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
 										if(sendBusFeedback && (i % 25 == 0))
@@ -677,6 +679,8 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
 						"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");						
 						
+						laserOn(fpga_map_request_port, 0);
+
 						//save image debug telemetry
 						std::string nameTag = std::string("DEBUG_CL_CALIB_histBrightest");
 						std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
