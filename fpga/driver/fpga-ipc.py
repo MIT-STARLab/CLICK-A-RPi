@@ -188,29 +188,29 @@ try:
         else:
             print "Error: FPGA not Comm Capable"
 
-        # if ipc_fpgarqpacket.rw_flag == 1:
-        #     print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-        #     #time.sleep(1)
-        #     # send the FPGA_map_answer packet (write)
-        #     ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
-        #     raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=0)
-        #     ipc_fpgaaswpacket_write.decode(raw)
-        #     print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
-        #     print(b'| ' + raw)
-        #     print(ipc_fpgaaswpacket_write)
-        #     send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
-        # else:
-        #     print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-        #     #time.sleep(1)
-        #     # send the FPGA_map_answer packet (read)
-        #     ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
-        #     ch_val = fl.flReadChannel(handle, ipc_fpgarqpacket.start_addr) 
-        #     raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=0, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=ipc_fpgarqpacket.size, read_data=int.encode(ch_val))
-        #     ipc_fpgaaswpacket_read.decode(raw)
-        #     print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
-        #     print(b'| ' + raw)
-        #     print(ipc_fpgaaswpacket_read)
-        #     send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_read.return_addr)
+        if ipc_fpgarqpacket.rw_flag == 1:
+            print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
+            #time.sleep(1)
+            # send the FPGA_map_answer packet (write)
+            ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
+            raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=0)
+            ipc_fpgaaswpacket_write.decode(raw)
+            print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
+            print(b'| ' + raw)
+            print(ipc_fpgaaswpacket_write)
+            send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
+        else:
+            print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
+            #time.sleep(1)
+            # send the FPGA_map_answer packet (read)
+            ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
+            ch_val = fl.flReadChannel(handle, ipc_fpgarqpacket.start_addr) 
+            raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=0, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=ipc_fpgarqpacket.size, read_data=int.encode(ch_val))
+            ipc_fpgaaswpacket_read.decode(raw)
+            print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
+            print(b'| ' + raw)
+            print(ipc_fpgaaswpacket_read)
+            send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_read.return_addr)
 
 except fl.FLException as ex:
     print(ex)

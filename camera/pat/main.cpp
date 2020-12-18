@@ -39,13 +39,15 @@ public:
 //Turn on Calibration Laser
 void laserOn(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
-	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	//receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);
 }
 
 //Turn Off Calibration Laser
 void laserOff(zmq::socket_t& fpga_map_request_port, uint8_t request_number){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
-	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	//receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -246,10 +248,11 @@ int main() //int argc, char** argv
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
 					camera.config->expose_us.write(command_exposure);	
 
-					laserOn(fpga_map_request_port, 0);
-					receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);	
+					laserOn(fpga_map_request_port, 0);	
+					receive_packet_fpga_map_answer(fpga_map_answer_port);
 					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
-					receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);	
+					receive_packet_fpga_map_answer(fpga_map_answer_port);
+
 					/*
 					//set to sufficiently large window size (but not too large)
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
