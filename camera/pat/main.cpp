@@ -157,7 +157,7 @@ int main() //int argc, char** argv
 			command = receive_packet_pat_control(pat_control_port);
 			if(command == CMD_END_PAT){
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
-				exit(-1);
+				return 0;
 			}
 		}
 		//Try to initialize again
@@ -897,5 +897,5 @@ int main() //int argc, char** argv
     std::cout << "CSV File Saved." << std::endl;
 	textFileOut.close(); //close text file
     std::cout << "TXT File Saved." << std::endl;
-	return 0;
+    return 0;
 }
