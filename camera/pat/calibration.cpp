@@ -188,7 +188,6 @@ bool Calibration::run(Group& calib)
 		// Use preferred exposure
 		camera.config->gain_dB.write(0);
 		camera.config->expose_us.write(preferredExpo);
-		//logImage(string("CALIBRATION_Start"), camera, fileStream, pat_health_port); 
 		for(int i = 0; i < 100; i++)
 		{
 			// Spiral outwards with 100 points from 0 to defined max FSM range
@@ -211,6 +210,11 @@ bool Calibration::run(Group& calib)
 						centerOffsetY = (frame.area.y + spot.y) - CAMERA_HEIGHT/2;
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - ",
 						"centerOffsetX = ", centerOffsetX, ", centerOffsetY = ", centerOffsetY);
+
+						std::string nameTag = std::string("CALIBRATION");
+						std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Saving image telemetry as: ", imageFileName);
+						frame.savePNG(imageFileName);
 					}
 					if(i % 5 == 0){
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y, "] for FSM [", x, ",", y, "]");
@@ -225,12 +229,6 @@ bool Calibration::run(Group& calib)
 				}
 			}
 		}
-		
-		std::string nameTag = std::string("CALIBRATION");
-		std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Saving image telemetry as: ", imageFileName);
-		frame.savePNG(imageFileName);
-		//logImage(string("CALIBRATION_End"), camera, fileStream, pat_health_port); 
 
 		// Reset FSM & Camera
 		fsm.setNormalizedAngles(0, 0);
