@@ -8,13 +8,13 @@
 
 // Initialize MEMS FSM control board over SPI; filter = cutoff in Hz
 //-----------------------------------------------------------------------------
-FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, float vBias, float vMax, float filter) :
+FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, uint16_t vBias_dac, uint16_t vMax_dac, float filter) :
 fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_port(fpga_map_request_port_in)
 //-----------------------------------------------------------------------------
 {
 	// Voltage setting (ref. PicoAmp datasheet)
-	voltageBias = FSM_VBIAS_DAC;
-	voltageMax = FSM_VMAX_DAC;
+	voltageBias = vBias_dac;
+	voltageMax = vMax_dac;
 
 	// Initialize DAC - AD5664
 	oldX = 1; oldY = 1;

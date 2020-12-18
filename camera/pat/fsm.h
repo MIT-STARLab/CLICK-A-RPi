@@ -38,7 +38,7 @@ class FSM
 	void fsmWrite(uint16_t channel, uint8_t data);
 	
 public:
-	FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, float vBias = FSM_VBIAS, float vMax = FSM_VMAX, float filter = FSM_FILTER);
+	FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, uint16_t vBias_dac = FSM_VBIAS_DAC, uint16_t vMax_dac = FSM_VMAX_DAC, float filter = FSM_FILTER);
 	~FSM();
 	void setNormalizedAngles(float x, float y);
 	void forceTransfer();
