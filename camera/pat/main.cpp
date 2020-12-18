@@ -294,17 +294,17 @@ int main() //int argc, char** argv
 
 					//save images at various FSM settings
 					fsm.setNormalizedAngles(0,0);
-					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 					fsm.setNormalizedAngles(1,0);
-					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 					fsm.setNormalizedAngles(0,1);
-					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 

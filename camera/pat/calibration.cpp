@@ -199,7 +199,7 @@ bool Calibration::run(Group& calib)
 			camera.requestFrame();
 			if(camera.waitForFrame())
 			{
-				Image frame(camera, fileStream, pat_health_port, smoothing);
+				Image frame(camera, fileStream, pat_health_port);
 
 				if(frame.performPixelGrouping() > 0)
 				{
