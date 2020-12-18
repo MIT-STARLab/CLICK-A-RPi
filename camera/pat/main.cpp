@@ -394,7 +394,7 @@ int main() //int argc, char** argv
 			case ACQUISITION:
 				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser.");
 				laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
-				if(track.runAcquisition(beacon) && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
+				if(track.runAcquisition(beacon)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 				{
 					// Acquisition passed!
 					haveBeaconKnowledge = true;
