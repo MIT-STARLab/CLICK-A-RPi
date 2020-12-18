@@ -140,6 +140,8 @@ int main() //int argc, char** argv
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	uint16_t command; 
 	int command_exposure; 
+	bool cl_beacon_switch_success, cl_calib_switch_success; 
+	int cl_beacon_num_groups, cl_calib_num_groups;
 	
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
@@ -382,11 +384,10 @@ int main() //int argc, char** argv
 			case ACQUISITION:
 				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser.");
 				laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for acquistion
-				if(track.runAcquisition(beacon) && beacon.pixelCount > MIN_PIXELS_PER_GROUP) //sets beacon exposure, pg-comment
+				if(track.runAcquisition(beacon) && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 				{
 					// Acquisition passed!
 					haveBeaconKnowledge = true;
-					haveCalibKnowledge = false;
 					// Save all important parameters
 					beaconExposure = camera.config->expose_us.read(); //save beacon exposure, pg-comment
 					beaconGain = camera.config->gain_dB.read();
@@ -397,6 +398,7 @@ int main() //int argc, char** argv
 					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
 						"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "] ", beaconGain, "dB smoothing", track.beaconSmoothing, 
 						". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "] ", calibGain, "dB smoothing", calibration.smoothing);
+					logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 					track.controlOpenLoop(fsm, calib.x, calib.y);
 					if(openLoop)
 					{
@@ -447,82 +449,118 @@ int main() //int argc, char** argv
 				if(camera.waitForFrame())
 				{
 					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
-					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
-					   frame.performPixelGrouping() > 0 && (
-					   spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference)) >= 0 &&
-					   frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
 					{
-						Group& spot = frame.groups[spotIndex];
-						// Check spot properties
-						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+						cl_beacon_num_groups = frame.performPixelGrouping();
+						if(cl_beacon_num_groups > 0)
 						{
-							haveBeaconKnowledge = true;
-							// Update values if confident
-							beacon.x = frame.area.x + spot.x;
-							beacon.y = frame.area.y + spot.y;
-							beacon.valueMax = spot.valueMax;
-							beacon.valueSum = spot.valueSum;
-							beacon.pixelCount = spot.pixelCount;
-							track.updateTrackingWindow(frame, spot, beaconWindow);
-							// If running open-loop
-							if(openLoop)
+							spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference);
+							if(spotIndex >= 0)
 							{
-								double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-								double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
-								track.controlOpenLoop(fsm, setPointX, setPointY);
+								if(frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+								{
+									Group& spot = frame.groups[spotIndex];
+									// Check spot properties
+									if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+									{
+										haveBeaconKnowledge = true;
+										// Update values if confident
+										beacon.x = frame.area.x + spot.x;
+										beacon.y = frame.area.y + spot.y;
+										beacon.valueMax = spot.valueMax;
+										beacon.valueSum = spot.valueSum;
+										beacon.pixelCount = spot.pixelCount;
+										track.updateTrackingWindow(frame, spot, beaconWindow);
+										// If running open-loop
+										if(openLoop)
+										{
+											double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
+											double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+											track.controlOpenLoop(fsm, setPointX, setPointY);
+										}
+										// If sending beacon angle errors to the bus adcs
+										//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
+										if(sendBusFeedback && (i % 25 == 0))
+										{
+											error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
+											log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
+											"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
+											"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
+											send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+										}
+									}
+									else
+									{
+										log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
+										"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+										"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+										"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+									}
+								}
+								else
+								{
+									log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
+									"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+									if(haveBeaconKnowledge) // Beacon Loss Scenario
+									{
+										log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
+										haveBeaconKnowledge = false;
+										startBeaconLoss = steady_clock::now(); // Record time of Loss
+									}
+								}
 							}
-							// If sending beacon angle errors to the bus adcs
-							//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
-							if(sendBusFeedback && (i % 25 == 0))
+							else
 							{
-								error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
-								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
-								"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
-								"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
-								send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
+								"(spotIndex = ", spotIndex, ") < 0");
+								if(haveBeaconKnowledge) // Beacon Loss Scenario
+								{
+									log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
+									haveBeaconKnowledge = false;
+									startBeaconLoss = steady_clock::now(); // Record time of Loss
+								}
 							}
 						}
 						else
 						{
-							if(haveBeaconKnowledge) //Rapid spot change -> loss scenario, pg
+							log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
+							"(cl_beacon_num_groups = ", cl_beacon_num_groups, ") <= 0");
+							if(haveBeaconKnowledge) // Beacon Loss Scenario
 							{
-								log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
-									"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-									"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
-									"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
-								haveBeaconKnowledge = false; // This variable is false if timeout has started, pg
-								startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
-						  }
-						}
-					}
+								log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
+								haveBeaconKnowledge = false;
+								startBeaconLoss = steady_clock::now(); // Record time of Loss
+							}
+						}					
+					} 
 					else
 					{
-						if(haveBeaconKnowledge) // Beacon Loss Scenario, pg
+						log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
+						"(frame.histBrightest = ", frame.histBrightest, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+						if(haveBeaconKnowledge) // Beacon Loss Scenario
 						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon spot vanished! Timeout started..."); //pg
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
 							haveBeaconKnowledge = false;
-							startBeaconLoss = steady_clock::now(); // Record time of Loss, pg
+							startBeaconLoss = steady_clock::now(); // Record time of Loss
 						}
 					}
 
-					if(!haveBeaconKnowledge) //Check timeout and return to acquisition if loss criterion met, pg
+					if(!haveBeaconKnowledge) //Check timeout and return to acquisition if loss criterion met
 					{
-						time_point<steady_clock> checkBeaconLoss = steady_clock::now(); // Record current time, pg
-						duration<double> elapsedBeaconLoss = checkBeaconLoss - startBeaconLoss; // Calculate time since beacon loss, pg
+						time_point<steady_clock> checkBeaconLoss = steady_clock::now(); // Record current time
+						duration<double> elapsedBeaconLoss = checkBeaconLoss - startBeaconLoss; // Calculate time since beacon loss
 						if(elapsedBeaconLoss > waitBeaconLoss) //pg
 						{
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon lost. Returning to acquisition.");
 							phase = ACQUISITION; // Beacon completely lost, return to ACQUISITION, pg
 							break; //pg
 						}
 					}
 
-					// nonflight, Send image to GUI
-					//link.setBeacon(frame);
-
 					// Request new frame
 					camera.setWindow(beaconWindow);
 					//camera.config->gain_dB.write(beaconGain);
-					//beaconExposure = track.controlExposure(frame, beaconExposure); //control beacon exposure, pg
+					beaconExposure = track.controlExposure(frame, beaconExposure); //control beacon exposure, pg
 					camera.config->expose_us.write(beaconExposure); //set frame exposure, pg
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					// Next up is calibration laser frame
@@ -541,57 +579,100 @@ int main() //int argc, char** argv
 				if(camera.waitForFrame())
 				{
 					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
-					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4 &&
-					   frame.performPixelGrouping() > 0 && (
-					   spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference)) >= 0 &&
-					   frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
+					if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4)
 					{
-						Group& spot = frame.groups[spotIndex];
-						// Check spot properties
-						if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+						cl_calib_num_groups = frame.performPixelGrouping();
+						if(cl_calib_num_groups > 0)
 						{
-							haveCalibKnowledge = true;
-							// Update values if confident
-							calib.x = frame.area.x + spot.x;
-							calib.y = frame.area.y + spot.y;
-							calib.valueMax = spot.valueMax;
-							calib.valueSum = spot.valueSum;
-							calib.pixelCount = spot.pixelCount;
-							track.updateTrackingWindow(frame, spot, calibWindow);
-							// Control in closed loop!
-							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
-							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
-							if(!openLoop)
+							spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference);
+							if(spotIndex >= 0)
 							{
-								track.control(fsm, calib.x, calib.y, setPointX, setPointY);
+								if(frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
+								{
+									Group& spot = frame.groups[spotIndex];
+									// Check spot properties
+									if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+									{
+										haveCalibKnowledge = true;
+										// Update values if confident
+										calib.x = frame.area.x + spot.x;
+										calib.y = frame.area.y + spot.y;
+										calib.valueMax = spot.valueMax;
+										calib.valueSum = spot.valueSum;
+										calib.pixelCount = spot.pixelCount;
+										track.updateTrackingWindow(frame, spot, calibWindow);
+										// Control in closed loop!
+										double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
+										double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
+										track.control(fsm, calib.x, calib.y, setPointX, setPointY);
+										if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 100x to ~1/(400ms) = 2.5Hz
+											// Save for CSV
+											time_point<steady_clock> now = steady_clock::now();
+											duration<double> diff = now - beginTime;
+											csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
+												calib.x, calib.y, setPointX, setPointY, calibExposure)));
+											//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+										}
+									}
+									else
+									{
+										log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
+										"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+										"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
+										"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+									}
+								}
+								else
+								{
+									log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
+									"(frame.groups[spotIndex].valueMax = ", frame.groups[spotIndex].valueMax, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");							
+									if(haveCalibKnowledge)
+									{						
+										log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
+										haveCalibKnowledge = false;
+										// Try forced FSM SPI transfer? Maybe data corruption
+										// fsm.forceTransfer();
+									}
+								}
 							}
-							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
-								// Save for CSV
-								time_point<steady_clock> now = steady_clock::now();
-								duration<double> diff = now - beginTime;
-								csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
-									calib.x, calib.y, setPointX, setPointY, calibExposure)));
-								//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							else
+							{
+								log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
+								"(spotIndex = ", spotIndex, ") < 0");						
+								if(haveCalibKnowledge)
+								{						
+									log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
+									haveCalibKnowledge = false;
+									// Try forced FSM SPI transfer? Maybe data corruption
+									// fsm.forceTransfer();
+								}
 							}
-						}
+						}	
 						else
 						{
-							if(haveCalibKnowledge) log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
-									"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-									"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
-									"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
-							haveCalibKnowledge = false;
+							log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
+							"(cl_calib_num_groups = ", cl_calib_num_groups, ") <= 0");						
+							if(haveCalibKnowledge)
+							{						
+								log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
+								haveCalibKnowledge = false;
+								// Try forced FSM SPI transfer? Maybe data corruption
+								// fsm.forceTransfer();
+							}
 						}
+											
 					}
 					else
 					{
+						log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
+						"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");						
 						if(haveCalibKnowledge)
-						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished! Executing FSM SPI forceTransfer().");
+						{						
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
+							haveCalibKnowledge = false;
 							// Try forced FSM SPI transfer? Maybe data corruption
-							fsm.forceTransfer();
+							// fsm.forceTransfer();
 						}
-						haveCalibKnowledge = false;
 					}
 
 					// Request new frame
@@ -636,7 +717,7 @@ int main() //int argc, char** argv
 							double setPointX = 2*((CAMERA_WIDTH/2) + centerOffsetX);
 							double setPointY = 2*((CAMERA_HEIGHT/2) + centerOffsetY);
 							track.control(fsm, calib.x, calib.y, setPointX, setPointY);
-							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+							if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 								// Save for CSV
 								time_point<steady_clock> now = steady_clock::now();
 								duration<double> diff = now - beginTime;
@@ -704,7 +785,7 @@ int main() //int argc, char** argv
 							calib.x = 2*((CAMERA_WIDTH/2) + centerOffsetX) - beacon.x;
 							calib.y = 2*((CAMERA_HEIGHT/2) + centerOffsetY) - beacon.y;
 							track.controlOpenLoop(fsm, calib.x, calib.y);
-							if(i % 10 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+							if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 								// Save for CSV
 								time_point<steady_clock> now = steady_clock::now();
 								duration<double> diff = now - beginTime;
@@ -747,7 +828,7 @@ int main() //int argc, char** argv
 	}
 	// END of main PAT loop
 
-	log(pat_health_port, textFileOut,  "\nIn main.cpp - Saving telemetry files and ending process.");
+	log(pat_health_port, textFileOut,  "In main.cpp - Saving telemetry files...");
 
 	ofstream out(dataFileName);
 	for(const auto& x : csvData)
@@ -760,6 +841,8 @@ int main() //int argc, char** argv
 	out.close(); //close data file
 
 	textFileOut.close(); //close text file
+
+	log(pat_health_port, textFileOut,  "In main.cpp - Exiting Process.");
 
 	return 0;
 }
