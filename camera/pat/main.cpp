@@ -885,7 +885,7 @@ int main() //int argc, char** argv
 	}
 	// END of main PAT loop
 
-	log(pat_health_port, textFileOut,  "In main.cpp - Saving telemetry files...");
+	log(pat_health_port, textFileOut,  "In main.cpp - Saving telemetry files and exiting process.");
 
 	ofstream out(dataFileName);
 	for(const auto& x : csvData)
@@ -896,10 +896,8 @@ int main() //int argc, char** argv
 		//	CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 	}
 	out.close(); //close data file
-
+    std::cout << "CSV File Saved." << std::endl;
 	textFileOut.close(); //close text file
-
-	log(pat_health_port, textFileOut,  "In main.cpp - Exiting Process.");
-
+    std::cout << "TXT File Saved." << std::endl;
 	return 0;
 }
