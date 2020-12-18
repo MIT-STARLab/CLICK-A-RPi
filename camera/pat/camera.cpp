@@ -22,7 +22,7 @@ Camera::~Camera()
 {
 	delete config;
 	delete fi;
-	std::cout << "Camera Destroyed" << std::endl;
+	//std::cout << "Camera Destroyed" << std::endl;
 }
 
 //-----------------------------------------------------------------------------

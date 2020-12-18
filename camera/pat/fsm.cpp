@@ -34,8 +34,8 @@ fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_
 FSM::~FSM()
 //-----------------------------------------------------------------------------
 {
-	setNormalizedAngles(0, 0); //reset to zero before destruction
-	std::cout << "FSM Destroyed." << std::endl;
+	//setNormalizedAngles(0, 0); //reset to zero before destruction
+	//std::cout << "FSM Destroyed." << std::endl;
 }
 
 //-----------------------------------------------------------------------------

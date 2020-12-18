@@ -890,7 +890,7 @@ int main() //int argc, char** argv
 		}
 	}
 	// END of main PAT loop
-
+	fsm.setNormalizedAngles(0, 0); //reset to zero before destruction
 	log(pat_health_port, textFileOut,  "In main.cpp - Saving telemetry files and exiting process.");
 
 	ofstream out(dataFileName);
@@ -902,18 +902,18 @@ int main() //int argc, char** argv
 		//	CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 	}
 	out.close(); //close data file
-    std::cout << "CSV File Saved." << std::endl;
+    //std::cout << "CSV File Saved." << std::endl;
 	textFileOut.close(); //close text file
-    std::cout << "TXT File Saved." << std::endl;
+    //std::cout << "TXT File Saved." << std::endl;
 
 	pat_health_port.close();
 	pat_control_port.close();
 	fpga_map_request_port.close();
 	fpga_map_answer_port.close();
 	tx_packets_port.close();
-	std::cout << "Ports Closed." << std::endl;
+	//std::cout << "Ports Closed." << std::endl;
     context.close();
-	std::cout << "Context Closed." << std::endl;
+	//std::cout << "Context Closed." << std::endl;
 
     return 0;
 }
