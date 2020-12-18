@@ -897,5 +897,15 @@ int main() //int argc, char** argv
     std::cout << "CSV File Saved." << std::endl;
 	textFileOut.close(); //close text file
     std::cout << "TXT File Saved." << std::endl;
+
+	pat_health_port.close();
+	pat_control_port.close();
+	fpga_map_request_port.close();
+	fpga_map_answer_port.close();
+	tx_packets_port.close();
+	std::cout << "Ports Closed." << std::endl;
+    context.close();
+	std::cout << "Context Closed." << std::endl;
+
     return 0;
 }
