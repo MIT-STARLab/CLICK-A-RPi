@@ -429,7 +429,8 @@ int main() //int argc, char** argv
 
 			// Initialize closed-loop double window tracking
 			case CL_INIT:
-				camera.ignoreNextFrames(camera.queuedCount);
+				camera.ignoreNextFrames(camera.queuedCount); //clear queue
+				/*
 				// Init flipping windows - first window
 				//camera.config->gain_dB.write(beaconGain);
 				camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
@@ -442,11 +443,19 @@ int main() //int argc, char** argv
 				calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
 				calibWindow.w = TRACK_ACQUISITION_WINDOW;
 				calibWindow.h = TRACK_ACQUISITION_WINDOW;
-				// Initial values will be uncertain
-				calib.pixelCount = 0;
 				camera.setWindow(calibWindow);
 				camera.requestFrame(); //queue calib frame, pg-comment
 				log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - Double window tracking set up! Queued", camera.queuedCount, "requests");
+				*/
+				calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
+				calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
+				calibWindow.w = TRACK_ACQUISITION_WINDOW;
+				calibWindow.h = TRACK_ACQUISITION_WINDOW;
+				log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - ",
+				"calibWindow.x = ", calibWindow.x, "calibWindow.y = ", calibWindow.y,
+				"calibWindow.w = ", calibWindow.w, "calibWindow.h = ", calibWindow.h);
+				// Initial values will be uncertain
+				calib.pixelCount = 0;
 				// Next up is beacon spot frame
 				phase = CL_BEACON;
 				// Save time
@@ -456,6 +465,9 @@ int main() //int argc, char** argv
 			// Process new frame of beacon spot
 			case CL_BEACON:
 				laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off for beacon
+				camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
+				camera.setWindow(beaconWindow);
+				camera.requestFrame(); //queue beacon frame, pg-comment
 				if(camera.waitForFrame())
 				{
 					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
@@ -569,6 +581,7 @@ int main() //int argc, char** argv
 						}
 					}
 
+					/*
 					// Request new frame
 					camera.setWindow(beaconWindow);
 					//camera.config->gain_dB.write(beaconGain);
@@ -576,6 +589,7 @@ int main() //int argc, char** argv
 					camera.config->expose_us.write(beaconExposure); //set frame exposure, pg
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					// Next up is calibration laser frame
+					*/
 					phase = CL_CALIB;
 				}
 				else
@@ -588,6 +602,9 @@ int main() //int argc, char** argv
 			// Process new frame of calib laser spot
 			case CL_CALIB:
 				laserOn(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser on for calib
+				camera.config->expose_us.write(calibExposure); //set cam to calib exposure, pg
+				camera.setWindow(calibWindow);
+				camera.requestFrame(); //queue calib frame, pg-comment
 				if(camera.waitForFrame())
 				{
 					Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
