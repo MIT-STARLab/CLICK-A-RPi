@@ -99,7 +99,7 @@ uint16_t receive_packet_pat_control(zmq::socket_t& pat_control_port, char* data_
 	return packet_struct.command;
 }
 
-uint8_t receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port)
+void receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port)
 {
 	zmq::message_t message;
 	fpga_map_answer_port.recv(message, zmq::recv_flags::none);
@@ -121,7 +121,7 @@ uint8_t receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port)
 	std::cout << "packetdef - data_size: " << packet_struct.data_size << std::endl;
 	std::cout << "packetdef - data_to_write: " << unsigned(packet_struct.data_to_read[3]) << std::endl;
 	
-	return packet_struct.data_to_read[3];
+	//return packet_struct.data_to_read[3];
 }
 
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)

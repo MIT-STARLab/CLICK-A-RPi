@@ -244,13 +244,19 @@ int main() //int argc, char** argv
 					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
-					camera.config->expose_us.write(command_exposure);		
+					camera.config->expose_us.write(command_exposure);	
 
+					laserOn(fpga_map_request_port, 0);
+					receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);	
+					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
+					receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);	
+					/*
 					//set to sufficiently large window size (but not too large)
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
 
 					//switch laser on and ensure FSM is centered
 					laserOn(fpga_map_request_port, 0);
+					receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);
 					fsm.setNormalizedAngles(0,0); 	
 
 					//save image
@@ -258,6 +264,7 @@ int main() //int argc, char** argv
 
 					//switch laser off
 					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
+					*/
 					break;
 
 				case CMD_FSM_TEST:

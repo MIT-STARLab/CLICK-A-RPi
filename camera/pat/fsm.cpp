@@ -58,9 +58,9 @@ void FSM::setNormalizedAngles(float x, float y)
 	// Write X+, X-, Y+, Y- & Update
 	if(newX != oldX || newY != oldY)
 	{
-		log(pat_health_port, fileStream,"In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to: ", 
-		"x_normalized = ", x, " -> voltageBias +/- newX = {", voltageBias + newX, ", ", voltageBias - newX,"}. ",
-		"y_normalized = ", y, " -> voltageBias +/- newY = {", voltageBias + newY, ", ", voltageBias - newY,"}. ");
+		//log(pat_health_port, fileStream,"In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to: ", 
+		//"x_normalized = ", x, " -> voltageBias +/- newX = {", voltageBias + newX, ", ", voltageBias - newX,"}. ",
+		//"y_normalized = ", y, " -> voltageBias +/- newY = {", voltageBias + newY, ", ", voltageBias - newY,"}. ");
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XP, voltageBias + newX);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XM, voltageBias - newX);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_YP, voltageBias + newY);

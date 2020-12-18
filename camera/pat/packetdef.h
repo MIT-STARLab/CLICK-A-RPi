@@ -70,7 +70,7 @@ void send_packet_tx_adcs(zmq::socket_t& tx_packets_port, float body_frame_x_angu
 // Packet Receiving & Parsing for SUB Processes:
 uint16_t receive_packet_pat_control(zmq::socket_t& pat_control_port, char* data_to_read = NULL);
 
-uint8_t receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);
+void receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);
 
 // TODO: receive_packet_pat_rx (commands from bus)
 
