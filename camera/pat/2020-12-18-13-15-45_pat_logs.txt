@@ -1,0 +1,169 @@
+[0.36] In camera.cpp Camera::Initialize - device found 
+[0.36] In main.cpp Camera Connection Initialized 
+[0.36] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.36] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.36] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[0.36] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Standing by for command... 
+[0.42] In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop... 
+[0.43] In main.cpp phase  START  - No idea where beacon is. 
+[0.43] In main.cpp phase  START  - No idea where calib is. 
+[0.43] In main.cpp phase START - Calibration Starting... 
+[0.44] In main.cpp phase  CALIBRATION  - No idea where beacon is. 
+[0.44] In main.cpp phase  CALIBRATION  - No idea where calib is. 
+[0.49] In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max 1000 us at [ 1383.46777 , 882.18745 ] with smoothing 0 
+[0.51] In calibration.cpp Calibration::findExposureRange - Found preferred exposure: 100 us, 0 dB 
+[0.51] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-13-15-55_CALIBRATION_Start_exp_100.png 
+[0.69] In calibration.cpp Calibration::run -  centerOffsetX =  87 , centerOffsetY =  -89 
+[0.69] In calibration.cpp Calibration::run - Pair 0 [ 1383.47250 , 882.19832 ] for FSM [ 0.00000 , 0.00000 ] 
+[0.69] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00951  -> voltageBias +/- newX = { 22114 ,  21886 }.  y_normalized =  0.00309  -> voltageBias +/- newY = { 22037 ,  21963 }.  
+[0.70] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.01618  -> voltageBias +/- newX = { 22194 ,  21806 }.  y_normalized =  0.01176  -> voltageBias +/- newY = { 22141 ,  21859 }.  
+[0.71] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.01763  -> voltageBias +/- newX = { 22211 ,  21789 }.  y_normalized =  0.02427  -> voltageBias +/- newY = { 22291 ,  21709 }.  
+[0.72] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.01236  -> voltageBias +/- newX = { 22148 ,  21852 }.  y_normalized =  0.03804  -> voltageBias +/- newY = { 22456 ,  21544 }.  
+[0.73] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.05000  -> voltageBias +/- newY = { 22600 ,  21400 }.  
+[0.73] In calibration.cpp Calibration::run - Pair 5 [ 1383.60960 , 873.97245 ] for FSM [ -0.00000 , 0.05000 ] 
+[0.73] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.01854  -> voltageBias +/- newX = { 21778 ,  22222 }.  y_normalized =  0.05706  -> voltageBias +/- newY = { 22684 ,  21316 }.  
+[0.74] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.04114  -> voltageBias +/- newX = { 21507 ,  22493 }.  y_normalized =  0.05663  -> voltageBias +/- newY = { 22679 ,  21321 }.  
+[0.75] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.06472  -> voltageBias +/- newX = { 21224 ,  22776 }.  y_normalized =  0.04702  -> voltageBias +/- newY = { 22564 ,  21436 }.  
+[0.76] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.08560  -> voltageBias +/- newX = { 20973 ,  23027 }.  y_normalized =  0.02781  -> voltageBias +/- newY = { 22333 ,  21667 }.  
+[0.77] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.10000  -> voltageBias +/- newX = { 20800 ,  23200 }.  y_normalized =  -0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[0.78] In calibration.cpp Calibration::run - Pair 10 [ 1407.57611 , 882.55850 ] for FSM [ -0.10000 , -0.00000 ] 
+[0.78] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.10462  -> voltageBias +/- newX = { 20745 ,  23255 }.  y_normalized =  -0.03399  -> voltageBias +/- newY = { 21593 ,  22407 }.  
+[0.79] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.09708  -> voltageBias +/- newX = { 20836 ,  23164 }.  y_normalized =  -0.07053  -> voltageBias +/- newY = { 21154 ,  22846 }.  
+[0.79] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.07641  -> voltageBias +/- newX = { 21084 ,  22916 }.  y_normalized =  -0.10517  -> voltageBias +/- newY = { 20738 ,  23262 }.  
+[0.80] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.04326  -> voltageBias +/- newX = { 21481 ,  22519 }.  y_normalized =  -0.13315  -> voltageBias +/- newY = { 20403 ,  23597 }.  
+[0.81] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  -0.15000  -> voltageBias +/- newY = { 20200 ,  23800 }.  
+[0.82] In calibration.cpp Calibration::run - Pair 15 [ 1382.91917 , 907.05643 ] for FSM [ 0.00000 , -0.15000 ] 
+[0.82] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.04944  -> voltageBias +/- newX = { 22593 ,  21407 }.  y_normalized =  -0.15217  -> voltageBias +/- newY = { 20174 ,  23826 }.  
+[0.83] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.09992  -> voltageBias +/- newX = { 23199 ,  20801 }.  y_normalized =  -0.13753  -> voltageBias +/- newY = { 20350 ,  23650 }.  
+[0.84] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.14562  -> voltageBias +/- newX = { 23747 ,  20253 }.  y_normalized =  -0.10580  -> voltageBias +/- newY = { 20731 ,  23269 }.  
+[0.85] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.18070  -> voltageBias +/- newX = { 24168 ,  19832 }.  y_normalized =  -0.05871  -> voltageBias +/- newY = { 21296 ,  22704 }.  
+[0.86] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.20000  -> voltageBias +/- newX = { 24400 ,  19600 }.  y_normalized =  0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[0.88] In calibration.cpp Calibration::run - Pair 20 [ 1335.19703 , 881.69187 ] for FSM [ 0.20000 , 0.00000 ] 
+[0.88] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.19972  -> voltageBias +/- newX = { 24396 ,  19604 }.  y_normalized =  0.06489  -> voltageBias +/- newY = { 22778 ,  21222 }.  
+[0.89] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.17798  -> voltageBias +/- newX = { 24135 ,  19865 }.  y_normalized =  0.12931  -> voltageBias +/- newY = { 23551 ,  20449 }.  
+[0.90] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.13519  -> voltageBias +/- newX = { 23622 ,  20378 }.  y_normalized =  0.18607  -> voltageBias +/- newY = { 24232 ,  19768 }.  
+[0.91] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.07416  -> voltageBias +/- newX = { 22889 ,  21111 }.  y_normalized =  0.22825  -> voltageBias +/- newY = { 24739 ,  19261 }.  
+[0.92] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.25000  -> voltageBias +/- newY = { 25000 ,  19000 }.  
+[0.93] In calibration.cpp Calibration::run - Pair 25 [ 1384.59069 , 840.56298 ] for FSM [ -0.00000 , 0.25000 ] 
+[0.93] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.08034  -> voltageBias +/- newX = { 21036 ,  22964 }.  y_normalized =  0.24727  -> voltageBias +/- newY = { 24967 ,  19033 }.  
+[0.95] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.15870  -> voltageBias +/- newX = { 20096 ,  23904 }.  y_normalized =  0.21843  -> voltageBias +/- newY = { 24621 ,  19379 }.  
+[0.96] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.22652  -> voltageBias +/- newX = { 19282 ,  24718 }.  y_normalized =  0.16458  -> voltageBias +/- newY = { 23974 ,  20026 }.  
+[0.97] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.27581  -> voltageBias +/- newX = { 18691 ,  25309 }.  y_normalized =  0.08961  -> voltageBias +/- newY = { 23075 ,  20925 }.  
+[0.98] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.30000  -> voltageBias +/- newX = { 18400 ,  25600 }.  y_normalized =  -0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[0.99] In calibration.cpp Calibration::run - Pair 30 [ 1456.02529 , 882.90232 ] for FSM [ -0.30000 , -0.00000 ] 
+[0.99] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.29483  -> voltageBias +/- newX = { 18463 ,  25537 }.  y_normalized =  -0.09580  -> voltageBias +/- newY = { 20851 ,  23149 }.  
+[1.00] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.25889  -> voltageBias +/- newX = { 18894 ,  25106 }.  y_normalized =  -0.18809  -> voltageBias +/- newY = { 19743 ,  24257 }.  
+[1.01] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.19397  -> voltageBias +/- newX = { 19673 ,  24327 }.  y_normalized =  -0.26698  -> voltageBias +/- newY = { 18797 ,  25203 }.  
+[1.01] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.10507  -> voltageBias +/- newX = { 20740 ,  23260 }.  y_normalized =  -0.32336  -> voltageBias +/- newY = { 18120 ,  25880 }.  
+[1.02] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  -0.35000  -> voltageBias +/- newY = { 17800 ,  26200 }.  
+[1.03] In calibration.cpp Calibration::run - Pair 35 [ 1382.13465 , 940.51903 ] for FSM [ 0.00000 , -0.35000 ] 
+[1.03] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.11125  -> voltageBias +/- newX = { 23334 ,  20666 }.  y_normalized =  -0.34238  -> voltageBias +/- newY = { 17892 ,  26108 }.  
+[1.04] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.21748  -> voltageBias +/- newX = { 24609 ,  19391 }.  y_normalized =  -0.29934  -> voltageBias +/- newY = { 18408 ,  25592 }.  
+[1.05] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.30743  -> voltageBias +/- newX = { 25689 ,  18311 }.  y_normalized =  -0.22336  -> voltageBias +/- newY = { 19320 ,  24680 }.  
+[1.06] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.37091  -> voltageBias +/- newX = { 26450 ,  17550 }.  y_normalized =  -0.12052  -> voltageBias +/- newY = { 20554 ,  23446 }.  
+[1.07] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.40000  -> voltageBias +/- newX = { 26800 ,  17200 }.  y_normalized =  0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.07] In calibration.cpp Calibration::run - Pair 40 [ 1286.09025 , 881.21966 ] for FSM [ 0.40000 , 0.00000 ] 
+[1.08] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.38993  -> voltageBias +/- newX = { 26679 ,  17321 }.  y_normalized =  0.12670  -> voltageBias +/- newY = { 23520 ,  20480 }.  
+[1.08] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.33979  -> voltageBias +/- newX = { 26077 ,  17923 }.  y_normalized =  0.24687  -> voltageBias +/- newY = { 24962 ,  19038 }.  
+[1.09] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.25275  -> voltageBias +/- newX = { 25032 ,  18968 }.  y_normalized =  0.34788  -> voltageBias +/- newY = { 26174 ,  17826 }.  
+[1.10] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.13597  -> voltageBias +/- newX = { 23631 ,  20369 }.  y_normalized =  0.41846  -> voltageBias +/- newY = { 27021 ,  16979 }.  
+[1.11] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.45000  -> voltageBias +/- newY = { 27400 ,  16600 }.  
+[1.12] In calibration.cpp Calibration::run - Pair 45 [ 1385.56290 , 807.35623 ] for FSM [ -0.00000 , 0.45000 ] 
+[1.12] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.14215  -> voltageBias +/- newX = { 20295 ,  23705 }.  y_normalized =  0.43749  -> voltageBias +/- newY = { 27249 ,  16751 }.  
+[1.13] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.27626  -> voltageBias +/- newX = { 18685 ,  25315 }.  y_normalized =  0.38024  -> voltageBias +/- newY = { 26562 ,  17438 }.  
+[1.14] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.38833  -> voltageBias +/- newX = { 17341 ,  26659 }.  y_normalized =  0.28214  -> voltageBias +/- newY = { 25385 ,  18615 }.  
+[1.15] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.46602  -> voltageBias +/- newX = { 16408 ,  27592 }.  y_normalized =  0.15142  -> voltageBias +/- newY = { 23817 ,  20183 }.  
+[1.16] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.50000  -> voltageBias +/- newX = { 16000 ,  28000 }.  y_normalized =  -0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.18] In calibration.cpp Calibration::run - Pair 50 [ 1504.91917 , 883.35674 ] for FSM [ -0.50000 , -0.00000 ] 
+[1.18] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.48504  -> voltageBias +/- newX = { 16180 ,  27820 }.  y_normalized =  -0.15760  -> voltageBias +/- newY = { 20109 ,  23891 }.  
+[1.19] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.42069  -> voltageBias +/- newX = { 16952 ,  27048 }.  y_normalized =  -0.30565  -> voltageBias +/- newY = { 18333 ,  25667 }.  
+[1.19] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.31153  -> voltageBias +/- newX = { 18262 ,  25738 }.  y_normalized =  -0.42878  -> voltageBias +/- newY = { 16855 ,  27145 }.  
+[1.20] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.16687  -> voltageBias +/- newX = { 19998 ,  24002 }.  y_normalized =  -0.51357  -> voltageBias +/- newY = { 15838 ,  28162 }.  
+[1.21] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  -0.55000  -> voltageBias +/- newY = { 15400 ,  28600 }.  
+[1.22] In calibration.cpp Calibration::run - Pair 55 [ 1381.39405 , 974.03957 ] for FSM [ 0.00000 , -0.55000 ] 
+[1.22] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.17305  -> voltageBias +/- newX = { 24076 ,  19924 }.  y_normalized =  -0.53259  -> voltageBias +/- newY = { 15609 ,  28391 }.  
+[1.23] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.33504  -> voltageBias +/- newX = { 26020 ,  17980 }.  y_normalized =  -0.46114  -> voltageBias +/- newY = { 16467 ,  27533 }.  
+[1.24] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.46923  -> voltageBias +/- newX = { 27630 ,  16370 }.  y_normalized =  -0.34092  -> voltageBias +/- newY = { 17910 ,  26090 }.  
+[1.25] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.56112  -> voltageBias +/- newX = { 28733 ,  15267 }.  y_normalized =  -0.18232  -> voltageBias +/- newY = { 19813 ,  24187 }.  
+[1.26] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.60000  -> voltageBias +/- newX = { 29200 ,  14800 }.  y_normalized =  0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.26] In calibration.cpp Calibration::run - Pair 60 [ 1237.48048 , 880.58584 ] for FSM [ 0.60000 , 0.00000 ] 
+[1.27] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.58014  -> voltageBias +/- newX = { 28961 ,  15039 }.  y_normalized =  0.18850  -> voltageBias +/- newY = { 24262 ,  19738 }.  
+[1.27] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.50159  -> voltageBias +/- newX = { 28019 ,  15981 }.  y_normalized =  0.36443  -> voltageBias +/- newY = { 26373 ,  17627 }.  
+[1.28] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.37030  -> voltageBias +/- newX = { 26443 ,  17557 }.  y_normalized =  0.50968  -> voltageBias +/- newY = { 28116 ,  15884 }.  
+[1.29] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.19777  -> voltageBias +/- newX = { 24373 ,  19627 }.  y_normalized =  0.60868  -> voltageBias +/- newY = { 29304 ,  14696 }.  
+[1.30] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.65000  -> voltageBias +/- newY = { 29799 ,  14201 }.  
+[1.31] In calibration.cpp Calibration::run - Pair 65 [ 1386.62416 , 774.43611 ] for FSM [ -0.00000 , 0.65000 ] 
+[1.31] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.20395  -> voltageBias +/- newX = { 19553 ,  24447 }.  y_normalized =  0.62770  -> voltageBias +/- newY = { 29532 ,  14468 }.  
+[1.32] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.39382  -> voltageBias +/- newX = { 17275 ,  26725 }.  y_normalized =  0.54204  -> voltageBias +/- newY = { 28504 ,  15496 }.  
+[1.33] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.55013  -> voltageBias +/- newX = { 15399 ,  28601 }.  y_normalized =  0.39969  -> voltageBias +/- newY = { 26796 ,  17204 }.  
+[1.34] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.65623  -> voltageBias +/- newX = { 14126 ,  29874 }.  y_normalized =  0.21322  -> voltageBias +/- newY = { 24558 ,  19442 }.  
+[1.35] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.70000  -> voltageBias +/- newX = { 13600 ,  30400 }.  y_normalized =  -0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.36] In calibration.cpp Calibration::run - Pair 70 [ 1552.82402 , 883.72991 ] for FSM [ -0.70000 , -0.00000 ] 
+[1.36] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.67525  -> voltageBias +/- newX = { 13897 ,  30103 }.  y_normalized =  -0.21940  -> voltageBias +/- newY = { 19368 ,  24632 }.  
+[1.37] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.58249  -> voltageBias +/- newX = { 15011 ,  28989 }.  y_normalized =  -0.42321  -> voltageBias +/- newY = { 16922 ,  27078 }.  
+[1.38] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.42908  -> voltageBias +/- newX = { 16852 ,  27148 }.  y_normalized =  -0.59058  -> voltageBias +/- newY = { 14914 ,  29086 }.  
+[1.39] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.22867  -> voltageBias +/- newX = { 19256 ,  24744 }.  y_normalized =  -0.70378  -> voltageBias +/- newY = { 13555 ,  30445 }.  
+[1.40] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  -0.75000  -> voltageBias +/- newY = { 13000 ,  31000 }.  
+[1.40] In calibration.cpp Calibration::run - Pair 75 [ 1380.93426 , 1006.82557 ] for FSM [ 0.00000 , -0.75000 ] 
+[1.41] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.23485  -> voltageBias +/- newX = { 24818 ,  19182 }.  y_normalized =  -0.72280  -> voltageBias +/- newY = { 13327 ,  30673 }.  
+[1.41] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.45259  -> voltageBias +/- newX = { 27431 ,  16569 }.  y_normalized =  -0.62294  -> voltageBias +/- newY = { 14525 ,  29475 }.  
+[1.42] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.63103  -> voltageBias +/- newX = { 29572 ,  14428 }.  y_normalized =  -0.45847  -> voltageBias +/- newY = { 16499 ,  27501 }.  
+[1.43] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.75133  -> voltageBias +/- newX = { 31016 ,  12984 }.  y_normalized =  -0.24412  -> voltageBias +/- newY = { 19071 ,  24929 }.  
+[1.44] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.80000  -> voltageBias +/- newX = { 31600 ,  12400 }.  y_normalized =  0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.45] In calibration.cpp Calibration::run - Pair 80 [ 1192.02077 , 880.35528 ] for FSM [ 0.80000 , 0.00000 ] 
+[1.45] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.77036  -> voltageBias +/- newX = { 31244 ,  12756 }.  y_normalized =  0.25030  -> voltageBias +/- newY = { 25003 ,  18997 }.  
+[1.46] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.66339  -> voltageBias +/- newX = { 29960 ,  14040 }.  y_normalized =  0.48198  -> voltageBias +/- newY = { 27783 ,  16217 }.  
+[1.47] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.48786  -> voltageBias +/- newX = { 27854 ,  16146 }.  y_normalized =  0.67148  -> voltageBias +/- newY = { 30057 ,  13943 }.  
+[1.48] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.25957  -> voltageBias +/- newX = { 25114 ,  18886 }.  y_normalized =  0.79889  -> voltageBias +/- newY = { 31586 ,  12414 }.  
+[1.48] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.85000  -> voltageBias +/- newY = { 32200 ,  11800 }.  
+[1.49] In calibration.cpp Calibration::run - Pair 85 [ 1387.77698 , 745.91571 ] for FSM [ -0.00000 , 0.85000 ] 
+[1.49] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.26575  -> voltageBias +/- newX = { 18811 ,  25189 }.  y_normalized =  0.81791  -> voltageBias +/- newY = { 31814 ,  12186 }.  
+[1.50] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.51137  -> voltageBias +/- newX = { 15864 ,  28136 }.  y_normalized =  0.70384  -> voltageBias +/- newY = { 30446 ,  13554 }.  
+[1.51] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.71194  -> voltageBias +/- newX = { 13457 ,  30543 }.  y_normalized =  0.51725  -> voltageBias +/- newY = { 28207 ,  15793 }.  
+[1.51] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.84644  -> voltageBias +/- newX = { 11843 ,  32157 }.  y_normalized =  0.27502  -> voltageBias +/- newY = { 25300 ,  18700 }.  
+[1.52] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.90000  -> voltageBias +/- newX = { 11200 ,  32800 }.  y_normalized =  -0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.53] In calibration.cpp Calibration::run - Pair 90 [ 1586.55230 , 884.13328 ] for FSM [ -0.90000 , -0.00000 ] 
+[1.53] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.86546  -> voltageBias +/- newX = { 11615 ,  32385 }.  y_normalized =  -0.28121  -> voltageBias +/- newY = { 18626 ,  25374 }.  
+[1.55] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.74430  -> voltageBias +/- newX = { 13069 ,  30931 }.  y_normalized =  -0.54076  -> voltageBias +/- newY = { 15511 ,  28489 }.  
+[1.56] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.54664  -> voltageBias +/- newX = { 15441 ,  28559 }.  y_normalized =  -0.75239  -> voltageBias +/- newY = { 12972 ,  31028 }.  
+[1.56] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  -0.29048  -> voltageBias +/- newX = { 18515 ,  25485 }.  y_normalized =  -0.89399  -> voltageBias +/- newY = { 11273 ,  32727 }.  
+[1.57] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  -0.95000  -> voltageBias +/- newY = { 10600 ,  33400 }.  
+[1.58] In calibration.cpp Calibration::run - Pair 95 [ 1380.86218 , 1008.80377 ] for FSM [ 0.00000 , -0.95000 ] 
+[1.58] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.29666  -> voltageBias +/- newX = { 25559 ,  18441 }.  y_normalized =  -0.91301  -> voltageBias +/- newY = { 11044 ,  32956 }.  
+[1.58] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.57015  -> voltageBias +/- newX = { 28841 ,  15159 }.  y_normalized =  -0.78475  -> voltageBias +/- newY = { 12584 ,  31416 }.  
+[1.59] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.79284  -> voltageBias +/- newX = { 31514 ,  12486 }.  y_normalized =  -0.57603  -> voltageBias +/- newY = { 15088 ,  28912 }.  
+[1.60] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.94155  -> voltageBias +/- newX = { 33298 ,  10702 }.  y_normalized =  -0.30593  -> voltageBias +/- newY = { 18329 ,  25671 }.  
+[1.61] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-13-15-59_CALIBRATION_End_exp_100.png 
+[1.75] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.00000  -> voltageBias +/- newX = { 22000 ,  22000 }.  y_normalized =  0.00000  -> voltageBias +/- newY = { 22000 ,  22000 }.  
+[1.75] In calibration.cpp Calibration::run - Calculated sensitivity matrix [ -0.00414 -0.00010 ; 0.00006 -0.00602 ] 
+[1.75] In calibration.cpp Calibration::run - Calculated affine transform [ -0.00418 -0.00009 ; 0.00007 -0.00617 ] + [ 5.86367 ; 5.34728 ] 
+[1.76] In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure =  100  us. 
+[1.76] In main.cpp phase  ACQUISITION  - No idea where beacon is. 
+[1.77] In main.cpp phase  ACQUISITION  - No idea where calib is. 
+[1.77] In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser. 
+[1.98] In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters 
+[1.98] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1413.41322 908.56749 ] 
+[1.98] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 56 at [ 1376 , 880 ] 
+[2.04] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1413.43856 908.59752 ] 
+[2.10] In main.cpp phase ACQUISITION - Acquisition complete.  Beacon is at [ 1412.97805 , 910.00527 , exp =  352 ]  0 dB smoothing 0 . Setting Calib to: [ 1353.02195 , 855.99473 , exp =  100 ]  0 dB smoothing 3 
+[2.11] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-13-16-02_ACQUISITION_exp_352.png 
+[2.17] In fsm.cpp FSM::setNormalizedAngles - Updating FSM position to:  x_normalized =  0.13012  -> voltageBias +/- newX = { 23561 ,  20439 }.  y_normalized =  0.15589  -> voltageBias +/- newY = { 23870 ,  20130 }.  
+[2.17] In Tracking::controlOpenLoop - Updating FSM position to:  x_pxls =  1353.02195  -> x_normalized =  0.13012 .  y_pxls =  855.99473  -> y_normalized =  0.15589 .  
+[2.18] In main.cpp phase  CL_INIT  - Beacon is at [ 1412.97805 , 910.00527 , exp =  352 ] 
+[2.18] In main.cpp phase  CL_INIT  - No idea where calib is. 
+[2.18] In main.cpp phase CL_INIT - Double window tracking set up! Queued 2 requests 
+[2.29] In main.cpp phase  CL_BEACON  - Beacon is at [ 1412.97805 , 910.00527 , exp =  352 ] 
+[2.29] In main.cpp phase  CL_BEACON  - No idea where calib is. 
+[2.48] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 56 at [ 1376 , 880 ] 
+[2.49] In main.cpp phase  CL_CALIB  - Beacon is at [ 1412.98311 , 910.00978 , exp =  352 ] 
+[2.49] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[2.51] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  12 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.51] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-13-16-08_DEBUG_CL_CALIB_histBrightest_exp_352.png 
