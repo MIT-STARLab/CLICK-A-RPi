@@ -1,0 +1,177 @@
+[0.36] In camera.cpp Camera::Initialize - device found 
+[0.36] In main.cpp Camera Connection Initialized 
+[0.36] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.36] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.36] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Standing by for command... 
+[0.42] In main.cpp - Standing by for command... 
+[0.42] In main.cpp - Standing by for command... 
+[0.43] In main.cpp - Standing by for command... 
+[0.44] In main.cpp - Standing by for command... 
+[0.45] In main.cpp - Standing by for command... 
+[0.46] In main.cpp - Standing by for command... 
+[0.46] In main.cpp - Standing by for command... 
+[0.47] In main.cpp - Standing by for command... 
+[0.48] In main.cpp - Standing by for command... 
+[0.49] In main.cpp - Standing by for command... 
+[0.50] In main.cpp - Standing by for command... 
+[0.51] In main.cpp - Standing by for command... 
+[0.52] In main.cpp - Standing by for command... 
+[0.52] In main.cpp - Standing by for command... 
+[0.53] In main.cpp - Standing by for command... 
+[0.54] In main.cpp - Standing by for command... 
+[0.55] In main.cpp - Standing by for command... 
+[0.56] In main.cpp - Standing by for command... 
+[0.56] In main.cpp - Standing by for command... 
+[0.57] In main.cpp - Standing by for command... 
+[0.58] In main.cpp - Standing by for command... 
+[0.59] In main.cpp - Standing by for command... 
+[0.60] In main.cpp - Standing by for command... 
+[0.61] In main.cpp - Standing by for command... 
+[0.61] In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop... 
+[0.62] In main.cpp phase  START  - No idea where beacon is. 
+[0.62] In main.cpp phase  START  - No idea where calib is. 
+[0.62] In main.cpp phase START - Calibration Starting... 
+[0.63] In main.cpp phase  CALIBRATION  - No idea where beacon is. 
+[0.63] In main.cpp phase  CALIBRATION  - No idea where calib is. 
+[0.69] In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max 1000 us at [ 1381.84874 , 884.53241 ] with smoothing 0 
+[0.70] In calibration.cpp Calibration::findExposureRange - Found preferred exposure: 100 us, 0 dB 
+[0.71] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-15-37-17_CALIBRATION_Start_exp_100.png 
+[0.87] In calibration.cpp Calibration::run -  centerOffsetX =  85 , centerOffsetY =  -87 
+[0.87] In calibration.cpp Calibration::run - Pair 0 [ 1381.86199 , 884.52916 ] for FSM [ 0.00000 , 0.00000 ] 
+[0.91] In calibration.cpp Calibration::run - Pair 5 [ 1381.93938 , 884.50745 ] for FSM [ -0.00000 , 0.05000 ] 
+[0.95] In calibration.cpp Calibration::run - Pair 10 [ 1381.94583 , 884.54538 ] for FSM [ -0.10000 , -0.00000 ] 
+[0.99] In calibration.cpp Calibration::run - Pair 15 [ 1381.94566 , 884.50042 ] for FSM [ 0.00000 , -0.15000 ] 
+[1.03] In calibration.cpp Calibration::run - Pair 20 [ 1381.91083 , 884.52691 ] for FSM [ 0.20000 , 0.00000 ] 
+[1.08] In calibration.cpp Calibration::run - Pair 25 [ 1381.85785 , 884.54614 ] for FSM [ -0.00000 , 0.25000 ] 
+[1.11] In calibration.cpp Calibration::run - Pair 30 [ 1381.91934 , 884.47727 ] for FSM [ -0.30000 , -0.00000 ] 
+[1.15] In calibration.cpp Calibration::run - Pair 35 [ 1381.82485 , 884.56812 ] for FSM [ 0.00000 , -0.35000 ] 
+[1.19] In calibration.cpp Calibration::run - Pair 40 [ 1381.90678 , 884.50718 ] for FSM [ 0.40000 , 0.00000 ] 
+[1.23] In calibration.cpp Calibration::run - Pair 45 [ 1381.67445 , 884.54014 ] for FSM [ -0.00000 , 0.45000 ] 
+[1.28] In calibration.cpp Calibration::run - Pair 50 [ 1381.82456 , 884.56126 ] for FSM [ -0.50000 , -0.00000 ] 
+[1.32] In calibration.cpp Calibration::run - Pair 55 [ 1380.17605 , 884.62457 ] for FSM [ 0.00000 , -0.55000 ] 
+[1.36] In calibration.cpp Calibration::run - Pair 60 [ 1379.93026 , 884.62642 ] for FSM [ 0.60000 , 0.00000 ] 
+[1.40] In calibration.cpp Calibration::run - Pair 65 [ 1380.00134 , 884.63256 ] for FSM [ -0.00000 , 0.65000 ] 
+[1.44] In calibration.cpp Calibration::run - Pair 70 [ 1379.22012 , 884.64542 ] for FSM [ -0.70000 , -0.00000 ] 
+[1.48] In calibration.cpp Calibration::run - Pair 75 [ 1379.81105 , 884.64991 ] for FSM [ 0.00000 , -0.75000 ] 
+[1.52] In calibration.cpp Calibration::run - Pair 80 [ 1379.52281 , 884.58416 ] for FSM [ 0.80000 , 0.00000 ] 
+[1.56] In calibration.cpp Calibration::run - Pair 85 [ 1380.13224 , 884.65441 ] for FSM [ -0.00000 , 0.85000 ] 
+[1.59] In calibration.cpp Calibration::run - Pair 90 [ 1380.69853 , 884.61320 ] for FSM [ -0.90000 , -0.00000 ] 
+[1.63] In calibration.cpp Calibration::run - Pair 95 [ 1381.51066 , 884.53229 ] for FSM [ 0.00000 , -0.95000 ] 
+[1.67] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-15-37-20_CALIBRATION_End_exp_100.png 
+[1.81] In calibration.cpp Calibration::run - Calculated sensitivity matrix [ -0.06237 -0.07856 ; 0.02778 0.12747 ] 
+[1.81] In calibration.cpp Calibration::run - Calculated affine transform [ -0.04644 -0.72412 ; 0.21246 5.14575 ] + [ 704.66485 ; -4845.23569 ] 
+[1.81] In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure =  100  us. 
+[1.81] In main.cpp phase  ACQUISITION  - No idea where beacon is. 
+[1.81] In main.cpp phase  ACQUISITION  - No idea where calib is. 
+[1.82] In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser. 
+[2.08] In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters 
+[2.08] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1413.20759 936.55638 ] 
+[2.09] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 80 x 56 at [ 1376 , 912 ] 
+[2.15] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1413.31324 936.62206 ] 
+[2.23] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1413.31335 936.58958 ] 
+[2.29] In main.cpp phase ACQUISITION - Acquisition complete.  Beacon is at [ 1414.49475 , 938.01576 , exp =  743 ]  0 dB smoothing 0 . Setting Calib to: [ 1347.50525 , 831.98424 , exp =  100 ]  0 dB smoothing 3 
+[2.29] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-15-37-23_ACQUISITION_exp_743.png 
+[2.36] In fsm.cpp FSM::setNormalizedAngles - Warning! FSM command (x_normalized =  39.63305 ) exceeds max range (+/- 1). Rounding to limit. 
+[2.36] In fsm.cpp FSM::setNormalizedAngles - Warning! FSM command (y_normalized =  -277.76083 ) exceeds max range (+/- 1). Rounding to limit. 
+[2.36] In Tracking::controlOpenLoop - Updating FSM position to:  x_pxls =  1347.50525  -> x_normalized =  39.63305 .  y_pxls =  831.98424  -> y_normalized =  -277.76083 .  
+[2.36] In main.cpp phase  CL_INIT  - Beacon is at [ 1414.49475 , 938.01576 , exp =  743 ] 
+[2.36] In main.cpp phase  CL_INIT  - No idea where calib is. 
+[2.37] In main.cpp phase CL_INIT -  calibWindow.x =  1247 calibWindow.y =  731 calibWindow.w =  200 calibWindow.h =  200 
+[2.37] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.49475 , 938.01576 , exp =  743 ] 
+[2.37] In main.cpp phase  CL_BEACON  - No idea where calib is. 
+[2.60] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-27_CL_BEACON_DEBUG_exp_743.png 
+[10.60] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 80 x 64 at [ 1376 , 904 ] 
+[10.60] In main.cpp phase  CL_CALIB  - Beacon is at [ 1414.48105 , 938.00041 , exp =  743 ] 
+[10.60] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[10.63] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-37-37_CL_CALIB_DEBUG_exp_100.png 
+[10.67] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 96 x 88 at [ 1328 , 840 ] 
+[10.67] In Tracking::control - Updating FSM position:  x_current =  1381.87844  -> x_setpoint =  1347.51895  -> x_normalized =  1.00000 .  y_current =  884.52152  -> y_setpoint =  831.99959  -> y_normalized =  -1.00000 .  
+[10.67] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.48105 , 938.00041 , exp =  743 ] 
+[10.67] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.69] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-39_CL_BEACON_DEBUG_exp_743.png 
+[10.71] In main.cpp phase  CL_CALIB  - Beacon is at [ 1414.45794 , 938.00000 , exp =  743 ] 
+[10.71] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.73] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-37-41_CL_CALIB_DEBUG_exp_100.png 
+[10.75] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  212.45280 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1379.63002 , y =  884.72590 , pixelCount =  653 , valueMax =  343 
+[10.75] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.45794 , 938.00000 , exp =  743 ] 
+[10.75] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.77] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-43_CL_BEACON_DEBUG_exp_743.png 
+[10.79] In main.cpp phase  CL_CALIB  - Beacon is at [ 1414.44989 , 937.97637 , exp =  743 ] 
+[10.79] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.82] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-37-45_CL_CALIB_DEBUG_exp_100.png 
+[10.83] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  162.10841 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.93028 , y =  884.57809 , pixelCount =  664 , valueMax =  416 
+[10.83] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.44989 , 937.97637 , exp =  743 ] 
+[10.83] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.85] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-47_CL_BEACON_DEBUG_exp_743.png 
+[10.88] In main.cpp phase  CL_CALIB  - Beacon is at [ 1414.42329 , 937.97078 , exp =  743 ] 
+[10.88] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.90] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-37-49_CL_CALIB_DEBUG_exp_100.png 
+[10.91] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  143.49175 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.41128 , y =  884.54612 , pixelCount =  682 , valueMax =  419 
+[10.91] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.42329 , 937.97078 , exp =  743 ] 
+[10.92] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.94] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-51_CL_BEACON_DEBUG_exp_743.png 
+[10.96] In main.cpp phase  CL_CALIB  - Beacon is at [ 1414.50434 , 938.02389 , exp =  743 ] 
+[10.96] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[10.98] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-37-53_CL_CALIB_DEBUG_exp_100.png 
+[11.00] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  139.65350 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.29171 , y =  884.58830 , pixelCount =  685 , valueMax =  421 
+[11.00] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.50434 , 938.02389 , exp =  743 ] 
+[11.00] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.02] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-55_CL_BEACON_DEBUG_exp_743.png 
+[11.04] In main.cpp phase  CL_CALIB  - Beacon is at [ 1414.48177 , 938.00304 , exp =  743 ] 
+[11.04] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.06] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-37-57_CL_CALIB_DEBUG_exp_100.png 
+[11.08] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  139.61054 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.30797 , y =  884.56160 , pixelCount =  685 , valueMax =  421 
+[11.08] In main.cpp phase  CL_BEACON  - Beacon is at [ 1414.48177 , 938.00304 , exp =  743 ] 
+[11.08] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.10] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-37-59_CL_BEACON_DEBUG_exp_743.png 
+[11.12] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.77443 , 938.03592 , exp =  743 ] 
+[11.12] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.15] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-38-02_CL_CALIB_DEBUG_exp_100.png 
+[11.16] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  138.57628 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.30567 , y =  884.51801 , pixelCount =  685 , valueMax =  422 
+[11.16] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.77443 , 938.03592 , exp =  743 ] 
+[11.16] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.18] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-38-04_CL_BEACON_DEBUG_exp_743.png 
+[11.20] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.83318 , 938.02556 , exp =  743 ] 
+[11.20] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.23] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-38-06_CL_CALIB_DEBUG_exp_100.png 
+[11.24] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  139.62327 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.28798 , y =  884.55434 , pixelCount =  684 , valueMax =  423 
+[11.24] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.83318 , 938.02556 , exp =  743 ] 
+[11.24] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.26] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-38-08_CL_BEACON_DEBUG_exp_743.png 
+[11.28] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.85087 , 938.01775 , exp =  743 ] 
+[11.28] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.31] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-38-10_CL_CALIB_DEBUG_exp_100.png 
+[11.32] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  142.62342 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.27348 , y =  884.53998 , pixelCount =  680 , valueMax =  424 
+[11.32] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.85087 , 938.01775 , exp =  743 ] 
+[11.32] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.34] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-38-12_CL_BEACON_DEBUG_exp_743.png 
+[11.36] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.83176 , 938.07382 , exp =  743 ] 
+[11.36] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.39] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-38-14_CL_CALIB_DEBUG_exp_100.png 
+[11.40] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  141.62517 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.30268 , y =  884.57094 , pixelCount =  682 , valueMax =  422 
+[11.40] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.83176 , 938.07382 , exp =  743 ] 
+[11.40] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.42] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-38-16_CL_BEACON_DEBUG_exp_743.png 
+[11.45] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.85112 , 938.01928 , exp =  743 ] 
+[11.45] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.47] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-38-18_CL_CALIB_DEBUG_exp_100.png 
+[11.48] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  141.47488 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.44875 , y =  884.56672 , pixelCount =  682 , valueMax =  422 
+[11.48] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.85112 , 938.01928 , exp =  743 ] 
+[11.49] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.51] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-38-20_CL_BEACON_DEBUG_exp_743.png 
+[11.53] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.84639 , 938.01205 , exp =  743 ] 
+[11.53] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.55] In main.cpp phase CL_CALIB - Saving image telemetry as:  2020-12-18-15-38-22_CL_CALIB_DEBUG_exp_100.png 
+[11.57] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  145.37885 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.87844 , y =  884.52152 , pixelCount =  798 , valueMax =  472 New: [ x =  1381.53540 , y =  884.55733 , pixelCount =  676 , valueMax =  426 
+[11.57] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.84639 , 938.01205 , exp =  743 ] 
+[11.57] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.87844 , 884.52152 , exp =  100 ] 
+[11.59] In main.cpp phase CL_BEACON - Saving image telemetry as:  2020-12-18-15-38-24_CL_BEACON_DEBUG_exp_743.png 
+[11.61] In main.cpp - Saving telemetry files... 
