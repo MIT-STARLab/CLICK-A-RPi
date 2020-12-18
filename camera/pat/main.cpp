@@ -81,29 +81,35 @@ int main() //int argc, char** argv
     zmq::context_t context{1}; 
     
     // Create the PUB/SUB Sockets: 
+	int linger = 0; // Configure sockets to not wait at close time
 
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
     pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+	pat_health_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
     pat_control_port.connect(PAT_CONTROL_PORT); // connect to the transport
     pat_control_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
-    
+    pat_control_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+
     // create the FPGA_MAP_REQUEST_PORT PUB socket
     zmq::socket_t fpga_map_request_port(context, ZMQ_PUB); 
     fpga_map_request_port.connect(FPGA_MAP_REQUEST_PORT); // connect to the transport
-    
+ 	fpga_map_request_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+
     // create the FPGA_MAP_ANSWER_PORT SUB socket
     zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
     fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
     fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+	fpga_map_answer_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
     // create the TX_PACKETS_PORT PUB socket
     zmq::socket_t tx_packets_port(context, ZMQ_PUB); 
     tx_packets_port.connect(TX_PACKETS_PORT); // connect to the transport
-    
+ 	tx_packets_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+
     /*
     // create the RX_PAT_PACKETS_PORT SUB socket
     zmq::socket_t rx_pat_packets_port(context, ZMQ_SUB); 
