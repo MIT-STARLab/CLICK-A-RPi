@@ -21,8 +21,8 @@
 #define FSM_B_CH 0x09 //fsm fpga channel b: voltage 1 (Notated_memory_map on Google Drive)
 #define FSM_C_CH 0x0A //fsm fpga channel c: voltage 2 (Notated_memory_map on Google Drive)
 
-#define FSM_VBIAS 80
-#define FSM_VMAX 125
+#define FSM_VBIAS_DAC 22000
+#define FSM_VMAX_DAC 12000
 #define FSM_FILTER 200
 
 class FSM

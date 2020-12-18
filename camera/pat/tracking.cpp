@@ -342,9 +342,10 @@ void Tracking::controlOpenLoop(FSM& fsm, double x, double y)
 	actionY = calibration.affineTransformY(x, y);
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = steady_clock::now();
-
-	if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
-	if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
+	log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Updating FSM position to: ",
+	"x_pxls = ", x, " -> x_normalized = ", actionX, ". ", "y_pxls = ", y, " -> y_normalized = ", actionY, ". ");
+	//if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
+	//if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
 
 // Control FSM with feedback to setpoint using integral control
@@ -387,9 +388,11 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	// Update output
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = now;
-
-	if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
-	if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
+	log(pat_health_port, fileStream, "In Tracking::control - Updating FSM position: ",
+	"x_current = ", x, " -> x_setpoint = ", spX, " -> x_normalized = ", actionX, ". ", 
+	"y_current = ", y, " -> y_setpoint = ", spY, " -> y_normalized = ", actionY, ". ");
+	//if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
+	//if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
 
 // Check whether spots are at a safe distance and closed-loop tracking is possible
@@ -425,6 +428,9 @@ int Tracking::controlExposure(Image& frame, int exposure)
 			if(newExposure < TRACK_MAX_EXPOSURE) exposure = newExposure; //limit at max exposure
 			else exposure = TRACK_MAX_EXPOSURE; //set to limit if necessary
 		}
+
+		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
+		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
 	}
 
 	return exposure;

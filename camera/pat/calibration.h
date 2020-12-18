@@ -7,7 +7,7 @@
 #include "fsm.h"
 #include "log.h"
 
-#define CALIB_FSM_MAX 0.003f		// Max FSM range to use during calibration / 100
+#define CALIB_FSM_MAX 1.0f/100		// Max FSM range to use during calibration / 100
 #define CALIB_FSM_RISE_TIME 15		// FSM rise time in ms
 #define CALIB_FSM_MAX_DELTA 0.003f	// Max difference in FSM output per step -> equivalent of moving ~3px on detector
 

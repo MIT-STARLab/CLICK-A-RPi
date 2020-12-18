@@ -13,8 +13,8 @@ fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_
 //-----------------------------------------------------------------------------
 {
 	// Voltage setting (ref. PicoAmp datasheet)
-	voltageBias = 22000; //(vBias/160)*65535;
-	voltageMax = 34000; //(vMax/160)*32768;
+	voltageBias = FSM_VBIAS_DAC;
+	voltageMax = FSM_VMAX_DAC;
 
 	// Initialize DAC - AD5664
 	oldX = 1; oldY = 1;
@@ -51,7 +51,9 @@ void FSM::setNormalizedAngles(float x, float y)
 	// Write X+, X-, Y+, Y- & Update
 	if(newX != oldX || newY != oldY)
 	{
-		//log(pat_health_port, fileStream,"Updating FSM position to", x, ",", y);
+		log(pat_health_port, fileStream,"Updating FSM position to: ", 
+		"x_normalized = ", x, " -> voltageBias +/- newX = {", voltageBias + newX, ", ", voltageBias - newX,"}. ",
+		"y_normalized = ", y, " -> voltageBias +/- newY = {", voltageBias + newY, ", ", voltageBias - newY,"}. ");
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XP, voltageBias + newX);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_XM, voltageBias - newX);
 		sendCommand(DAC_CMD_WRITE_INPUT_REG, DAC_ADDR_YP, voltageBias + newY);

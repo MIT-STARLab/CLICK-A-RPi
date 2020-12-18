@@ -280,17 +280,17 @@ int main() //int argc, char** argv
 					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-					fsm.setNormalizedAngles(0.1,0);
+					fsm.setNormalizedAngles(1,0);
 					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-					fsm.setNormalizedAngles(0,0.1);
+					fsm.setNormalizedAngles(0,1);
 					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-					fsm.setNormalizedAngles(0.1,0.1);
+					fsm.setNormalizedAngles(1,1);
 					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -679,6 +679,7 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
 						"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");						
 						
+						/*
 						laserOn(fpga_map_request_port, 0);
 
 						//save image debug telemetry
@@ -688,7 +689,8 @@ int main() //int argc, char** argv
 						frame.savePNG(imageFileName);
 
 						exit(-1);
-												
+						*/
+											
 						if(haveCalibKnowledge)
 						{						
 							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
