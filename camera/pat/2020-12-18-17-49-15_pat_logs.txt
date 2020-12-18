@@ -1,0 +1,90 @@
+[0.31] In camera.cpp Camera::Initialize - device found 
+[0.32] In main.cpp Camera Connection Initialized 
+[0.32] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.32] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.32] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.32] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.32] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.32] In main.cpp - Standing by for command... 
+[0.33] In main.cpp - Standing by for command... 
+[0.34] In main.cpp - Standing by for command... 
+[0.35] In main.cpp - Standing by for command... 
+[0.36] In main.cpp - Standing by for command... 
+[0.37] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop... 
+[0.42] In main.cpp phase  START  - No idea where beacon is. 
+[0.42] In main.cpp phase  START  - No idea where calib is. 
+[0.43] In main.cpp phase START - Calibration Starting... 
+[0.43] In main.cpp phase  CALIBRATION  - No idea where beacon is. 
+[0.43] In main.cpp phase  CALIBRATION  - No idea where calib is. 
+[0.49] In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max 1000 us at [ 1379.89021 , 884.77429 ] with smoothing 0 
+[0.62] In calibration.cpp Calibration::findExposureRange - Found preferred exposure:  48 us, 0 dB 
+[0.62] In calibration.cpp Calibration::findExposureRange - Found smoothing:  3 
+[0.65] In calibration.cpp Calibration::run -  centerOffsetX =  86 , centerOffsetY =  -87 
+[0.65] In calibration.cpp Calibration::run - Saving image telemetry as:  2020-12-18-17-49-32_CALIBRATION_exp_48.png 
+[0.69] In calibration.cpp Calibration::run - Pair 0 [ 1382.08230 , 884.89727 ] for FSM [ 0.00000 , 0.00000 ] 
+[0.78] In calibration.cpp Calibration::run - Pair 5 [ 1382.36034 , 884.81972 ] for FSM [ -0.00000 , 0.05000 ] 
+[0.87] In calibration.cpp Calibration::run - Pair 10 [ 1381.86494 , 884.73244 ] for FSM [ -0.10000 , -0.00000 ] 
+[0.95] In calibration.cpp Calibration::run - Pair 15 [ 1381.56106 , 884.70163 ] for FSM [ 0.00000 , -0.15000 ] 
+[1.03] In calibration.cpp Calibration::run - Pair 20 [ 1381.39720 , 884.68124 ] for FSM [ 0.20000 , 0.00000 ] 
+[1.12] In calibration.cpp Calibration::run - Pair 25 [ 1381.42998 , 884.72824 ] for FSM [ -0.00000 , 0.25000 ] 
+[1.20] In calibration.cpp Calibration::run - Pair 30 [ 1381.33820 , 884.69734 ] for FSM [ -0.30000 , -0.00000 ] 
+[1.28] In calibration.cpp Calibration::run - Pair 35 [ 1381.36258 , 884.67829 ] for FSM [ 0.00000 , -0.35000 ] 
+[1.37] In calibration.cpp Calibration::run - Pair 40 [ 1381.34552 , 884.72188 ] for FSM [ 0.40000 , 0.00000 ] 
+[1.45] In calibration.cpp Calibration::run - Pair 45 [ 1381.36138 , 884.70285 ] for FSM [ -0.00000 , 0.45000 ] 
+[1.53] In calibration.cpp Calibration::run - Pair 50 [ 1381.33450 , 884.71868 ] for FSM [ -0.50000 , -0.00000 ] 
+[1.61] In calibration.cpp Calibration::run - Pair 55 [ 1381.34432 , 884.68693 ] for FSM [ 0.00000 , -0.55000 ] 
+[1.70] In calibration.cpp Calibration::run - Pair 60 [ 1381.34420 , 884.71408 ] for FSM [ 0.60000 , 0.00000 ] 
+[1.78] In calibration.cpp Calibration::run - Pair 65 [ 1381.35635 , 884.71070 ] for FSM [ -0.00000 , 0.65000 ] 
+[1.86] In calibration.cpp Calibration::run - Pair 70 [ 1381.34978 , 884.72562 ] for FSM [ -0.70000 , -0.00000 ] 
+[1.95] In calibration.cpp Calibration::run - Pair 75 [ 1381.32043 , 884.71881 ] for FSM [ 0.00000 , -0.75000 ] 
+[2.03] In calibration.cpp Calibration::run - Pair 80 [ 1381.33188 , 884.70984 ] for FSM [ 0.80000 , 0.00000 ] 
+[2.11] In calibration.cpp Calibration::run - Pair 85 [ 1381.34052 , 884.71345 ] for FSM [ -0.00000 , 0.85000 ] 
+[2.18] In calibration.cpp Calibration::run - Pair 90 [ 1381.35046 , 884.70046 ] for FSM [ -0.90000 , -0.00000 ] 
+[2.26] In calibration.cpp Calibration::run - Pair 95 [ 1381.34202 , 884.70486 ] for FSM [ 0.00000 , -0.95000 ] 
+[2.32] In calibration.cpp Calibration::run - Calculated sensitivity matrix [ 0.01606 0.07488 ; 0.02327 0.09253 ] 
+[2.32] In calibration.cpp Calibration::run - Calculated affine transform [ 0.16038 -0.91944 ; -0.00543 0.44784 ] + [ 591.88374 ; -388.74212 ] 
+[2.32] In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure =  48  us. 
+[2.32] In main.cpp phase  ACQUISITION  - No idea where beacon is. 
+[2.32] In main.cpp phase  ACQUISITION  - No idea where calib is. 
+[2.33] In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser. 
+[2.73] In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters 
+[2.74] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1420.69518 937.30921 ] 
+[2.74] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1392 , 904 ] 
+[2.83] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1420.54922 937.25216 ] 
+[2.91] In main.cpp phase ACQUISITION - Acquisition complete.  Beacon is at [ 1420.48142 , 937.02534 , exp =  762 ]  0 dB smoothing 0 . Setting Calib to: [ 1343.51858 , 832.97466 , exp =  48 ]  0 dB smoothing 3 
+[2.92] In processing.cpp logImage - Saving image telemetry as:  2020-12-18-17-49-39_ACQUISITION_exp_762.png 
+[2.99] In fsm.cpp FSM::setNormalizedAngles - Warning! FSM command (x_normalized =  41.48597 ) exceeds max range (+/- 1). Rounding to limit. 
+[2.99] In fsm.cpp FSM::setNormalizedAngles - Warning! FSM command (y_normalized =  -22.99876 ) exceeds max range (+/- 1). Rounding to limit. 
+[2.99] In Tracking::controlOpenLoop - Updating FSM position to:  x_pxls =  1343.51858  -> x_normalized =  41.48597 .  y_pxls =  832.97466  -> y_normalized =  -22.99876 .  
+[2.99] In main.cpp phase  CL_INIT  - Beacon is at [ 1420.48142 , 937.02534 , exp =  762 ] 
+[2.99] In main.cpp phase  CL_INIT  - No idea where calib is. 
+[2.99] In main.cpp phase CL_INIT -  calibWindow.x =  1243 calibWindow.y =  732 calibWindow.w =  200 calibWindow.h =  200 
+[3.00] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.48142 , 937.02534 , exp =  762 ] 
+[3.00] In main.cpp phase  CL_BEACON  - No idea where calib is. 
+[3.27] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1392 , 904 ] 
+[3.27] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.48762 , 937.01320 , exp =  762 ] 
+[3.27] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[3.30] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 96 x 88 at [ 1328 , 840 ] 
+[3.30] In Tracking::control - Updating FSM position:  x_current =  1381.36454  -> x_setpoint =  1343.51238  -> x_normalized =  1.00000 .  y_current =  884.66513  -> y_setpoint =  832.98680  -> y_normalized =  -1.00000 .  
+[3.31] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.48762 , 937.01320 , exp =  762 ] 
+[3.31] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.36454 , 884.66513 , exp =  48 ] 
+[3.33] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.55462 , 937.01066 , exp =  762 ] 
+[3.33] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.36454 , 884.66513 , exp =  48 ] 
+[3.35] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  170.20408 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.36454 , y =  884.66513 , pixelCount =  856 , valueMax =  557 New: [ x =  1381.46167 , y =  884.77208 , pixelCount =  718 , valueMax =  493 
+[3.35] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.55462 , 937.01066 , exp =  762 ] 
+[3.36] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.36454 , 884.66513 , exp =  48 ] 
+[3.38] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.50575 , 937.04090 , exp =  762 ] 
+[3.38] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.36454 , 884.66513 , exp =  48 ] 
+[3.40] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  169.15654 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.36454 , y =  884.66513 , pixelCount =  856 , valueMax =  557 New: [ x =  1381.44926 , y =  884.73694 , pixelCount =  719 , valueMax =  493 
+[3.40] In main.cpp phase  CL_BEACON  - Beacon is at [ 1420.50575 , 937.04090 , exp =  762 ] 
+[3.40] In main.cpp phase  CL_BEACON  - Calib is at [ 1381.36454 , 884.66513 , exp =  48 ] 
+[3.43] In main.cpp phase  CL_CALIB  - Beacon is at [ 1420.50490 , 937.07797 , exp =  762 ] 
+[3.43] In main.cpp phase  CL_CALIB  - Calib is at [ 1381.36454 , 884.66513 , exp =  48 ] 
+[3.46] In main.cpp phase CL_CALIB - Rapid calib spot property change:  (propertyDifference =  170.51238 ) >= (TRACK_MAX_SPOT_DIFFERENCE =  100 ).  Prev: [ x =  1381.36454 , y =  884.66513 , pixelCount =  856 , valueMax =  557 New: [ x =  1381.78817 , y =  884.75387 , pixelCount =  713 , valueMax =  502 
+[3.46] In main.cpp - Saving telemetry files and exiting process. 
