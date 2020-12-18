@@ -343,8 +343,8 @@ void Tracking::controlOpenLoop(FSM& fsm, double x, double y)
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = steady_clock::now();
 
-	if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3";}
-	if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3";}
+	if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
+	if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
 
 // Control FSM with feedback to setpoint using integral control
@@ -388,8 +388,8 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = now;
 
-	if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3";}
-	if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3";}
+	if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
+	if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
 
 // Check whether spots are at a safe distance and closed-loop tracking is possible
