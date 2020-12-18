@@ -473,9 +473,9 @@ int main() //int argc, char** argv
 					Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
 
 					//save image debug telemetry
-					std::string nameTag = std::string("CL_CALIB_DEBUG");
+					std::string nameTag = std::string("CL_BEACON_DEBUG");
 					std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-					log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
+					log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
 					frame.savePNG(imageFileName);
 
 					if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
