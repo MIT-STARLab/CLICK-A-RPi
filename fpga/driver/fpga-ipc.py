@@ -190,7 +190,6 @@ try:
 
         if ipc_fpgarqpacket.rw_flag == 1:
             print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-            #time.sleep(1)
             # send the FPGA_map_answer packet (write)
             ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
             raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=0)
@@ -201,7 +200,6 @@ try:
             send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
         else:
             print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
-            #time.sleep(1)
             # send the FPGA_map_answer packet (read)
             ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
             ch_val = fl.flReadChannel(handle, ipc_fpgarqpacket.start_addr) 
