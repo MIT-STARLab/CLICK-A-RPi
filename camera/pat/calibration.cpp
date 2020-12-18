@@ -102,7 +102,7 @@ bool Calibration::findExposureRange(Group& calib)
 						// Find preferred exposure time (good brightness with no gain)
 						if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < TRACK_HAPPY_BRIGHTNESS)
 						{
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure:", exposure, "us,", gain, "dB");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
 							preferredExpo = exposure;
 							if(smoothing == 0)
 							{
@@ -110,6 +110,7 @@ bool Calibration::findExposureRange(Group& calib)
 								if(test != smoothing)
 								{
 									smoothing = test;
+									log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
 									return true;
 								}
 							}
@@ -187,7 +188,7 @@ bool Calibration::run(Group& calib)
 		// Use preferred exposure
 		camera.config->gain_dB.write(0);
 		camera.config->expose_us.write(preferredExpo);
-		logImage(string("CALIBRATION_Start"), camera, fileStream, pat_health_port); 
+		//logImage(string("CALIBRATION_Start"), camera, fileStream, pat_health_port); 
 		for(int i = 0; i < 100; i++)
 		{
 			// Spiral outwards with 100 points from 0 to defined max FSM range
@@ -199,7 +200,7 @@ bool Calibration::run(Group& calib)
 			camera.requestFrame();
 			if(camera.waitForFrame())
 			{
-				Image frame(camera, fileStream, pat_health_port);
+				Image frame(camera, fileStream, pat_health_port, smoothing);
 
 				if(frame.performPixelGrouping() > 0)
 				{
@@ -225,7 +226,11 @@ bool Calibration::run(Group& calib)
 			}
 		}
 		
-		logImage(string("CALIBRATION_End"), camera, fileStream, pat_health_port); 
+		std::string nameTag = std::string("CALIBRATION");
+		std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Saving image telemetry as: ", imageFileName);
+		frame.savePNG(imageFileName);
+		//logImage(string("CALIBRATION_End"), camera, fileStream, pat_health_port); 
 
 		// Reset FSM & Camera
 		fsm.setNormalizedAngles(0, 0);
