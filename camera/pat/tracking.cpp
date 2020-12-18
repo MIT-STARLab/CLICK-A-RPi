@@ -28,8 +28,10 @@ bool Tracking::runAcquisition(Group& beacon)
 		{
 			Image frame(camera, fileStream, pat_health_port);
 			if(verifyFrame(frame) && windowAndTune(frame, beacon)){
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
-					"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
+					if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
+						log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
+						"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
+					}
 				return true;
 			}
 			camera.config->expose_us.write(exposure);

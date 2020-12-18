@@ -152,7 +152,7 @@ while True:
                 print "CMD_FSM_TEST = ", CMD_FSM_TEST
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
-                        if(user_cmd == CMD_GET_IMAGE):
+                        if(user_cmd in [CMD_GET_IMAGE, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]):
                                 exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))
                                 if(exp_cmd < 10):
                                         print "Exposure below minimum of 10 us entered. Using 10 us."
