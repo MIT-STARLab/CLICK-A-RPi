@@ -1,0 +1,194 @@
+[0.36] In camera.cpp Camera::Initialize - device found 
+[0.36] In main.cpp Camera Connection Initialized 
+[0.36] Initializing FSM DAC - Commanding DAC_FULL_RESET =  2621441 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_INTERNAL_REFERENCE =  3670017 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_ALL_DAC_CHANNELS =  2097167 
+[0.36] Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC =  3145728 
+[0.36] Initializing FSM DAC - Commanding Normalized Angles to (0,0). 
+[0.37] In main.cpp - Standing by for command... 
+[0.38] In main.cpp - Standing by for command... 
+[0.39] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.40] In main.cpp - Standing by for command... 
+[0.41] In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop... 
+[0.41] In main.cpp phase START - Calibration Starting... 
+[0.45] In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max 1000 us at [ 1379.66630 , 883.73871 ] with smoothing 0 
+[0.65] In calibration.cpp Calibration::findExposureRange - Found preferred exposure: 30 us, 0 dB 
+[0.66] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-19-26-59_CALIBRATION_Start_exp_30.png 
+[0.82] In calibration.cpp Calibration::run - Pair 0 [ 1380.00559 , 883.74729 ] for FSM [ 0.00000 , 0.00000 ] 
+[0.86] In calibration.cpp Calibration::run - Pair 5 [ 1380.28987 , 876.69625 ] for FSM [ -0.00000 , 0.01500 ] 
+[0.90] In calibration.cpp Calibration::run - Pair 10 [ 1400.30821 , 884.07127 ] for FSM [ -0.03000 , -0.00000 ] 
+[0.94] In calibration.cpp Calibration::run - Pair 15 [ 1379.56169 , 904.79141 ] for FSM [ 0.00000 , -0.04500 ] 
+[0.98] In calibration.cpp Calibration::run - Pair 20 [ 1338.98033 , 883.29837 ] for FSM [ 0.06000 , 0.00000 ] 
+[1.03] In calibration.cpp Calibration::run - Pair 25 [ 1380.83211 , 848.22187 ] for FSM [ -0.00000 , 0.07500 ] 
+[1.07] In calibration.cpp Calibration::run - Pair 30 [ 1441.65463 , 884.48709 ] for FSM [ -0.09000 , -0.00000 ] 
+[1.11] In calibration.cpp Calibration::run - Pair 35 [ 1378.78702 , 933.17229 ] for FSM [ 0.00000 , -0.10500 ] 
+[1.16] In calibration.cpp Calibration::run - Pair 40 [ 1297.15437 , 882.84869 ] for FSM [ 0.12000 , 0.00000 ] 
+[1.22] In calibration.cpp Calibration::run - Pair 45 [ 1381.91287 , 819.99706 ] for FSM [ -0.00000 , 0.13500 ] 
+[1.27] In calibration.cpp Calibration::run - Pair 50 [ 1483.22211 , 884.89222 ] for FSM [ -0.15000 , -0.00000 ] 
+[1.33] In calibration.cpp Calibration::run - Pair 55 [ 1378.29302 , 961.72768 ] for FSM [ 0.00000 , -0.16500 ] 
+[1.40] In calibration.cpp Calibration::run - Pair 60 [ 1255.82690 , 882.11414 ] for FSM [ 0.18000 , 0.00000 ] 
+[1.46] In calibration.cpp Calibration::run - Pair 65 [ 1382.62483 , 791.74335 ] for FSM [ -0.00000 , 0.19500 ] 
+[1.50] In calibration.cpp Calibration::run - Pair 70 [ 1524.36829 , 885.18116 ] for FSM [ -0.21000 , -0.00000 ] 
+[1.54] In calibration.cpp Calibration::run - Pair 75 [ 1376.63961 , 990.25555 ] for FSM [ 0.00000 , -0.22500 ] 
+[1.59] In calibration.cpp Calibration::run - Pair 80 [ 1214.70940 , 882.02912 ] for FSM [ 0.24000 , 0.00000 ] 
+[1.63] In calibration.cpp Calibration::run - Pair 85 [ 1383.82461 , 764.25830 ] for FSM [ -0.00000 , 0.25500 ] 
+[1.67] In calibration.cpp Calibration::run - Pair 90 [ 1565.36761 , 885.81643 ] for FSM [ -0.27000 , -0.00000 ] 
+[1.70] In calibration.cpp Calibration::run - Pair 95 [ 1377.59613 , 1010.93683 ] for FSM [ 0.00000 , -0.28500 ] 
+[1.74] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-19-27-03_CALIBRATION_End_exp_30.png 
+[1.88] In calibration.cpp Calibration::run - Calculated sensitivity matrix [ -0.00130 0.00023 ; 0.00014 -0.00183 ] 
+[1.88] In calibration.cpp Calibration::run - Calculated affine transform [ -0.00145 -0.00004 ; 0.00002 -0.00213 ] + [ 2.04074 ; 1.85011 ] 
+[1.88] In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure =  30  us. 
+[1.88] In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switch off Cal Laser. 
+[2.12] In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters 
+[2.12] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1732.62626 1044.73593 ] 
+[2.13] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1696 , 1016 ] 
+[2.19] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1732.63574 1044.76209 ] 
+[2.20] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1696 , 1016 ] 
+[2.25] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1732.61454 1044.71586 ] 
+[2.26] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1696 , 1016 ] 
+[2.32] In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [ 1732.62946 1044.76304 ] 
+[2.37] In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection.  (beacon.pixelCount =  11 ) <= (MIN_PIXELS_PER_GROUP =  2 ) 
+[2.38] In main.cpp phase ACQUISITION - Acquisition complete.  Beacon is at [ 1734.00591 , 1046.16174 , exp =  640 ]  0 dB smoothing 0 . Setting Calib to: [ 857.99409 , 897.83826 , exp =  30 ]  0 dB smoothing 3 
+[2.38] In processing.cpp logImage - Saving image telemetry as:  2020-12-17-19-27-04_ACQUISITION_exp_640.png 
+[2.47] In main.cpp phase CL_INIT - Double window tracking set up! Queued 2 requests 
+[2.68] In tracking.cpp Tracking::updateTrackingWindow - Updated window to 64 x 64 at [ 1696 , 1016 ] 
+[2.69] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.70] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.71] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.73] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.74] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.75] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.75] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.76] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  0 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.78] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.79] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.80] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.81] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.83] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.85] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.86] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.88] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.89] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.91] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.92] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.94] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.96] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.97] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[2.99] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.00] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.02] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.03] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.05] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.06] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.07] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.09] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.10] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.12] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.13] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.15] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.16] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.18] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.19] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.21] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.22] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.23] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.25] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.26] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.28] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.29] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.31] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.32] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.34] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.34] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.95333 , 1046.19010 , exp =  614 ] 
+[3.34] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[3.35] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.37] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.38] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.40] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.41] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.43] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.44] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.46] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.47] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.49] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.50] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.51] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.53] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.55] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.56] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.58] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.59] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.61] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.62] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.64] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.65] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.67] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.68] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.70] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.72] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.73] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.75] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.76] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.78] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.79] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.81] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.82] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.84] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.85] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.87] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.88] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.90] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.91] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.92] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.94] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.95] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.97] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[3.98] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.00] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.01] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.02] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.04] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.05] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.06] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.08] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.09] In main.cpp phase  CL_CALIB  - Beacon is at [ 1733.95025 , 1046.16231 , exp =  537 ] 
+[4.09] In main.cpp phase  CL_CALIB  - No idea where calib is. 
+[4.10] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.11] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.12] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.14] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.15] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.17] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.18] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.20] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.21] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.23] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.24] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.26] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.27] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.29] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.30] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.32] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.33] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.35] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.36] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.38] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.39] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.40] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.42] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.43] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.45] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.46] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.48] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.49] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.50] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.52] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.53] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.55] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.56] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.58] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.59] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.61] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.62] In main.cpp phase CL_CALIB - Switching Failure:  (frame.histBrightest =  1 ) <= (CALIB_MIN_BRIGHTNESS/4 =  75 ) 
+[4.63] In main.cpp - Saving telemetry files... 

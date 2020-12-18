@@ -139,8 +139,7 @@ int main() //int argc, char** argv
 	int centerOffsetY = OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
 	uint16_t command; 
-	int command_exposure; 
-	bool cl_beacon_switch_success, cl_calib_switch_success; 
+	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
 	
 	// Hardware init				
