@@ -82,33 +82,35 @@ int main() //int argc, char** argv
     
     // Create the PUB/SUB Sockets: 
 	int linger = 0; // Configure sockets to not wait at close time
+	int rc;
 
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
+	rc = zmq_setsockopt(pat_health_port, ZMQ_LINGER, &linger, sizeof(linger));
     pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
-	pat_health_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
+	rc = zmq_setsockopt(pat_control_port, ZMQ_LINGER, &linger, sizeof(linger));
     pat_control_port.connect(PAT_CONTROL_PORT); // connect to the transport
     pat_control_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
-    pat_control_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
     // create the FPGA_MAP_REQUEST_PORT PUB socket
     zmq::socket_t fpga_map_request_port(context, ZMQ_PUB); 
+	rc = zmq_setsockopt(fpga_map_request_port, ZMQ_LINGER, &linger, sizeof(linger));
     fpga_map_request_port.connect(FPGA_MAP_REQUEST_PORT); // connect to the transport
- 	fpga_map_request_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
     // create the FPGA_MAP_ANSWER_PORT SUB socket
     zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
+	rc = zmq_setsockopt(fpga_map_answer_port, ZMQ_LINGER, &linger, sizeof(linger));
     fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
     fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
-	fpga_map_answer_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
     // create the TX_PACKETS_PORT PUB socket
     zmq::socket_t tx_packets_port(context, ZMQ_PUB); 
+	rc = zmq_setsockopt(tx_packets_port, ZMQ_LINGER, &linger, sizeof(linger));
     tx_packets_port.connect(TX_PACKETS_PORT); // connect to the transport
- 	tx_packets_port->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
     /*
     // create the RX_PAT_PACKETS_PORT SUB socket
