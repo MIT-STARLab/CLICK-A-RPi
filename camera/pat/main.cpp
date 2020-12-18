@@ -680,7 +680,7 @@ int main() //int argc, char** argv
 						//save image debug telemetry
 						std::string nameTag = std::string("DEBUG_CL_CALIB_histBrightest");
 						std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-						log(pat_health_port, fileStream, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
+						log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
 						frame.savePNG(imageFileName);
 
 						exit(-1);
