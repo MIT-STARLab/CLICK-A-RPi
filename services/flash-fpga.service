@@ -3,6 +3,17 @@ Description=Flash FPGA
 
 [Service]
 Type=oneshot
+
+ExecStartPre=/bin/bash -c "echo 29 >> /sys/class/gpio/export"
+ExecStartPre=/bin/bash -c "echo out >> /sys/class/gpio/gpio29/direction"
+ExecStartPre=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio29/value"
+
+ExecStartPre=/bin/bash -c "echo 36 >> /sys/class/gpio/export"
+ExecStartPre=/bin/bash -c "echo out >> /sys/class/gpio/gpio36/direction"
+ExecStartPre=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio36/value"
+ExecStartPre=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio36/value"
+ExecStartPre=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio36/value"
+
 ExecStart=/bin/python /root/fpga/driver/fpgadriver.py -i 04b4:8613 -v 1d50:602b:0002
 ExecStartPost=/bin/python /root/fpga/driver/fpgadriver.py -i 04b4:8613 -v 1d50:602b:0002 -p J:A7A0A3A1:/root/bin/fpga.xsvf
 
