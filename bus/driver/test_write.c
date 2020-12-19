@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "crc.h"
 
 #define DEVICE "bct"
@@ -38,6 +39,13 @@ int main (int argc, char *argv[])
     uint8_t *buffer = NULL;
     packet_header_t *header = NULL;
     uint16_t offset = 0, len = DEFAULT_WRITE_LEN, repeat = 1, crc = 0;
+
+    /* Usage */
+    if (argc == 1)
+    {
+        printf("Usage: %s [len] [offset] [repeat]\n", argv[0]);
+        return 0;
+    }
 
     /* Read packet size */
     if (argc > 1 && atoi(argv[1]) <= PACKET_TM_MAX_LEN && atoi(argv[1]) > DEFAULT_WRITE_LEN)
