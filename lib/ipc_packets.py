@@ -264,7 +264,7 @@ class FPGAMapAnswerPacket(IpcPacket):
         request_number: will be sent back with the answer, can be used to identify individual requests
         rw_flag: read=0, write=1
         start_addr: first FPGA register to read or write
-        size: number of 32bit registers that have been read
+        size: number of 32bit registers that have been read/written
         read_data: data to be written
         returns
         message bytes'''
@@ -278,7 +278,7 @@ class FPGAMapAnswerPacket(IpcPacket):
         self.size = size
         self.read_data = read_data
         self.read_size = len(read_data)
-
+        
         assert self.read_size == size
 
         if self.rw_flag == 0:
@@ -339,7 +339,7 @@ class FPGAMapAnswerPacket(IpcPacket):
         if self.error: status_str = 'Failed'
         else: status_str = 'Success'
         if self.rw_flag == 0:
-            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:0x%X, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.read_data.encode('hex'), 16), status_str)
+            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:0x%X, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.read_data, 32), status_str) #int(self.read_data.encode('hex'), 16)
         elif self.rw_flag == 1:
             return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Write to address:0x%04X, %s' % (self.return_addr, self.rq_number, self.start_addr, status_str)
 

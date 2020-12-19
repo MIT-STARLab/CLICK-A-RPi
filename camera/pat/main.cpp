@@ -152,6 +152,30 @@ int main() //int argc, char** argv
 	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
 	
+	
+	//~ std::cout << "Turn laser on. " << std::endl;
+	//~ laserOn(fpga_map_request_port, 0);	//send write request
+	
+	//~ std::cout << "Get FPGA answer: " << std::endl;
+	//~ fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
+	//~ std::cout << "write_ans_struct - return_address: " << write_ans_struct.return_address << std::endl;
+	//~ std::cout << "write_ans_struct - request_number: " << unsigned(write_ans_struct.request_number) << std::endl;
+	//~ std::cout << "write_ans_struct - combined_flag: " << write_ans_struct.combined_flag << std::endl;
+	//~ std::cout << "write_ans_struct - start_address: " << write_ans_struct.start_address << std::endl;
+
+	//~ std::cout << "Send read request. " << std::endl;
+	//~ send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) 0x00, (bool) READ, (uint8_t) 0);
+	
+	//~ std::cout << "Get FPGA answer: " << std::endl;
+	//~ fpga_answer_struct read_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, READ);
+	//~ std::cout << "read_ans_struct - return_address: " << read_ans_struct.return_address << std::endl;
+	//~ std::cout << "read_ans_struct - request_number: " << unsigned(read_ans_struct.request_number) << std::endl;
+	//~ std::cout << "read_ans_struct - combined_flag: " << read_ans_struct.combined_flag << std::endl;
+	//~ std::cout << "read_ans_struct - start_address: " << read_ans_struct.start_address << std::endl;
+	//~ std::cout << "read_ans_struct - data_to_read: " << unsigned(read_ans_struct.data_to_read) << std::endl;
+
+	//~ return 0;
+	
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -254,22 +278,13 @@ int main() //int argc, char** argv
 					if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 					if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
-					camera.config->expose_us.write(command_exposure);	
-
-					std::cout << "Turn laser on" << std::endl;
-					laserOn(fpga_map_request_port, 0);	
-					receive_packet_fpga_map_answer(fpga_map_answer_port);
-					std::cout << "Turn laser off" << std::endl;
-					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
-					receive_packet_fpga_map_answer(fpga_map_answer_port);
-
-					/*
+					camera.config->expose_us.write(command_exposure);		
+					
 					//set to sufficiently large window size (but not too large)
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
 
 					//switch laser on and ensure FSM is centered
 					laserOn(fpga_map_request_port, 0);
-					receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port);
 					fsm.setNormalizedAngles(0,0); 	
 
 					//save image
@@ -277,7 +292,7 @@ int main() //int argc, char** argv
 
 					//switch laser off
 					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
-					*/
+					
 					break;
 
 				case CMD_FSM_TEST:

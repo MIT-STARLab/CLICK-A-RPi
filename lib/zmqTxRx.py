@@ -15,7 +15,6 @@ def send_zmq(socket, payload, envelope):
     envelope: string (usually unique identifier for return message, can be PID)
     returns
     error'''
-    #print(str(envelope).encode('ascii') + b' ' + payload)
     return socket.send(str(envelope).encode('ascii') + b' ' + payload)
 
 def recv_zmq(socket):
