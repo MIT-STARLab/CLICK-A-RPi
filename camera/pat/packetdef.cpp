@@ -106,6 +106,8 @@ void receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port)
 	
 	char packet[sizeof(fpga_answer_packet_struct)];
 	memcpy(packet, message.data(), message.size());
+
+	std::cout << "packet - " << packet << std::endl;
 	
 	fpga_answer_packet_struct packet_struct = fpga_answer_packet_struct(); //initialize
 	memcpy(&packet_struct, packet, sizeof(packet));

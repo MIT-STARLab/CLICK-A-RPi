@@ -256,8 +256,10 @@ int main() //int argc, char** argv
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
 					camera.config->expose_us.write(command_exposure);	
 
+					std::cout << "Turn laser on" << std::endl;
 					laserOn(fpga_map_request_port, 0);	
 					receive_packet_fpga_map_answer(fpga_map_answer_port);
+					std::cout << "Turn laser off" << std::endl;
 					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
 					receive_packet_fpga_map_answer(fpga_map_answer_port);
 
@@ -294,24 +296,24 @@ int main() //int argc, char** argv
 
 					//save images at various FSM settings
 					fsm.setNormalizedAngles(0,0);
-					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 					fsm.setNormalizedAngles(1,0);
-					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 					fsm.setNormalizedAngles(0,1);
-					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 					fsm.setNormalizedAngles(1,1);
-					this_thread::sleep_for(chrono::milliseconds(3*CALIB_FSM_RISE_TIME));
+					this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 					logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 					//switch laser off
 					laserOff(fpga_map_request_port, 0); //TBR request number argument, turn calibration laser off
