@@ -1,6 +1,9 @@
 #include "log.h"
 
-std::string timeStamp() 	//Get date and time for telemetry file names
+// Get date and time for telemetry file names
+//-----------------------------------------------------------------------------
+std::string timeStamp()
+//-----------------------------------------------------------------------------
 {
 	time_t     now = time(0);
 	struct tm  tstruct;

@@ -102,7 +102,7 @@ static ssize_t packet_write(struct file *f, const char __user *buf, size_t len, 
     uint16_t len_tot = len + (2 * PACKET_LATENCY);
 
     /* Check memory availability */
-    if (len > PACKET_TM_MAX_LEN || (MAX_TX_QUEUE_LEN - tx_queue_len) < (len_tot + sizeof(packet_t)) ||
+    if (len_tot > PACKET_TM_MAX_LEN || (MAX_TX_QUEUE_LEN - tx_queue_len) < (len_tot + sizeof(packet_t)) ||
         ((new_packet = kzalloc(sizeof(packet_t), GFP_KERNEL)) == NULL))
     {
         res = -ENOMEM;

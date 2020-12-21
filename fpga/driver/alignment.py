@@ -16,8 +16,8 @@ def laserInit(handle):
     # 35C = 6,114
     # 40C = 5,170
     # 45C = 4,246
-    fl.flWriteChannel(handle,1,6)
-    fl.flWriteChannel(handle,2,114) 
+    fl.flWriteChannel(handle,1,4)
+    fl.flWriteChannel(handle,2,100) 
     print("Wrote to TEC registers")
     sleep(.10)
     #Turn on TEC Power/LD Controller Power AND make sure TEC set voltage is non zero
@@ -36,9 +36,9 @@ def laserInit(handle):
     #Code = MSB + LSB
     fl.flWriteChannel(handle,33,85)
     sleep(.25) 
-    fl.flWriteChannel(handle,3,13)
-    fl.flWriteChannel(handle,4,250)
-    print("Laser Current Code set to 80mA")
+    fl.flWriteChannel(handle,3,15)
+    fl.flWriteChannel(handle,4,100)
+    print("Laser Current Code set to 60mA")
 
 # Set the seed laser current 
 # Input units are in uA
@@ -118,36 +118,36 @@ def debounce(handle,length,reg,pin,val):
     return pos/length
 
 
-#This will find the center of the fbg
-def findCenter(handle):
+#his will find the center of the fbg
+def findCenter(handle, init_only):
 
     laserInit(handle)
-    thresholdInit(handle, 0, 20000) #CHECK THE STARTING POINT HERE
-    thresholdInit(handle, 1, 40000)
-    thresholdInit(handle, 2, 40000)
+    thresholdInit(handle, 0, 15000) #CHECK THE STARTING POINT HERE
+    thresholdInit(handle, 1, 15000)
+    thresholdInit(handle, 2, 15000)
     sleep(5)
     print("Initialization Complete")
-    while(fl.flReadChannel(handle,memMap.get_register('PDI')) < 3):
+    if(init_only):
+        return
+    while(fl.flReadChannel(handle,memMap.get_register('PDI')) < 1):
             
             #check starting temp
         MSB = fl.flReadChannel(handle,memMap.get_register('LTSa'))
         LSB = fl.flReadChannel(handle,memMap.get_register('LTSb'))
 
         value = MSB*256 + LSB
-        new_value = value -1
+        new_value = value +1
         new_MSB = new_value/256
         new_LSB = new_value%256
-        print(new_value, MSB, new_MSB, LSB, new_LSB)
         fl.flWriteChannel(handle,memMap.get_register('LTSa'),new_MSB)
         fl.flWriteChannel(handle,memMap.get_register('LTSb'),new_LSB)
-        sleep(.5)
-        if(new_value < (620)):
+        sleep(.15)
+        if(new_value < 1100 or new_value >1800):
             print("Center frequency was not matched")
             return
         reg64 = fl.flReadChannel(handle,memMap.get_register('PDI'))
-        print("Power level: ", reg64)
+        print(new_value, MSB, new_MSB, LSB, new_LSB,"Power level: ", reg64)
     print("matched center frequency")
-
 
 # Author Joe Kusters
 # DAC helper functions
