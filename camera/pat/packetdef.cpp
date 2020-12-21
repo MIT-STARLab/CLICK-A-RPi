@@ -147,8 +147,8 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		fpga_answer_struct return_struct = fpga_answer_struct();
 		return_struct.return_address = packet_struct.return_address; 
 		return_struct.request_number = packet_struct.request_number;
-		return_struct.rw_flag = packet_struct.combined_flag & 0x01
-        return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1
+		return_struct.rw_flag = packet_struct.combined_flag & 0x01;
+        return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 		return_struct.start_address = packet_struct.start_address;	
 		return_struct.data_to_read = 0;
 		
@@ -173,8 +173,8 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		fpga_answer_struct return_struct = fpga_answer_struct();
 		return_struct.return_address = packet_struct.return_address; 
 		return_struct.request_number = packet_struct.request_number;
-		return_struct.rw_flag = packet_struct.combined_flag & 0x01
-        return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1
+		return_struct.rw_flag = packet_struct.combined_flag & 0x01;
+        return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 		return_struct.start_address = packet_struct.start_address;	
 		return_struct.data_to_read = atoi(packet_struct.data_to_read); 
 		
