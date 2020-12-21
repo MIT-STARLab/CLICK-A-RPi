@@ -25,6 +25,7 @@ from datetime import datetime
 from node import NodeFPGA
 import sys
 import memorymap
+import alignment
 
 DEBUG = False
 memMap = memorymap.MemoryMap()
@@ -63,9 +64,11 @@ parser.add_argument('--write', action="store", nargs=2, metavar="<regnum>", help
 parser.add_argument('--edfa', action="store", nargs=1, metavar="<edfacmd>", help="Writes either edfa on, edfa off, or flash to the FPGA register controlling the edfa")
 parser.add_argument('--send', action="store", nargs=2, metavar="<sendfile>", help="Sends a binary file to the FPGA Modulator along with desired PPM order")
 parser.add_argument('--power', action="store", nargs=1, metavar="<power>", help="Turns power on/off on the FPGA board")
-parser.add_argument('--fsm', action="store", nargs=1, metavar="<fsm>", help="Send FSM commands")
 parser.add_argument('--update', nargs = '?', help="Starts printing the values in registers 96-117 every 0.1 seconds until told to stop")
 parser.add_argument('--interval', action="store", nargs=1, metavar="<interval>", help="Sets the printing interval", type=int)
+parser.add_argument('--findCenter', action='count', default=0, help="This variable is irrelevant --get rid of this")
+
+
 
 argList = parser.parse_args()
 
@@ -199,12 +202,37 @@ try:
                 else:
                     print('no edfa data to read')
                     edfa_data = False
+        elif(argList.edfa[0] == 'fline'):
+            edfa_data = True
+            data = []
+            count = 0
+            last_line = 0
+            while(edfa_data):
+                status = fl.flReadChannel(handle, memMap.get_register('flg'))
+                status = status & 0x20 
+                if(status == 0x20):
+                    data += [fl.flReadChannel(handle, memMap.get_register('erx'))]
+                    #print(chr(data[1]))
+                    if(data[count] == 32):
+                        edfa_characters = ''
+                        for i in range(count+1):
+                            print(chr(data[i]))
+                            edfa_characters += chr(data[i])
+                        print(edfa_characters)
+                        last_line = count
+                    count += 1
+                    time.sleep(1)
+                else:
+                    print('no edfa data to read')
+                    edfa_data = False
         else:
            edfa_cmd = argList.edfa[0] 
-        for i in edfa_cmd:
-            print(edfa_cmd)
-            fl.flWriteChannel(handle, memMap.get_register('etx'), ord(i)) 
-            time.sleep(0.01) # sleep for 10us before sending next character
+        
+        if(edfa_cmd):
+            for i in edfa_cmd:    
+                fl.flWriteChannel(handle, memMap.get_register('etx'), ord(i)) 
+                time.sleep(0.01) # sleep for 10us before sending next character
+            print('Sent string:', edfa_cmd,' to EDFA')
 
     if ( argList.read and isCommCapable ):
         print("Channel value is")
@@ -214,9 +242,9 @@ try:
         print(argList.write[1])
         fl.flWriteChannel(handle, argList.write[0], argList.write[1])
 
-    if (argList.fsm and isCommCapable ): 
-	print("Sending command to FSM...")
-	
+    if(argList.findCenter and isCommCapable):
+        alignment.findCenter(handle)
+        print("Here")
 
     if(argList.update and isCommCapable):
         while(1):

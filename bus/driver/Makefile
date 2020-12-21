@@ -9,4 +9,5 @@ clean:
 	$(MAKE) -C $(LINUX_DIR) M=$(PWD) clean
 symbols:
 	readelf -s $(modname).ko | grep -oP "(?<= UND ).*" > symbols.txt
-	
+test:
+	$(CC) test_write.c crc.c -o test_tlm

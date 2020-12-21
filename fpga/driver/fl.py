@@ -298,7 +298,7 @@ def flAwaitDevice(vp, timeout):
             flc.flFreeError(error)
             raise FLException(s)
         if ( isAvailable ):
-            return
+            return True
         timeout = timeout - 1
         if ( timeout == 0 ):
             raise FLException("flAwaitDevice(): Timed out waiting for USB device")

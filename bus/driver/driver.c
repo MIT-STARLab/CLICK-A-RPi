@@ -89,14 +89,24 @@ void spi_xfer_complete(void *arg)
         else if (data->payload_len == 0)
         {
             data->payload_len = ((data->header->len_msb << 8) | data->header->len_lsb) + 1;
-            data->read_ptr += PACKET_HEADER_LEN;
-            data->read_len -= PACKET_HEADER_LEN;
-            /* Request more payload data if needed */
-            if(data->read_len < data->payload_len)
+            if (data->payload_len > 0 && data->payload_len <= (PACKET_TM_MAX_LEN - PACKET_OVERHEAD))
             {
-                data->read_ptr += data->read_len;
-                spi_xfer(data, data->read_ptr, data->payload_len - data->read_len);
-                return;
+                data->read_ptr += PACKET_HEADER_LEN;
+                data->read_len -= PACKET_HEADER_LEN;
+                /* Request more payload data if needed */
+                if(data->read_len < data->payload_len)
+                {
+                    data->read_ptr += data->read_len;
+                    spi_xfer(data, data->read_ptr, data->payload_len - data->read_len);
+                    return;
+                }
+            }
+            /* Invalid packet length in header */
+            else
+            {
+                dev_warn_ratelimited(&data->spi->dev, "received invalid packet length %d\n", data->payload_len);
+                data->payload_len = 0;
+                break;
             }
         }
         /* Finish reading packet */

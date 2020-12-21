@@ -10,7 +10,7 @@
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
+# Linux  GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -25,6 +25,10 @@ from datetime import datetime
 from node import NodeFPGA
 import sys
 import memorymap
+import fsm
+import pdThresh
+import edfa
+import alignment
 
 DEBUG = False
 memMap = memorymap.MemoryMap()
@@ -63,9 +67,17 @@ parser.add_argument('--write', action="store", nargs=2, metavar="<regnum>", help
 parser.add_argument('--edfa', action="store", nargs=1, metavar="<edfacmd>", help="Writes either edfa on, edfa off, or flash to the FPGA register controlling the edfa")
 parser.add_argument('--send', action="store", nargs=2, metavar="<sendfile>", help="Sends a binary file to the FPGA Modulator along with desired PPM order")
 parser.add_argument('--power', action="store", nargs=1, metavar="<power>", help="Turns power on/off on the FPGA board")
-parser.add_argument('--fsm', action="store", nargs=1, metavar="<fsm>", help="Send FSM commands")
+parser.add_argument('--fsmWrite', action="store", nargs=2, metavar="<fsmWrite>", help="Send FSM commands <channel (0-3)> <value (0-65000)>", type=int)
+parser.add_argument('--fsmInit', action="store",  nargs="?", const=1, help="Initialize FSM DAC")
+parser.add_argument('--fsmUpdate', action="store", nargs="?", const=1, help="Update FSM DAC Values")
+parser.add_argument('--pdWrite', action="store", nargs=2, metavar="<pd>",help="Send PD thresholds <channel (0-3)> <value (0-65000)>", type=int)
+parser.add_argument('--pdInit', action="store", nargs="?", const=1, help="Initialize PD DAC")
+parser.add_argument('--pdUpdate', action="store", nargs="?", const=1, help="Update PD DAC Values")
+
 parser.add_argument('--update', nargs = '?', help="Starts printing the values in registers 96-117 every 0.1 seconds until told to stop")
 parser.add_argument('--interval', action="store", nargs=1, metavar="<interval>", help="Sets the printing interval", type=int)
+parser.add_argument('--findCenter', action="store", nargs=1, metavar="<start>", help="Matches the laser wavelength to the center of the FBG")
+
 
 argList = parser.parse_args()
 
@@ -165,19 +177,27 @@ try:
             print('turning power on...')
         else:
             print('not a valid power command')
-        for i in range(0, 6):
+        for i in range(0, 5):
             fl.flWriteChannel(handle, reg+i, cmd)
 
     if(argList.edfa and isCommCapable):
         edfa_cmd = ''
+	edfa_data = True
+	data = []
+	count = 0
+	last_line = 0
         if(argList.edfa[0] == 'on'):
             edfa_cmd = 'edfa on\r'
         elif(argList.edfa[0] == 'off'):
             edfa_cmd = 'edfa off\r'
         elif(argList.edfa[0] == 'flash'):
             edfa_cmd = 'flash\r'
+	elif(argList.edfa[0] == 'fline'):
+	    edfa_cmd = 'fline\r'
         elif(argList.edfa[0] == 'esc'):
             edfa_cmd = chr(27)
+	elif(argList.edfa[0] == 'aopc'):
+	    edfa_cmd = 'aopc 5'
         elif(argList.edfa[0] == 'read'):
             edfa_data = True
             data = []
@@ -186,8 +206,9 @@ try:
             while(edfa_data):
                 status = fl.flReadChannel(handle, memMap.get_register('flg'))
                 status = status & 0x20
-                if(status == 0x20):
-                    data += [fl.flReadChannel(handle, memMap.get_register('erx'))]
+		new_chr = fl.flReadChannel(handle, memMap.get_register('erx'))
+                if (status == 0x20):
+                    data += [new_chr]
                     if(data[count] == 13):
                         edfa_characters = ''
                         for i in range(last_line, count+1):
@@ -195,24 +216,87 @@ try:
                         print(edfa_characters)
                         last_line = count
                     count += 1
-                    time.sleep(1)
-                else:
-                    print('no edfa data to read')
-                    edfa_data = False
-        else:
-           edfa_cmd = argList.edfa[0] 
-        for i in edfa_cmd:
-            print(edfa_cmd)
-            fl.flWriteChannel(handle, memMap.get_register('etx'), ord(i)) 
-            time.sleep(0.01) # sleep for 10us before sending next character
+	else:
+	    edfa_cmd = argList.edfa[0]
+	edfa_send = False
+	edfa.edfa_write_cmd(handle,edfa_cmd)
 
-    if ( argList.read and isCommCapable ):
+	if(edfa_cmd == 'fline\r'):
+            edfa_data = True
+            data = []
+            count = 0
+            last_line = 0
+	    valid_return = 0
+            while(edfa_data):
+                status = fl.flReadChannel(handle, memMap.get_register('flg'))
+                status = status & 0x20
+                new_chr = fl.flReadChannel(handle, memMap.get_register('erx'))
+                if (status == 0x20):
+                    data += [new_chr]
+                    if(data[count] == 13):
+                        edfa_characters = ''
+                        for i in range(last_line, count+1):
+                            edfa_characters += chr(data[i])
+			for i in range(len(edfa_characters)):
+			    if(edfa_characters[i] == 'E'):
+				print(edfa_characters[i::])
+				valid_return = 1
+			#if(edfa_characters[0] == 'E'):
+                        #print(edfa_characters)
+                        #print(1)
+			last_line = count
+                    if(valid_return):
+		        break
+		    count += 1
+
+
+    if( argList.read and isCommCapable ):
         print("Channel value is")
         print(fl.flReadChannel(handle, argList.read[0]))
 
     if ( argList.write and isCommCapable ): 
         print(argList.write[1])
         fl.flWriteChannel(handle, argList.write[0], argList.write[1])
+
+    if (argList.fsmInit and isCommCapable ): 
+	print("initializing FSM DAC...")
+	fsm.init(handle)
+	print("done initializing FSM DAC")
+	
+    if (argList.fsmWrite and isCommCapable ):
+	if((argList.fsmWrite[0] > 3 and argList.fsmWrite[0] != 7) or argList.fsmWrite[1] > 65535 or argList.fsmWrite[1] < 0.0):
+		print("FSM DAC Address Needs to be between 0 and 3 or 7, and the DAC only takes 0-2.5V as an input cmd")
+	else:
+		fsmVoltage = argList.fsmWrite[1]
+#		fsmVoltage = int(65535*(fsmVoltage/2.5))
+		print("Writing to DAC "+str(fsmVoltage)+"V")
+		fsm.write_dac(handle, argList.fsmWrite[0], fsmVoltage)
+
+    if (argList.fsmUpdate and isCommCapable ):
+	print("updating FSM DAC...")
+	fsm.update_dac(handle)
+	print("done")
+
+
+    if (argList.pdInit and isCommCapable ): 
+	print("initializing PD DAC...")
+	pdThresh.init(handle)
+	print("done initializing PD DAC")
+	
+    if (argList.pdWrite and isCommCapable ):
+	if((argList.pdWrite[0] > 3 and argList.pdWrite[0] != 7) or argList.pdWrite[1] > 65535 or argList.pdWrite[1] < 0.0):
+		print("PD DAC Address Needs to be between 0 and 3 or 7, and the DAC only takes 0-2.5V as an input cmd")
+	else:
+		pdVoltage = argList.pdWrite[1]
+#		fsmVoltage = int(65535*(fsmVoltage/2.5))
+		print("Writing to PD DAC "+str(pdVoltage)+"V")
+		pdThresh.write_dac(handle, argList.pdWrite[0], pdVoltage)
+
+    if (argList.pdUpdate and isCommCapable ):
+	print("updating PD DAC...")
+	pdThresh.update_dac(handle)
+	print("done")
+
 
     if(argList.update and isCommCapable):
         while(1):
@@ -233,6 +317,9 @@ try:
                     print(derp)
             time.sleep(interval)
 
+
+    if(argList.findCenter and isCommCapable):    
+        alignment.findCenter(handle)
 
     if ( argList.q ):
         if ( isNeroCapable ):
@@ -344,3 +431,4 @@ except fl.FLException as ex:
     print(ex)
 finally:
     fl.flClose(handle)
+
