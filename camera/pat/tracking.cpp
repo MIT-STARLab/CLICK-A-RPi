@@ -25,27 +25,30 @@ bool Tracking::runAcquisition(Group& beacon)
 	{
 		Image frame(camera, fileStream, pat_health_port);
 		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
-		camera.config->expose_us.write(exposure);
-		camera.requestFrame();
 	}
+
 	int exposure_up = exposure;
 	int exposure_down = exposure;
 	while((exposure >= TRACK_MIN_EXPOSURE) && (exposure <= TRACK_MAX_EXPOSURE)){
 		//try search up:
 		exposure_up += TRACK_ACQUISITION_EXP_INCREMENT; 
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
-		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
 		camera.config->expose_us.write(exposure);
 		camera.requestFrame();
+		if(camera.waitForFrame()){
+			Image frame(camera, fileStream, pat_health_port);
+			if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+		}
 		
 		//try search down:
 		exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
-		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
 		camera.config->expose_us.write(exposure);
 		camera.requestFrame();
+		if(camera.waitForFrame()){
+			Image frame(camera, fileStream, pat_health_port);
+			if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+		}
 	}
 
 	// // Sweep exposure times; running at ~16 fps at this point
