@@ -339,7 +339,7 @@ class FPGAMapAnswerPacket(IpcPacket):
         if self.error: status_str = 'Failed'
         else: status_str = 'Success'
         if self.rw_flag == 0:
-            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:0x%X, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.read_data, 32), status_str) #int(self.read_data.encode('hex'), 16)
+            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:%d, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.read_data.decode('ascii'), 16), status_str)
         elif self.rw_flag == 1:
             return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Write to address:0x%04X, %s' % (self.return_addr, self.rq_number, self.start_addr, status_str)
 

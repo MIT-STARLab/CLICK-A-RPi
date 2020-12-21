@@ -35,20 +35,6 @@ socket_FPGA_map_request.setsockopt(zmq.SUBSCRIBE, b'')
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
 
-# https://stackoverflow.com/questions/25188792/how-can-i-use-send-json-with-pyzmq-pub-sub
-# How can I use send_json with pyzmq PUB SUB
-# ~ def mogrify(topic, msg):
-    # ~ """ json encode the message and prepend the topic """
-    # ~ return (topic + ' ' + json.dumps(msg)).encode('ascii')
-
-# ~ def demogrify(topicmsg):
-    # ~ """ Inverse of mogrify() """
-    # ~ topicmsg = topicmsg.decode('ascii')
-    # ~ json0 = topicmsg.find('{')
-    # ~ topic = topicmsg[0:json0].strip()
-    # ~ msg = json.loads(topicmsg[json0:])
-    # ~ return topic, msg
-
 DEBUG = False
 memMap = memorymap.MemoryMap()
 # FPGA image
@@ -193,12 +179,12 @@ try:
             print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
             # send the FPGA_map_answer packet (write)
             ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
-            raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=0)
+            raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=(isCommCapable && (ch_val == write_data)), start_addr=ipc_fpgarqpacket.start_addr, size=0)
             ipc_fpgaaswpacket_write.decode(raw)
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
             print (ipc_fpgaaswpacket_write)
             
-            #Define Header
+            #Define Header (for PAT code)
             HEADER_PID = str(ipc_fpgarqpacket.return_addr) + '\0' #PID Header
             HEADER_SIZE = 8-1 #Send_zmq adds an extra null byte. Must be a multiple of 4 (struct packing) and at least 5 (PID len + null byte)
             #print "HEADER_PID: " + HEADER_PID
@@ -214,15 +200,14 @@ try:
             print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
             # send the FPGA_map_answer packet (read)
             ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
-            ch_val_read = str(85) + '\0' + '\0' #fl.flReadChannel(handle, ipc_fpgarqpacket.start_addr) 
+            ch_val_read = str(fl.flReadChannel(handle, ipc_fpgarqpacket.start_addr)) + '\0\0' 
             ch_val_read = ch_val_read.encode('ascii') 
-            print ch_val_read 
             raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=0, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=len(ch_val_read), read_data=ch_val_read)
             ipc_fpgaaswpacket_read.decode(raw)
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
-            #print (ipc_fpgaaswpacket_read)
+            print (ipc_fpgaaswpacket_read)
             
-            #Define Header
+            #Define Header (for PAT code)
             HEADER_PID = str(ipc_fpgarqpacket.return_addr) + '\0' #PID Header
             HEADER_SIZE = 8-1 #Send_zmq adds an extra null byte. Must be a multiple of 4 (struct packing) and at least 5 (PID len + null byte)
             #print "HEADER_PID: " + HEADER_PID
