@@ -175,21 +175,6 @@ int main() //int argc, char** argv
 	uint16_t command; 
 	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
-	
-
-  	if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
-		log(pat_health_port, textFileOut, "In main.cpp - Cal ON Succeeded.");
-	} else{
-        log(pat_health_port, textFileOut, "In main.cpp - Cal ON Failed.");
-
-    }
-	if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
-		log(pat_health_port, textFileOut, "In main.cpp - Cal OFF Succeeded.");
-	} else{
-        log(pat_health_port, textFileOut, "In main.cpp - Cal OFF Failed.");
-
-    }
-    return 0;
     
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
