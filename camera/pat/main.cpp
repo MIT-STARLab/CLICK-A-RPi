@@ -20,6 +20,8 @@
 #define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0 //user input from calibration
+#define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
+#define MAX_ACQUISITION_ATTEMPTS 3 //number of times to attempt beacon acquisition
 
 using namespace std;
 using namespace std::chrono;
@@ -175,6 +177,8 @@ int main() //int argc, char** argv
 	uint16_t command; 
 	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
+	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
+	bool static_pointing_initialized = false;
     
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
@@ -421,6 +425,7 @@ int main() //int argc, char** argv
 				if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on
 					if(calibration.run(calib)) //sets calib exposure, pg-comment
 					{
+						haveCalibKnowledge = true; 
 						calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
 						log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure = ", calibExposure, " us.");
 						if(staticPoint)
@@ -434,12 +439,26 @@ int main() //int argc, char** argv
 					}
 					else
 					{
-						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration failed!");
-						phase = START;
+						haveCalibKnowledge = false; 
+						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - calibration.run failed!");
+						num_calibration_attempts++;
+						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
+						if(num_calibration_attempts >= MAX_CALIBRATION_ATTEMPTS){
+							phase = STATIC_POINT;
+						} else{
+							phase = CALIBRATION;
+						}
 					}
 				} else{
+					haveCalibKnowledge = false; 
 					log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - laserOn FPGA command failed!");
-					phase = START;
+					num_calibration_attempts++;
+					log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
+					if(num_calibration_attempts >= MAX_CALIBRATION_ATTEMPTS){
+						phase = STATIC_POINT;
+					} else{
+						phase = CALIBRATION;
+					}
 				}
 				break;
 
@@ -475,12 +494,28 @@ int main() //int argc, char** argv
 					}
 					else
 					{
-						log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Failed! Transitioning to Static Pointing Mode...");
-						phase = STATIC_POINT; 
+						haveBeaconKnowledge = false; 
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - track.runAcquisition failed!");
+						num_acquisition_attempts++;
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
+						if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
+							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
+							phase = STATIC_POINT;
+						} else{
+							phase = ACQUISITION;
+						}
 					}
 				} else{
+					haveBeaconKnowledge = false; 
 					log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - laserOff FPGA command failed!");
-					phase = ACQUISITION;
+					num_acquisition_attempts++;
+					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
+					if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
+						phase = STATIC_POINT;
+					} else{
+						phase = ACQUISITION;
+					}
 				}
 				break;
 
@@ -935,10 +970,20 @@ int main() //int argc, char** argv
 				
 			// Graceful failure mode for when beacon is not detected: command the FSM to point the laser straight & rely on bus pointing.
 			case STATIC_POINT:
-				// Control pointing in open-loop
-				calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX;
-				calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY;
-				track.controlOpenLoop(fsm, calib.x, calib.y);
+				if(!static_pointing_initialized){
+					// Command FSM
+					if(haveCalibKnowledge){
+						calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX;
+						calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY;
+						log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Have calibration knowledge. Setting FSM to: ",
+						"x_pixels = ", calib.x, ", y_pixels = ", calib.y);
+						track.controlOpenLoop(fsm, calib.x, calib.y);
+					} else{
+						log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Do not have calibration knowledge. Setting FSM to (x_normalized, y_normalized) = (0,0).");
+						fsm.setNormalizedAngles(0,0); 
+					}
+					static_pointing_initialized = true; 
+				}
 				if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 					// Save for CSV
 					time_point<steady_clock> now = steady_clock::now();
@@ -951,7 +996,7 @@ int main() //int argc, char** argv
 
 			// Fail-safe
 			default:
-				log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Unknown phase encountered in switch structure. Resetting to START...");
+				log(pat_health_port, textFileOut,  "In main.cpp phase default - Unknown phase encountered in switch structure. Resetting to START...");
 				phase = START;
 				break;
 		}
