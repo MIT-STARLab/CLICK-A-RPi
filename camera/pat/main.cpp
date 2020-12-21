@@ -1019,14 +1019,13 @@ int main() //int argc, char** argv
 					}
 
 					// Save for CSV
-					time_point<steady_clock> now = steady_clock::now();
-					duration<double> diff = now - beginTime;
+					now = steady_clock::now();
+					diff = now - beginTime;
 					csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
 					//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 
 					static_pointing_initialized = true; 
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(40)); //make timing similar to taking picture
 				break;
 
 			// Fail-safe
