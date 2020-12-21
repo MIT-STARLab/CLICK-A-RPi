@@ -7,15 +7,15 @@
 #include "fsm.h"
 #include "log.h"
 
-#define CALIB_FSM_MAX 0.006f		// Max FSM range to use during calibration / 100
-#define CALIB_FSM_RISE_TIME 15		// FSM rise time in ms
+#define CALIB_FSM_MAX 1.0f/100		// Max FSM range to use during calibration / 100
+#define CALIB_FSM_RISE_TIME 45		// FSM rise time in ms
 #define CALIB_FSM_MAX_DELTA 0.003f	// Max difference in FSM output per step -> equivalent of moving ~3px on detector
 
-#define CALIB_BIG_WINDOW 400		// Initial camera window for FSM 0,0 acquisition
+#define CALIB_BIG_WINDOW 600		// Initial camera window for FSM 0,0 acquisition
 #define CALIB_SMALL_WINDOW 300		// Camera window for calibration pattern tracking
 
-#define CALIB_MIN_BRIGHTNESS 400	// Minimum brightness of calib laser spot to work with
-#define CALIB_MAX_EXPOSURE 10000	// Max exposure in us to check for range tuning
+#define CALIB_MIN_BRIGHTNESS 300	// Minimum brightness of calib laser spot to work with
+#define CALIB_MAX_EXPOSURE 1000 	// Max exposure in us to check for range tuning
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow
 #define CALIB_EXP_DIVIDER 15		// Exposure tuning division factor, the higher the finer tuning, but slower; for range search
 #define CALIB_MAX_SMOOTHING 3		// Maximum blurring of frames allowed
@@ -44,7 +44,7 @@ public:
 	double a00, a01, a10, a11, t0, t1;
 	// Sensitivity matrix
 	double s00, s01, s10, s11;
-	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, smoothing;
+	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, smoothing, centerOffsetX, centerOffsetY;
 	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(camera), fsm(fsm), fileStream(fileStreamIn), pat_health_port(pat_health_port_in){};
 	int gainForExposure(int exposure);
 	int determineSmoothing(Image& frame);

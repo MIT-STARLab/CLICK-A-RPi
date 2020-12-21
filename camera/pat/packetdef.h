@@ -5,6 +5,8 @@
 #include <zmq.hpp>
 #include <iostream>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <unistd.h>
 #define TX_ADCS_APID 0x250 //(CLICK-A CPU Software Architecture on Google Drive)
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
@@ -18,15 +20,26 @@
 #define CMD_START_PAT_BUS_FEEDBACK 0x05
 #define CMD_GET_IMAGE 0x06
 #define CMD_CALIB_TEST 0x07
+#define CMD_CALIB_LASER_TEST 0x08
+#define CMD_FSM_TEST 0x09
 
 // Packet Definitions
-struct fpga_request_packet_struct{
+struct fpga_request_write_packet_struct{
 	uint32_t return_address;
 	uint8_t request_number;
 	bool read_write_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	uint32_t data_to_write;
+	uint8_t data_to_write[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
+};
+
+struct fpga_request_read_packet_struct{
+	uint32_t return_address;
+	uint8_t request_number;
+	bool read_write_flag;
+	uint16_t start_address;
+	uint32_t data_size;
+	//uint8_t data_to_write[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct pat_health_packet_struct{
@@ -48,8 +61,35 @@ struct pat_control_packet_struct{
 	char data_to_read[CMD_PAYLOAD_SIZE];
 };
 
+struct fpga_answer_write_packet_struct{
+	char header[8];
+	uint32_t return_address;
+	uint8_t request_number;
+	bool combined_flag;
+	uint16_t start_address;
+	uint32_t data_size;
+};
+
+struct fpga_answer_read_packet_struct{
+	char header[8];
+	uint32_t return_address;
+	uint8_t request_number;
+	bool combined_flag;
+	uint16_t start_address;
+	uint32_t data_size;
+	char data_to_read[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
+};
+
+struct fpga_answer_struct{
+	uint32_t return_address;
+	uint8_t request_number;
+	bool combined_flag;
+	uint16_t start_address;
+	uint8_t data_to_read;
+};
+
 // Packet Sending for PUB Processes:
-void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint32_t data, bool read_write, uint8_t request_num);
+void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, bool read_write, uint8_t request_num);
 
 void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
 
@@ -58,9 +98,9 @@ void send_packet_tx_adcs(zmq::socket_t& tx_packets_port, float body_frame_x_angu
 // Packet Receiving & Parsing for SUB Processes:
 uint16_t receive_packet_pat_control(zmq::socket_t& pat_control_port, char* data_to_read = NULL);
 
-// TODO: fpga_map_answer packet parsing helper function
+fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port, bool read_write);
 
-// TODO: parse_packet_pat_control (commands from command handler)
+// TODO: receive_packet_pat_rx (commands from bus)
 
 
 #endif

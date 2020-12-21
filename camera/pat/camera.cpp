@@ -8,10 +8,12 @@ Camera::Camera(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, s
 fileStream(fileStreamIn), pat_health_port(pat_health_port_in)
 //-----------------------------------------------------------------------------
 {
+	/*
 	if(initialize(serialNumber))
 	{
 		log(pat_health_port, fileStream, "In camera.cpp Camera::Camera - Camera Connection Initialized");
 	}
+	*/
 }
 
 //-----------------------------------------------------------------------------
@@ -20,6 +22,7 @@ Camera::~Camera()
 {
 	delete config;
 	delete fi;
+	//std::cout << "Camera Destroyed" << std::endl;
 }
 
 //-----------------------------------------------------------------------------
@@ -46,12 +49,14 @@ bool Camera::initialize(std::string serialNumber)
 
 	if(device == NULL)
 	{
+		log(pat_health_port, fileStream, "In camera.cpp Camera::Initialize - Error: NULL device");
 		error = ERROR_NULL_DEVICE;
 		return false;
 	}
 	else
 	{
 		// Basic configuration
+		log(pat_health_port, fileStream, "In camera.cpp Camera::Initialize - device found");
 		fi = new FunctionInterface(device);
 		config = new CameraSettingsBlueFOX(device);
 		config->triggerMode.write(ctmOnDemand);

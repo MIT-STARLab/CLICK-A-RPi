@@ -13,7 +13,7 @@
 bool Calibration::findExposureRange(Group& calib)
 //-----------------------------------------------------------------------------
 {
-	int gain = 0, exposure = CALIB_MAX_EXPOSURE, skip = camera.queuedCount;
+	int gain = 0, exposure = CALIB_MAX_EXPOSURE/10, skip = camera.queuedCount;
 	preferredExpo = CALIB_MAX_EXPOSURE + 1;
 	lowestExpoNoGain = 0;
 
@@ -22,7 +22,10 @@ bool Calibration::findExposureRange(Group& calib)
 	camera.config->binningMode.write(cbmOff);
 	camera.config->expose_us.write(exposure);
 	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
-	camera.requestFrame();
+	
+    //logImage(string("CALIBRATION_debug"), camera, fileStream, pat_health_port);
+    
+    camera.requestFrame();
 
 	// Skip pre-queued old frames
 	camera.ignoreNextFrames(skip);
@@ -30,10 +33,49 @@ bool Calibration::findExposureRange(Group& calib)
 	if(camera.waitForFrame())
 	{
 		Image init(camera, fileStream, pat_health_port, smoothing);
-		if(init.histBrightest > CALIB_MIN_BRIGHTNESS &&
-		   init.histBrightest > init.histPeak &&
-		   init.histBrightest - init.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
-		   init.performPixelGrouping() > 0)
+		if(init.histBrightest <= CALIB_MIN_BRIGHTNESS){
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+			"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
+			return false;
+		}
+
+		if(init.histBrightest <= init.histPeak){
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+			"(init.histBrightest = ", init.histBrightest, ") <= (init.histPeak = ", init.histPeak, ")");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
+			return false;
+		}
+
+		if(init.histBrightest - init.histPeak <= TRACK_GOOD_PEAKTOMAX_DISTANCE){
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+			"(init.histBrightest = ", init.histBrightest, ") - ",
+			"(init.histPeak = ", init.histPeak, ") = ", init.histBrightest - init.histPeak, 
+			" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE, ")");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
+			return false;
+		}
+
+		/*
+		init.histBrightest > CALIB_MIN_BRIGHTNESS &&
+		init.histBrightest > init.histPeak &&
+		init.histBrightest - init.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
+		init.performPixelGrouping() > 0
+		*/
+		int num_groups = init.performPixelGrouping();
+		if(num_groups > 0)
 		{
 			// Check initial image values
 			Group& spot = init.groups[0];
@@ -60,7 +102,7 @@ bool Calibration::findExposureRange(Group& calib)
 						// Find preferred exposure time (good brightness with no gain)
 						if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < TRACK_HAPPY_BRIGHTNESS)
 						{
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure:", exposure, "us,", gain, "dB");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
 							preferredExpo = exposure;
 							if(smoothing == 0)
 							{
@@ -68,6 +110,7 @@ bool Calibration::findExposureRange(Group& calib)
 								if(test != smoothing)
 								{
 									smoothing = test;
+									log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
 									return true;
 								}
 							}
@@ -106,8 +149,18 @@ bool Calibration::findExposureRange(Group& calib)
 			calib.pixelCount = spot.pixelCount;
 			return true;
 		}
+		else{
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: (num_groups = ", num_groups,") <= 0");
+			//save image debug telemetry
+			std::string nameTag = std::string("DEBUG_findExposureRange");
+			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+			init.savePNG(imageFileName);
+		}
 	}
-
+	else{
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - camera.waitForFrame() Failed");
+	}
 	return false;
 }
 
@@ -128,14 +181,13 @@ bool Calibration::run(Group& calib)
 	// Find the exposure setting range
 	smoothing = 0;
 	bool success = findExposureRange(calib);
-	if(smoothing != 0) success = findExposureRange(calib);
+	//if(smoothing != 0) success = findExposureRange(calib);
 
 	if(success)
 	{
 		// Use preferred exposure
 		camera.config->gain_dB.write(0);
 		camera.config->expose_us.write(preferredExpo);
-		logImage(string("CALIBRATION_Start"), camera, fileStream, pat_health_port, true); 
 		for(int i = 0; i < 100; i++)
 		{
 			// Spiral outwards with 100 points from 0 to defined max FSM range
@@ -153,7 +205,18 @@ bool Calibration::run(Group& calib)
 				{
 					Group& spot = frame.groups[0];
 					points.emplace_back(frame.area.x + spot.x, frame.area.y + spot.y, x, y);
-					if(i % 10 == 0){
+					if(i == 0){
+						centerOffsetX = (frame.area.x + spot.x) - CAMERA_WIDTH/2;
+						centerOffsetY = (frame.area.y + spot.y) - CAMERA_HEIGHT/2;
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - ",
+						"centerOffsetX = ", centerOffsetX, ", centerOffsetY = ", centerOffsetY);
+
+						std::string nameTag = std::string("CALIBRATION");
+						std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Saving image telemetry as: ", imageFileName);
+						frame.savePNG(imageFileName);
+					}
+					if(i % 5 == 0){
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Pair", i, "[", frame.area.x + spot.x, ",", frame.area.y + spot.y, "] for FSM [", x, ",", y, "]");
 					}
 
@@ -166,12 +229,12 @@ bool Calibration::run(Group& calib)
 				}
 			}
 		}
-		
-		logImage(string("CALIBRATION_End"), camera, fileStream, pat_health_port, true); 
 
 		// Reset FSM & Camera
-		camera.setFullWindow();
 		fsm.setNormalizedAngles(0, 0);
+
+		//Reset Camera
+		camera.setFullWindow();	
 
 		// Check pair count
 		if(points.size() < 50) return false;
@@ -182,9 +245,8 @@ bool Calibration::run(Group& calib)
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Calculated sensitivity matrix [", s00, s01, ";", s10, s11, "]");
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Calculated affine transform [", a00, a01, ";", a10, a11, "] + [", t0, ";", t1, "]");
 		return true;
-
 	}
-
+	log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - findExposureRange Failed");
 	return false;
 }
 

@@ -8,7 +8,7 @@
 bool Tracking::runAcquisition(Group& beacon)
 //-----------------------------------------------------------------------------
 {
-	uint16_t exposure = TRACK_MIN_EXPOSURE, gain = 0, skip = camera.queuedCount;
+	int exposure = TRACK_MIN_EXPOSURE, gain = 0, skip = camera.queuedCount;
 
 	camera.setFullWindow();
 	camera.config->binningMode.write(cbmBinningHV);
@@ -27,7 +27,13 @@ bool Tracking::runAcquisition(Group& beacon)
 		if(camera.waitForFrame())
 		{
 			Image frame(camera, fileStream, pat_health_port);
-			if(verifyFrame(frame) && windowAndTune(frame, beacon)) return true;
+			if(verifyFrame(frame) && windowAndTune(frame, beacon)){
+					if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
+						log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
+						"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
+					}
+				return true;
+			}
 			camera.config->expose_us.write(exposure);
 			camera.requestFrame();
 		}
@@ -87,7 +93,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 		camera.requestFrame();
 
 		// Try tuning the windowed frame
-		// log(pat_health_port, fileStream, "Prepared windowed tuning frame at [", fullX, fullY, "]");
+		log(pat_health_port, fileStream, "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [", fullX, fullY, "]");
 		bool success = autoTuneExposure(beacon);
 
 		// Switch back to full frame
@@ -334,9 +340,12 @@ void Tracking::controlOpenLoop(FSM& fsm, double x, double y)
 {
 	actionX = calibration.affineTransformX(x, y);
 	actionY = calibration.affineTransformY(x, y);
-	// log(pat_health_port, fileStream, "Moving FSM to", x, y, "... that is", actionX, actionY);
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = steady_clock::now();
+	log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Updating FSM position to: ",
+	"x_pxls = ", x, " -> x_normalized = ", actionX, ". ", "y_pxls = ", y, " -> y_normalized = ", actionY, ". ");
+	//if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
+	//if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
 
 // Control FSM with feedback to setpoint using integral control
@@ -379,6 +388,11 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	// Update output
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = now;
+	log(pat_health_port, fileStream, "In Tracking::control - Updating FSM position: ",
+	"x_current = ", x, " -> x_setpoint = ", spX, " -> x_normalized = ", actionX, ". ", 
+	"y_current = ", y, " -> y_setpoint = ", spY, " -> y_normalized = ", actionY, ". ");
+	//if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
+	//if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
 
 // Check whether spots are at a safe distance and closed-loop tracking is possible
@@ -414,6 +428,9 @@ int Tracking::controlExposure(Image& frame, int exposure)
 			if(newExposure < TRACK_MAX_EXPOSURE) exposure = newExposure; //limit at max exposure
 			else exposure = TRACK_MAX_EXPOSURE; //set to limit if necessary
 		}
+
+		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
+		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
 	}
 
 	return exposure;
