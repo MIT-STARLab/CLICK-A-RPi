@@ -47,7 +47,7 @@ bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answe
 			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
 			//make sure message is for PAT process:
 			if(((uint32_t) getpid()) == write_ans_struct.return_address){
-				return write_ans_struct.combined_flag;
+				return !write_ans_struct.error_flag;
 			} 
 		}
 	}
@@ -66,7 +66,7 @@ bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answ
 			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
 			//make sure message is for PAT process:
 			if(((uint32_t) getpid()) == write_ans_struct.return_address){
-				return write_ans_struct.combined_flag;
+				return !write_ans_struct.error_flag;
 			} 
 		}
 	}

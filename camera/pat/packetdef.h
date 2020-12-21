@@ -83,7 +83,8 @@ struct fpga_answer_read_packet_struct{
 struct fpga_answer_struct{
 	uint32_t return_address;
 	uint8_t request_number;
-	bool combined_flag;
+	bool rw_flag;
+	bool error_flag;
 	uint16_t start_address;
 	uint8_t data_to_read;
 };
