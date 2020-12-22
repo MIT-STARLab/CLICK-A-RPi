@@ -495,6 +495,11 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
 						if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
 							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
+							camera.setFullWindow();
+							camera.config->binningMode.write(cbmBinningHV);
+							camera.config->expose_us.write(TRACK_GUESS_EXPOSURE);
+							camera.config->gain_dB.write(0);
+							logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); 
 							phase = STATIC_POINT;
 						} else{
 							phase = ACQUISITION;
