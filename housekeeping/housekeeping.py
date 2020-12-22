@@ -10,7 +10,7 @@ import zmq
 import struct
 import psutil
 
-sys.path.append('/home/pi/CLICK-A-RPi/lib/')
+sys.path.append('/root/CLICK-A-RPi/lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT
@@ -67,13 +67,13 @@ class Housekeeping:
 
     def check_fpga_mmap(self):
         pkt = FPGAMapRequestPacket()
-        tc_pkt = pkt.encode(self.pid, 0, 0, 96, 22) # registers 0 through 14
+        tc_pkt = pkt.encode(self.pid, 0, 0, 0, 15) # registers 0 through 14
         self.fpga_req_socket.send(tc_pkt)
-        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 22) # registers 32 through 38
+        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 7) # registers 32 through 38
         self.fpga_req_socket.send(tc_pkt)
-        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 22) # registers 49 through 68
+        tc_pkt = pkt.encode(self.pid, 2, 0, 49, 20) # registers 49 through 68
         self.fpga_req_socket.send(tc_pkt)
-        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 22) # registers 96 through 117
+        tc_pkt = pkt.encode(self.pid, 3, 0, 96, 22) # registers 96 through 117
         return
 
     def check_cpu(self):
@@ -83,7 +83,7 @@ class Housekeeping:
         mem = psutil.virtual_memory()
         mem_total = mem.total
         mem_available = mem.available
-        print("MemTotal: ", mem_total, "MemAvailable: ", mem_available)
+        #print("MemTotal: ", mem_total, "MemAvailable: ", mem_available)
 
         pkt.extend(struct.pack('L', mem_available))
 
@@ -95,6 +95,13 @@ class Housekeeping:
                 pkt.extend(struct.pack('L', int(p.cpu_percent())))
                 pkt.extend(struct.pack('L', int(p.memory_percent('uss'))))
 
+        count = 0;
+        with open('/mnt/journal/id.txt', 'r') as boot_id_list:
+            for count, l in enumerate(boot_id_list, 1):
+                pass
+
+        pkt.extend(struct.pack('B', count))
+    
         return pkt
 
     def handle_hk_pkt(self, data, process):
