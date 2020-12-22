@@ -1,98 +1,156 @@
-# Joe Kusters
-# fpga.py
-# main program for handling all fpga processes (downlink, optimizer, interface, fault detection)
+#!/usr/bin/env python
 
-import fl
 import sys
-import time
 import zmq
-import memorymap as mem
-import modulator as mod
-import optimizer as opt
-import fdir
-import encoder
-import interleaver
+import time
 
-def test():
-    print("FPGA test process from fpga")
+import math
+import argparse
+import time
+import struct
+import csv
+from datetime import datetime
+
+import sys #importing options and functions
+sys.path.append('../lib/')
+sys.path.append('/root/lib/')
+from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket
+from zmqTxRx import recv_zmq, send_zmq
+
+sys.path.append('driver/')
+import fl
+from node import NodeFPGA
+import memorymap
+import fsm
+import edfa
+import alignment
 
 
-def main_loop():
-    memory = mem.MemoryMap()
-    handle = fl.FLHandle()
+DEBUG = False
+memMap = memorymap.MemoryMap()
 
+
+
+""" FPGA initialization """
+
+handle = fl.FLHandle()
+
+try:
     fl.flInitialise(0)
-    vp = "1d50:602b:0002"
-    # check lsusb to see what the current prodcut ID is for the FPGA/Cypress chip, and uncomment accordingly
-    ip = '04b4:8613' 
-    #ip = '1d50:602b'
-    try: 
+
+    vp = '1d50:602b:0002'
+    print("Attempting to open connection to FPGALink device {}...".format(vp))
+    try:
         handle = fl.flOpen(vp)
     except fl.FLException as ex:
-        if(ip):
-            fl.flLoadStandardFirmware(ip, vp)
-            time.sleep(3)
-            if(not fl.flAwaitDevice(vp, 10000)):
-                raise fl.FLException("Device did not renumerate properly")
-            handle = fl.flOpen(vp)
-        else:
-            raise fl.FLException("Couldn't open connection to FPGA".format(vp))
+        ivp = '04b4:8613' #TODO: needs root?
+        #ivp = '0424:2422' #TODO: why is this different? (USB ADDRESS)
+        print("Loading firmware into {}...".format(ivp))
+        fl.flLoadStandardFirmware(ivp, vp)
+        print type(ivp)
+        print type(vp)
+        # Long delay for renumeration
+        # TODO: fix this hack.  The timeout value specified in flAwaitDevice() below doesn't seem to work
+        time.sleep(3)
+
+        print("Awaiting renumeration...")
+        if ( not fl.flAwaitDevice(vp, 10000) ):
+            raise fl.FLException("FPGALink device did not renumerate properly as {}".format(vp))
+
+        print("Attempting to open connection to FPGALink device {} again...".format(vp))
+        handle = fl.flOpen(vp)
+
 
     conduit = 1
+
+
     isNeroCapable = fl.flIsNeroCapable(handle)
     isCommCapable = fl.flIsCommCapable(handle, conduit)
     fl.flSelectConduit(handle, conduit)
 
-    if(isCommCapable):
-        modulator = mod.Modulator(4, handle)
-        optimizer = opt.Optimizer(handle)
-        walle = fdir.RepairBot(handle)
-        
-        # configure fpga
-        if(isNeroCapable):
-            print('Reprogramming FPGA...')
-            fl.flProgram(handle, 'J:A7A0A3A1:/home/pi/TopLevel_FPGAboard_v9.xsvf')
-            print('Done!')
 
+    """ ZMQ inter process communication initialization """
 
     context = zmq.Context()
 
-    receiver = context.socket(zmq.PULL)
-    receiver.connect("tcp://localhost:5556")
+    socket_FPGA_map_request = context.socket(zmq.SUB)
+    socket_FPGA_map_request.bind("tcp://*:%s" % FPGA_MAP_REQUEST_PORT)
 
-    sender = context.socket(zmq.PUSH)
-    sender.bind("tcp://*:5557")
+    socket_FPGA_map_answer = context.socket(zmq.PUB)
+    socket_FPGA_map_answer.bind("tcp://*:%s" % FPGA_MAP_ANSWER_PORT)
 
-    while(1):
-        # poll command queue to see if any commands for FPGA (downlink, FSMs, new config, etc.)
-        msg = receiver.recv()
-        #simply print to console for now, write implemenetation later
-        print(msg)
-        sender.send("received message " + msg)
-        msg = msg.split()
-        # execute any commands
-        if(msg[0] == 'downlink'):
-            encoded = 'encoded_'+msg[1]
-            interleaved = 'interleaved_'+msg[1]
-            encoder.encodeFile(msg[1], 255, 223, True, encoded)
-            #interleaver.intrlvFile(encoded, modulator.get_ppm_order(), 255, 223, True, interleaved)
-            modulator.downlink(encoded)
+    # socket.setsockopt(zmq.SUBSCRIBE, topicfilter)
+    # subscribe to ALL incoming FPGA_map_requests
+    socket_FPGA_map_request.setsockopt(zmq.SUBSCRIBE, b'')
 
-        # run optimizer loop, generates telemetry
-        optimizer.dither()
+    # socket needs some time to set up. give it a second - else the first message will be lost
+    time.sleep(1)
 
-        # run fault detection, generates telemetry
-        walle.detect()
-        if(walle.problem()):
-            walle.respond()
+    print ("\n")
 
-        # send any telemetry to bus
+    while True:
 
-        time.sleep(1)
+        # wait for a package to arrive
+        print ('RECEIVING on %s with TIMEOUT %d' % (socket_FPGA_map_request.get_string(zmq.LAST_ENDPOINT), socket_FPGA_map_request.get(zmq.RCVTIMEO)))
+        message = recv_zmq(socket_FPGA_map_request)
+
+        # decode the package
+        ipc_fpgarqpacket = FPGAMapRequestPacket()
+        ipc_fpgarqpacket.decode(message)
+        print (ipc_fpgarqpacket)
 
 
-if __name__ == '__main__':
-    main_loop()
-    
-#def startup():
-    # turn shit on, check power levels, run initial optimization loop, then enter main loop of checking command fifo, optimizer run through, fdir run through, repeat
+        if ipc_fpgarqpacket.rw_flag == 1:
+            print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
+
+            time.sleep(1)
+
+            # send the FPGA_map_answer packet (write)
+            ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
+            raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=0, rw_flag=1, error_flag=0, start_addr=0xDEF0, size=0)
+            ipc_fpgaaswpacket_write.decode(raw)
+            print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
+            print(b'| ' + raw)
+            print(ipc_fpgaaswpacket_write)
+            send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
+
+        else:
+            print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
+
+            """ read FPGA memory map """
+            if(isCommCapable):
+                for reg in range(ipc_fpgarqpacket.start_addr, ipc_fpgarqpacket.start_addr + ipc_fpgarqpacket.size): #from start_addr to start_addr+size
+                    num = fl.flReadChannel(handle, reg)
+                    derp = 'Register '+str(reg)+' = '+str(num)
+                    print(derp)
+            else:
+                print('!isCommCapable')
+            """                    """
+
+            mapData = derp
+            dataLength = len(derp)
+
+            # send the FPGA_map_answer packet (read)
+            ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
+            raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=0, rw_flag=0, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=16, read_data=b"I'm Mr. Meeseeks")
+            ipc_fpgaaswpacket_read.decode(raw)
+            print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
+            print(b'| ' + raw)
+            print(ipc_fpgaaswpacket_read)
+            send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_read.return_addr)
+
+
+
+
+
+
+except fl.FLException as ex:
+    print(ex)
+finally:
+    fl.flClose(handle)
+
+
+
+
+
