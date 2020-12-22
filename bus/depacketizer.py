@@ -8,7 +8,7 @@ import zmq
 import binascii
 from crccheck.crc import Crc16CcittFalse as crc16
 
-sys.path.append('/home/pi/CLICK-A-RPi/lib/')
+sys.path.append('/root/CLICK-A-RPi/lib/')
 from ipc_packets import RxCommandPacket, RxPATPacket
 from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
@@ -168,11 +168,10 @@ class Depacketizer:
 
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
+        print(binascii.hexlify(raw_ipc_pkt))
         if (APID == 0x01):
-            print(binascii.hexlify(raw_ipc_pkt))
             self.rx_cmd_socket.send(raw_ipc_pkt)
         else:
-            print(binascii.hexlify(raw_ipc_pkt))
             self.rx_pat_socket.send(raw_ipc_pkt)
 
     def run(self):

@@ -5,9 +5,9 @@ import sys
 import os
 import zmq
 
-from crccheck.crc import Crc16Ccitt as crc16
+from crccheck.crc import Crc16CcittFalse as crc16
 
-sys.path.append('/home/pi/CLICK-A-RPi/lib/')
+sys.path.append('/root/CLICK-A-RPi/lib/')
 from ipc_packets import TxPacket
 from options import TX_PACKETS_PORT
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
@@ -25,7 +25,7 @@ class Packetizer:
 
     #spi = spidev.SpiDev()
     # spi = open(SPI_DEV, os.O_RDWR)
-    spi = open(SPI_DEV, 'w')
+    spi = open(SPI_DEV, 'wb', buffering=0)
 
     bus_pkts_buffer = []
     ipc_pkts_buffer = []
@@ -121,7 +121,7 @@ class Packetizer:
             # Empty buffer, but that's ok
             return
 
-        self.spi.write(raw_bus_pkt)
+        self.spi.write(bytearray(raw_bus_pkt))
 
     def run(self):
         print("Start Packetizer")
