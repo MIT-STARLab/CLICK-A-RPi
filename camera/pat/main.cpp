@@ -44,39 +44,15 @@ public:
 bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
 	// Send command to FPGA:
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
-	
-	// Listen for FPGA answer:
-	for(int i = 0; i < 10; i++){		
-		zmq::poll(poll_fpga_answer.data(), 1, 100); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
-		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
-			// received something on the first (only) socket
-			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
-			//make sure message is for PAT process:
-			if(((uint32_t) getpid()) == write_ans_struct.return_address){
-				return !write_ans_struct.error_flag;
-			} 
-		}
-	}
-	return false; //timeout
+	// Check that message was received and FPGA was written to:
+	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer);
 }
 
 //Turn Off Calibration Laser
 bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number = 0){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
-	
-	// Listen for FPGA answer:
-	for(int i = 0; i < 10; i++){		
-		zmq::poll(poll_fpga_answer.data(), 1, 100); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
-		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
-			// received something on the first (only) socket
-			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
-			//make sure message is for PAT process:
-			if(((uint32_t) getpid()) == write_ans_struct.return_address){
-				return !write_ans_struct.error_flag;
-			} 
-		}
-	}
-	return false; //timeout
+	// Check that message was received and FPGA was written to:
+	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer);
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -164,11 +140,11 @@ int main() //int argc, char** argv
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
 
 	// Synchronization
-	enum Phase { START, CALIBRATION, ACQUISITION, CL_INIT, CL_BEACON, CL_CALIB, OPEN_LOOP, STATIC_POINT };
-	const char *phaseNames[8] = {"START","CALIBRATION","ACQUISITION","CL_INIT","CL_BEACON","CL_CALIB","OPEN_LOOP","STATIC_POINT"};
+	enum Phase { CALIBRATION, ACQUISITION, CL_INIT, CL_BEACON, CL_CALIB, OPEN_LOOP, STATIC_POINT };
+	const char *phaseNames[8] = {"CALIBRATION","ACQUISITION","CL_INIT","CL_BEACON","CL_CALIB","OPEN_LOOP","STATIC_POINT"};
 	
 	// Initialize execution variables
-	Phase phase = START;
+	Phase phase = CALIBRATION;
 	Group beacon, calib;
 	AOI beaconWindow, calibWindow;
 	int beaconExposure = 0, spotIndex = 0, calibExposure = 0;
@@ -440,11 +416,6 @@ int main() //int argc, char** argv
 		//PAT Phases:		
 		switch(phase)
 		{
-			case START:
-				log(pat_health_port, textFileOut, "In main.cpp phase START - Calibration Starting...");
-				phase = CALIBRATION;
-				break;
-
 			// Calibration phase, internal laser has to be turned on, ran just once
 			case CALIBRATION:
 				if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on
@@ -509,7 +480,6 @@ int main() //int argc, char** argv
 						track.controlOpenLoop(fsm, calib.x, calib.y);
 						if(openLoop)
 						{
-							camera.requestFrame(); //queue frame, pg-comment
 							phase = OPEN_LOOP;
 						}
 						else
@@ -1030,8 +1000,8 @@ int main() //int argc, char** argv
 
 			// Fail-safe
 			default:
-				log(pat_health_port, textFileOut,  "In main.cpp phase default - Unknown phase encountered in switch structure. Resetting to START...");
-				phase = START;
+				log(pat_health_port, textFileOut,  "In main.cpp phase default - Unknown phase encountered in switch structure. Transitioning to STATIC_POINT.");
+				phase = STATIC_POINT;
 				break;
 		}
 	}
