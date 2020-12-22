@@ -32,7 +32,7 @@ bool Tracking::runAcquisition(Group& beacon)
 	exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
 	exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
 
-	while((exposure > TRACK_MIN_EXPOSURE) && (exposure < TRACK_MAX_EXPOSURE)){
+	while((exposure_down > TRACK_MIN_EXPOSURE) && (exposure_up < TRACK_MAX_EXPOSURE)){
 		//try search up:
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_up);
 		camera.config->expose_us.write(exposure_up);
