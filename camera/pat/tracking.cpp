@@ -33,7 +33,7 @@ bool Tracking::runAcquisition(Group& beacon)
 		//try search up:
 		exposure_up += TRACK_ACQUISITION_EXP_INCREMENT; 
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
-		camera.config->expose_us.write(exposure);
+		camera.config->expose_us.write(exposure_up);
 		camera.requestFrame();
 		if(camera.waitForFrame()){
 			Image frame(camera, fileStream, pat_health_port);
@@ -43,7 +43,7 @@ bool Tracking::runAcquisition(Group& beacon)
 		//try search down:
 		exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
-		camera.config->expose_us.write(exposure);
+		camera.config->expose_us.write(exposure_down);
 		camera.requestFrame();
 		if(camera.waitForFrame()){
 			Image frame(camera, fileStream, pat_health_port);
