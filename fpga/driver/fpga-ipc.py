@@ -6,14 +6,15 @@ import json
 import time
 import argparse
 import fl
-from node import NodeFPGA
+#from node import NodeFPGA
 import sys
 import memorymap
-import fsm
-import edfa
-import alignment
+#import fsm
+#import edfa
+#import alignment
 
 import sys #importing options and functions
+sys.path.append('../lib/')
 sys.path.append('../../lib/')
 #sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
@@ -38,7 +39,7 @@ time.sleep(1)
 DEBUG = False
 memMap = memorymap.MemoryMap()
 # FPGA image
-FPGA_IMAGE = "/home/kingryan/Dropbox/grad_school/fpga/makestuff/hdlmake/apps/roamingryan/swled/bist/vhdl/top_level.xsvf"
+# FPGA_IMAGE = "/home/kingryan/Dropbox/grad_school/fpga/makestuff/hdlmake/apps/roamingryan/swled/bist/vhdl/top_level.xsvf"
 
 # File-reader which yields chunks of data
 def readFile(fileName):
@@ -179,7 +180,11 @@ try:
             print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
             # send the FPGA_map_answer packet (write)
             ipc_fpgaaswpacket_write = FPGAMapAnswerPacket()
-            raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=(isCommCapable && (ch_val == write_data)), start_addr=ipc_fpgarqpacket.start_addr, size=0)
+            err_flag = not (isCommCapable & (ch_val == write_data))
+            print "err_flag: ", err_flag
+            print "isCommCapable: ", isCommCapable
+            print "(ch_val == write_data): ", (ch_val == write_data)
+            raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=ipc_fpgarqpacket.rq_number, rw_flag=1, error_flag=err_flag, start_addr=ipc_fpgarqpacket.start_addr, size=0)
             ipc_fpgaaswpacket_write.decode(raw)
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
             print (ipc_fpgaaswpacket_write)

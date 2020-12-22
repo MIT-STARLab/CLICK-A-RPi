@@ -20,6 +20,12 @@
 #define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0 //user input from calibration
+#define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
+#define MAX_ACQUISITION_ATTEMPTS 3 //number of times to attempt beacon acquisition
+#define PERIOD_BEACON_LOSS 5.0f //seconds, time to wait after beacon loss before switching back to acquisition
+#define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
+#define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
+#define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 
 using namespace std;
 using namespace std::chrono;
@@ -38,39 +44,15 @@ public:
 bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
 	// Send command to FPGA:
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
-	
-	// Listen for FPGA answer:
-	for(int i = 0; i < 10; i++){		
-		zmq::poll(poll_fpga_answer.data(), 1, 100); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
-		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
-			// received something on the first (only) socket
-			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
-			//make sure message is for PAT process:
-			if(((uint32_t) getpid()) == write_ans_struct.return_address){
-				return write_ans_struct.combined_flag;
-			} 
-		}
-	}
-	return false; //timeout
+	// Check that message was received and FPGA was written to:
+	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer);
 }
 
 //Turn Off Calibration Laser
 bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number = 0){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
-	
-	// Listen for FPGA answer:
-	for(int i = 0; i < 10; i++){		
-		zmq::poll(poll_fpga_answer.data(), 1, 100); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
-		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
-			// received something on the first (only) socket
-			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
-			//make sure message is for PAT process:
-			if(((uint32_t) getpid()) == write_ans_struct.return_address){
-				return write_ans_struct.combined_flag;
-			} 
-		}
-	}
-	return false; //timeout
+	// Check that message was received and FPGA was written to:
+	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer);
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -158,11 +140,11 @@ int main() //int argc, char** argv
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
 
 	// Synchronization
-	enum Phase { START, CALIBRATION, ACQUISITION, CL_INIT, CL_BEACON, CL_CALIB, OPEN_LOOP, STATIC_POINT };
-	const char *phaseNames[8] = {"START","CALIBRATION","ACQUISITION","CL_INIT","CL_BEACON","CL_CALIB","OPEN_LOOP","STATIC_POINT"};
+	enum Phase { CALIBRATION, ACQUISITION, CL_INIT, CL_BEACON, CL_CALIB, OPEN_LOOP, STATIC_POINT };
+	const char *phaseNames[8] = {"CALIBRATION","ACQUISITION","CL_INIT","CL_BEACON","CL_CALIB","OPEN_LOOP","STATIC_POINT"};
 	
 	// Initialize execution variables
-	Phase phase = START;
+	Phase phase = CALIBRATION;
 	Group beacon, calib;
 	AOI beaconWindow, calibWindow;
 	int beaconExposure = 0, spotIndex = 0, calibExposure = 0;
@@ -175,7 +157,9 @@ int main() //int argc, char** argv
 	uint16_t command; 
 	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
-	
+	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
+	bool static_pointing_initialized = false;
+    
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -194,7 +178,7 @@ int main() //int argc, char** argv
 		}
 		//Try to initialize again
 		camera_initialized = camera.initialize();
-	}	
+	}
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
 	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
@@ -359,10 +343,30 @@ int main() //int argc, char** argv
 	time_point<steady_clock> beginTime;
 	map<double, CSVdata> csvData;
 
-	//Beacon Loss Timing, pg
-	time_point<steady_clock> startBeaconLoss; //pg
-	duration<double> waitBeaconLoss(5.0); //wait time before switching back to ACQUISITION, pg
-	
+	//Beacon Loss Timing
+	time_point<steady_clock> startBeaconLoss;
+	duration<double> waitBeaconLoss(PERIOD_BEACON_LOSS); //wait time before switching back to ACQUISITION
+
+	//Health Heartbeat Telemetry Timing
+	time_point<steady_clock> time_prev_heartbeat;
+	duration<double> period_heartbeat(PERIOD_HEARTBEAT_TLM); //wait time in between heartbeat messages (0.5s = 2 Hz)
+	time_point<steady_clock> check_heartbeat; // Record current time
+	duration<double> elapsed_time_heartbeat; // time since tx adcs tlm
+
+	//CSV Telemetry Timing
+	time_point<steady_clock> time_prev_csv_write; 
+	duration<double> period_csv_write(PERIOD_CSV_WRITE); //wait time in between csv writes (0.1s = 10 Hz)
+	time_point<steady_clock> check_csv_write; // Record current time
+	duration<double> elapsed_time_csv_write; // time since tx adcs tlm
+	time_point<steady_clock> now;
+	duration<double> diff;
+
+	//Bus feedback Telemetry Timing
+	time_point<steady_clock> time_prev_tx_adcs; 
+	duration<double> period_tx_adcs(PERIOD_TX_ADCS); //wait time in between feedback messages to the bus (1s = 1 Hz)
+	time_point<steady_clock> check_tx_adcs; // Record current time
+	duration<double> elapsed_time_tx_adcs; // time since tx adcs tlm
+										
 	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
 	signal(SIGINT, [](int signum) { stop = true; });
 		
@@ -382,8 +386,9 @@ int main() //int argc, char** argv
 			}
 		}
 		
-		// Periodic health update
-		if(true) //i % 100 == 0, standard sampling frequency is about 1/(40ms) = 25Hz, reduced 100x to 0.25Hz (one every 4 seconds < 5 second housekeeping aliveness check)
+		check_heartbeat = steady_clock::now(); // Record current time
+		elapsed_time_heartbeat = check_heartbeat - time_prev_heartbeat; // Calculate time since heartbeat tlm
+		if(elapsed_time_heartbeat > period_heartbeat) //pg
 		{
 			if(phase == OPEN_LOOP){
 				if(haveBeaconKnowledge){
@@ -404,23 +409,19 @@ int main() //int argc, char** argv
 				} else{
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where calib is.");
 				}
-			}			
-			i = 0;
+			}	
+			time_prev_heartbeat = steady_clock::now(); // Record time of message		
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));					
+				
 		//PAT Phases:		
 		switch(phase)
 		{
-			case START:
-				log(pat_health_port, textFileOut, "In main.cpp phase START - Calibration Starting...");
-				phase = CALIBRATION;
-				break;
-
 			// Calibration phase, internal laser has to be turned on, ran just once
 			case CALIBRATION:
 				if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on
 					if(calibration.run(calib)) //sets calib exposure, pg-comment
 					{
+						haveCalibKnowledge = true; 
 						calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
 						log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure = ", calibExposure, " us.");
 						if(staticPoint)
@@ -434,12 +435,26 @@ int main() //int argc, char** argv
 					}
 					else
 					{
-						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration failed!");
-						phase = START;
+						haveCalibKnowledge = false; 
+						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - calibration.run failed!");
+						num_calibration_attempts++;
+						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
+						if(num_calibration_attempts >= MAX_CALIBRATION_ATTEMPTS){
+							phase = STATIC_POINT;
+						} else{
+							phase = CALIBRATION;
+						}
 					}
 				} else{
+					haveCalibKnowledge = false; 
 					log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - laserOn FPGA command failed!");
-					phase = START;
+					num_calibration_attempts++;
+					log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
+					if(num_calibration_attempts >= MAX_CALIBRATION_ATTEMPTS){
+						phase = STATIC_POINT;
+					} else{
+						phase = CALIBRATION;
+					}
 				}
 				break;
 
@@ -465,7 +480,6 @@ int main() //int argc, char** argv
 						track.controlOpenLoop(fsm, calib.x, calib.y);
 						if(openLoop)
 						{
-							camera.requestFrame(); //queue frame, pg-comment
 							phase = OPEN_LOOP;
 						}
 						else
@@ -475,12 +489,28 @@ int main() //int argc, char** argv
 					}
 					else
 					{
-						log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Failed! Transitioning to Static Pointing Mode...");
-						phase = STATIC_POINT; 
+						haveBeaconKnowledge = false; 
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - track.runAcquisition failed!");
+						num_acquisition_attempts++;
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
+						if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
+							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
+							phase = STATIC_POINT;
+						} else{
+							phase = ACQUISITION;
+						}
 					}
 				} else{
+					haveBeaconKnowledge = false; 
 					log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - laserOff FPGA command failed!");
-					phase = ACQUISITION;
+					num_acquisition_attempts++;
+					log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
+					if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
+						phase = STATIC_POINT;
+					} else{
+						phase = ACQUISITION;
+					}
 				}
 				break;
 
@@ -559,13 +589,18 @@ int main() //int argc, char** argv
 											track.updateTrackingWindow(frame, spot, beaconWindow);
 											// If sending beacon angle errors to the bus adcs
 											//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
-											if(sendBusFeedback && (i % 25 == 0))
-											{
-												error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
-												log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
-												"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
-												"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
-												send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+											if(sendBusFeedback){
+												check_tx_adcs = steady_clock::now(); // Record current time
+												elapsed_time_tx_adcs = check_tx_adcs - time_prev_tx_adcs; // Calculate time since heartbeat tlm
+												if(elapsed_time_tx_adcs > period_tx_adcs) //pg
+												{
+													error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
+													log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
+													"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
+													"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
+													send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+													time_prev_tx_adcs = steady_clock::now(); // Record time of message		
+												}
 											}
 										}
 										else
@@ -697,13 +732,18 @@ int main() //int argc, char** argv
 											double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
 											double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
 											track.control(fsm, calib.x, calib.y, setPointX, setPointY);
-											if(true){ //i % 100 == 0 standard sampling frequency is about 1/(40ms) = 25Hz, reduced 100x to ~1/(400ms) = 2.5Hz
+
+											check_csv_write = steady_clock::now(); // Record current time
+											elapsed_time_csv_write = check_csv_write - time_prev_csv_write; // Calculate time since csv write
+											if(elapsed_time_csv_write > period_csv_write)
+											{
 												// Save for CSV
-												time_point<steady_clock> now = steady_clock::now();
-												duration<double> diff = now - beginTime;
+												now = steady_clock::now();
+												diff = now - beginTime;
 												csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
 													calib.x, calib.y, setPointX, setPointY, calibExposure)));
 												//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+												time_prev_csv_write = now; // Record time of csv write		
 											}
 										}
 										else
@@ -935,24 +975,33 @@ int main() //int argc, char** argv
 				
 			// Graceful failure mode for when beacon is not detected: command the FSM to point the laser straight & rely on bus pointing.
 			case STATIC_POINT:
-				// Control pointing in open-loop
-				calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX;
-				calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY;
-				track.controlOpenLoop(fsm, calib.x, calib.y);
-				if(i % 100 == 0){ //standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+				if(!static_pointing_initialized){
+					// Command FSM
+					if(haveCalibKnowledge){
+						calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX;
+						calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY;
+						log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Have calibration knowledge. Setting FSM to: ",
+						"x_pixels = ", calib.x, ", y_pixels = ", calib.y);
+						track.controlOpenLoop(fsm, calib.x, calib.y);
+					} else{
+						log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Do not have calibration knowledge. Setting FSM to (x_normalized, y_normalized) = (0,0).");
+						fsm.setNormalizedAngles(0,0); 
+					}
+
 					// Save for CSV
-					time_point<steady_clock> now = steady_clock::now();
-					duration<double> diff = now - beginTime;
+					now = steady_clock::now();
+					diff = now - beginTime;
 					csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
 					//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+
+					static_pointing_initialized = true; 
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(40)); //make timing similar to taking picture
 				break;
 
 			// Fail-safe
 			default:
-				log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Unknown phase encountered in switch structure. Resetting to START...");
-				phase = START;
+				log(pat_health_port, textFileOut,  "In main.cpp phase default - Unknown phase encountered in switch structure. Transitioning to STATIC_POINT.");
+				phase = STATIC_POINT;
 				break;
 		}
 	}

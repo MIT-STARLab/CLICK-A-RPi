@@ -6,7 +6,7 @@ import json
 import time
 
 import sys #importing options and functions
-sys.path.append('../../lib/')
+sys.path.append('../lib/')
 from options import PAT_HEALTH_PORT, PAT_CONTROL_PORT
 from ipc_packets import PATControlPacket, PATHealthPacket
 from zmqTxRx import recv_zmq, send_zmq

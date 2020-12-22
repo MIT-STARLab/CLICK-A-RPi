@@ -8,7 +8,7 @@
 bool Tracking::runAcquisition(Group& beacon)
 //-----------------------------------------------------------------------------
 {
-	int exposure = TRACK_MIN_EXPOSURE, gain = 0, skip = camera.queuedCount;
+	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
 
 	camera.setFullWindow();
 	camera.config->binningMode.write(cbmBinningHV);
@@ -19,25 +19,57 @@ bool Tracking::runAcquisition(Group& beacon)
 	// Skip pre-queued old frames
 	camera.ignoreNextFrames(skip);
 
-	// Sweep exposure times; running at ~16 fps at this point
-	// This has to have top limit on calib laser saturation?!
-	// We want to do gain flipping eventually
-	for(exposure += TRACK_ACQUISITION_EXP_INCREMENT; exposure <= TRACK_MAX_EXPOSURE; exposure += TRACK_ACQUISITION_EXP_INCREMENT) //pg, using limit constants
+	// Try guessed value
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
+	if(camera.waitForFrame())
 	{
-		if(camera.waitForFrame())
-		{
+		Image frame(camera, fileStream, pat_health_port);
+		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+	}
+
+	int exposure_up = exposure;
+	int exposure_down = exposure;
+	while((exposure >= TRACK_MIN_EXPOSURE) && (exposure <= TRACK_MAX_EXPOSURE)){
+		//try search up:
+		exposure_up += TRACK_ACQUISITION_EXP_INCREMENT; 
+		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
+		camera.config->expose_us.write(exposure);
+		camera.requestFrame();
+		if(camera.waitForFrame()){
 			Image frame(camera, fileStream, pat_health_port);
-			if(verifyFrame(frame) && windowAndTune(frame, beacon)){
-					if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
-						log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
-						"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
-					}
-				return true;
-			}
-			camera.config->expose_us.write(exposure);
-			camera.requestFrame();
+			if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+		}
+		
+		//try search down:
+		exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
+		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
+		camera.config->expose_us.write(exposure);
+		camera.requestFrame();
+		if(camera.waitForFrame()){
+			Image frame(camera, fileStream, pat_health_port);
+			if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
 		}
 	}
+
+	// // Sweep exposure times; running at ~16 fps at this point
+	// // This has to have top limit on calib laser saturation?!
+	// // We want to do gain flipping eventually
+	// for(exposure += TRACK_ACQUISITION_EXP_INCREMENT; exposure <= TRACK_MAX_EXPOSURE; exposure += TRACK_ACQUISITION_EXP_INCREMENT) //pg, using limit constants
+	// {
+	// 	if(camera.waitForFrame())
+	// 	{
+	// 		Image frame(camera, fileStream, pat_health_port);
+	// 		if(verifyFrame(frame) && windowAndTune(frame, beacon)){
+	// 				// if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
+	// 				// 	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
+	// 				// 	"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
+	// 				// }
+	// 			return true;
+	// 		}
+	// 		camera.config->expose_us.write(exposure);
+	// 		camera.requestFrame();
+	// 	}
+	// }
 
 	// Sweep gains
 	// for(gain++; gain <= 10; gain++)

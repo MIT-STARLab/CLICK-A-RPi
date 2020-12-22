@@ -147,7 +147,8 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		fpga_answer_struct return_struct = fpga_answer_struct();
 		return_struct.return_address = packet_struct.return_address; 
 		return_struct.request_number = packet_struct.request_number;
-		return_struct.combined_flag = packet_struct.combined_flag;
+		return_struct.rw_flag = packet_struct.combined_flag & 0x01;
+        return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 		return_struct.start_address = packet_struct.start_address;	
 		return_struct.data_to_read = 0;
 		
@@ -172,7 +173,8 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		fpga_answer_struct return_struct = fpga_answer_struct();
 		return_struct.return_address = packet_struct.return_address; 
 		return_struct.request_number = packet_struct.request_number;
-		return_struct.combined_flag = packet_struct.combined_flag;
+		return_struct.rw_flag = packet_struct.combined_flag & 0x01;
+        return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 		return_struct.start_address = packet_struct.start_address;	
 		return_struct.data_to_read = atoi(packet_struct.data_to_read); 
 		
@@ -184,3 +186,21 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 }
 
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
+
+// Check FPGA write request
+bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer)
+{
+	// Listen for FPGA answer:
+	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
+		zmq::poll(poll_fpga_answer.data(), 1, POLL_TIME_FPGA_RESPONSE); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
+			// received something on the first (only) socket
+			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
+			//make sure message is for PAT process:
+			if(((uint32_t) getpid()) == write_ans_struct.return_address){
+				return !write_ans_struct.error_flag;
+			} 
+		}
+	}
+	return false; //timeout
+}
