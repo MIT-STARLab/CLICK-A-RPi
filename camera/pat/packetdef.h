@@ -106,5 +106,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 
 // TODO: receive_packet_pat_rx (commands from bus)
 
+bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer);
+
 
 #endif
