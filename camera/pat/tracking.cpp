@@ -27,28 +27,41 @@ bool Tracking::runAcquisition(Group& beacon)
 		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
 	}
 
-	int exposure_up = exposure;
-	int exposure_down = exposure;
-	while((exposure >= TRACK_MIN_EXPOSURE) && (exposure <= TRACK_MAX_EXPOSURE)){
+	bool searching_up = true, searching_down = true;
+	int exposure_up = exposure, exposure_down = exposure; 
+	exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
+	exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
+
+	while(searching_up || searching_down){
 		//try search up:
-		exposure_up += TRACK_ACQUISITION_EXP_INCREMENT; 
-		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
-		camera.config->expose_us.write(exposure);
-		camera.requestFrame();
-		if(camera.waitForFrame()){
-			Image frame(camera, fileStream, pat_health_port);
-			if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
-		}
+		if(exposure_up <= TRACK_MAX_EXPOSURE){
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_up);
+			camera.config->expose_us.write(exposure_up);
+			camera.requestFrame();
+			if(camera.waitForFrame()){
+				Image frame(camera, fileStream, pat_health_port);
+				if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+			}
+			//update exposure:
+			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
+		} else{
+			searching_up = false;
+		}		
 		
 		//try search down:
-		exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
-		log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
-		camera.config->expose_us.write(exposure);
-		camera.requestFrame();
-		if(camera.waitForFrame()){
-			Image frame(camera, fileStream, pat_health_port);
-			if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
-		}
+		if(exposure_down >= TRACK_MIN_EXPOSURE){
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_down);
+			camera.config->expose_us.write(exposure_down);
+			camera.requestFrame();
+			if(camera.waitForFrame()){
+				Image frame(camera, fileStream, pat_health_port);
+				if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+			}
+			//update exposure:
+			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
+		} else{
+			searching_down = false;
+		}		
 	}
 
 	// // Sweep exposure times; running at ~16 fps at this point
