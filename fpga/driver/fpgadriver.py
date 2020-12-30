@@ -295,6 +295,7 @@ try:
 						for i in range(len(edfa_characters)):
 							if(edfa_characters[i] == 'E'):
 								print(edfa_characters[i::])
+								time.sleep(.1)
 								valid_return = 1
 						last_line = count
 					if(valid_return):

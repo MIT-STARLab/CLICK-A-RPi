@@ -38,13 +38,14 @@ handle = fl.FLHandle()
 
 try:
     fl.flInitialise(0)
-
-    vp = '1d50:602b:0002'
+    print("here")
+    vp = "1d50:602b:0002"
     print("Attempting to open connection to FPGALink device {}...".format(vp))
     try:
         handle = fl.flOpen(vp)
+	print("Made it")
     except fl.FLException as ex:
-        ivp = '04b4:8613' #TODO: needs root?
+        ivp = "04b4:8613" #TODO: needs root?
         #ivp = '0424:2422' #TODO: why is this different? (USB ADDRESS)
         print("Loading firmware into {}...".format(ivp))
         fl.flLoadStandardFirmware(ivp, vp)
@@ -61,14 +62,19 @@ try:
         print("Attempting to open connection to FPGALink device {} again...".format(vp))
         handle = fl.flOpen(vp)
 
-
+    time.sleep(2)
     conduit = 1
-
 
     isNeroCapable = fl.flIsNeroCapable(handle)
     isCommCapable = fl.flIsCommCapable(handle, conduit)
     fl.flSelectConduit(handle, conduit)
-
+    #time.sleep(2)
+    progConfig = "J:A7A0A3A1:/root/bin/fpga.xsvf"
+    print("Programming device with config {}...".format(progConfig))
+    if ( isNeroCapable ):
+        fl.flProgram(handle, progConfig)
+    else:
+        raise fl.FLException("Device program requested but device at {} does not support NeroProg".format(vp))
 
     """ ZMQ inter process communication initialization """
 
