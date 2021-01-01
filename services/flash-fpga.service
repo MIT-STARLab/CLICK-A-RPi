@@ -1,3 +1,4 @@
+#!/bin/bash
 [Unit]
 Description=Flash FPGA
 
@@ -15,8 +16,7 @@ ExecStartPre=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio36/value"
 ExecStartPre=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio36/value"
 
 ExecStartPre=/bin/sleep 2
-
-ExecStartPre=/sys/bus/usb/devices/1-1.2:1.0/driver/ "echo 1-1.2:1.0 > unbind"
+ExecStartPre=/bin/bash /root/bin/unbind
 
 ExecStart=/bin/python -u /root/fpga/fpga.py
 
