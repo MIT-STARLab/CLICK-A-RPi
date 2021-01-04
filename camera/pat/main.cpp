@@ -16,10 +16,10 @@
 #define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
 #define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
 #define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
-#define CENTROID2ANGLE_SLOPE_X 1 //user input from calibration
-#define CENTROID2ANGLE_BIAS_X 0 //user input from calibration
-#define CENTROID2ANGLE_SLOPE_Y 1 //user input from calibration
-#define CENTROID2ANGLE_BIAS_Y 0 //user input from calibration
+#define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
+#define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
+#define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
+#define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
 #define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
 #define MAX_ACQUISITION_ATTEMPTS 3 //number of times to attempt beacon acquisition
 #define PERIOD_BEACON_LOSS 5.0f //seconds, time to wait after beacon loss before switching back to acquisition
