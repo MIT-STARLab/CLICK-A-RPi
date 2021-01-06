@@ -3,6 +3,7 @@
 import sys
 import zmq
 import time
+import binascii
 
 import math
 import argparse
@@ -15,6 +16,7 @@ import sys #importing options and functions
 sys.path.append('../lib/')
 sys.path.append('/root/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
+from fpga_map import REGISTERS
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket
 from zmqTxRx import recv_zmq, send_zmq
 
@@ -69,7 +71,7 @@ try:
     isCommCapable = fl.flIsCommCapable(handle, conduit)
     fl.flSelectConduit(handle, conduit)
     #time.sleep(2)
-    progConfig = "J:A7A0A3A1:/root/bin/fpga.xsvf"
+    progConfig = "J:A7A0A3A1:/root/bin/protected_output_2.xsvf"
     print("Programming device with config {}...".format(progConfig))
     if ( isNeroCapable ):
         fl.flProgram(handle, progConfig)
@@ -117,29 +119,46 @@ try:
             raw = ipc_fpgaaswpacket_write.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=0, rw_flag=1, error_flag=0, start_addr=0xDEF0, size=0)
             ipc_fpgaaswpacket_write.decode(raw)
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
-            print(b'| ' + raw)
+            #print(b'| ' + raw)
             print(ipc_fpgaaswpacket_write)
             send_zmq(socket_FPGA_map_answer, raw, ipc_fpgaaswpacket_write.return_addr)
 
         else:
             print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
 
+            mapData = b''
+
             """ read FPGA memory map """
             if(isCommCapable):
                 for reg in range(ipc_fpgarqpacket.start_addr, ipc_fpgarqpacket.start_addr + ipc_fpgarqpacket.size): #from start_addr to start_addr+size
-                    num = fl.flReadChannel(handle, reg)
-                    derp = 'Register '+str(reg)+' = '+str(num)
-                    print(derp)
+
+                    if REGISTERS[reg] is not None: #if the requested register is defined
+                        bytes = ''
+                        count = 0
+                        for register in REGISTERS[reg][1]: #for each physical register in register definition
+                            count += 1
+                            num = fl.flReadChannel(handle, register)
+                            byte = struct.pack('B', num) #convert int to byte (unsigned char)
+                            derp = 'Register '+str(register)+' = '+str(num)+' (raw='+byte+', hex='+binascii.hexlify(byte)+')'
+                            print(derp)
+                            bytes = bytes + byte
+                        if REGISTERS[reg][0] == 'I': #check if requested datatype is Integer
+                            for x in range(4-count): #Integer has 4 bytes - add zeros if less than 4 bytes retrieved
+                                bytes = bytes + struct.pack('B', 0)
+                        #print(binascii.hexlify(bytes))
+                        mapData = mapData + bytes
+                    else:
+                        print('Register undefined')
+                        mapData = mapData + struct.pack('B', 0)
+
             else:
                 print('!isCommCapable')
             """                    """
 
-            mapData = derp
-            dataLength = len(derp)
 
             # send the FPGA_map_answer packet (read)
             ipc_fpgaaswpacket_read = FPGAMapAnswerPacket()
-            raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=0, rw_flag=0, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=16, read_data=b"I'm Mr. Meeseeks")
+            raw = ipc_fpgaaswpacket_read.encode(return_addr=ipc_fpgarqpacket.return_addr, rq_number=0, rw_flag=0, error_flag=0, start_addr=ipc_fpgarqpacket.start_addr, size=ipc_fpgarqpacket.size, read_data=mapData)
             ipc_fpgaaswpacket_read.decode(raw)
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
             print(b'| ' + raw)
@@ -155,6 +174,7 @@ except fl.FLException as ex:
     print(ex)
 finally:
     fl.flClose(handle)
+
 
 
 

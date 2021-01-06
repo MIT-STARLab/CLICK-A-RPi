@@ -1,4 +1,10 @@
+import sys
 import struct
+import binascii
+
+sys.path.append('../lib/')
+sys.path.append('/root/lib/')
+from fpga_map import REGISTERS
 
 class IpcPacket:
     def __init__(self): pass
@@ -251,7 +257,7 @@ class FPGAMapRequestPacket(IpcPacket):
 
     def __str__(self):
         if self.rw_flag == 0:
-            return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Reading %d bytes from address:0x%04X' % (self.return_addr, self.rq_number, self.size, self.start_addr)
+            return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Reading %d registers from address:0x%04X' % (self.return_addr, self.rq_number, self.size, self.start_addr)
         elif self.rw_flag == 1:
             return 'IPC FPGA_MAP_REQUEST_PACKET, PID:%d, request number:%d, Writing %d bytes to address:0x%04X, data:0x%X' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.write_data.encode('hex'), 16))
 
@@ -278,12 +284,14 @@ class FPGAMapAnswerPacket(IpcPacket):
         self.size = size
         self.read_data = read_data
         self.read_size = len(read_data)
-        
-        assert self.read_size == size
+
+        #assert self.read_size == size
+        #print (self.read_size)
+        #print(size)
 
         if self.rw_flag == 0:
             #Read results
-            assert (self.read_size % 4) == 0
+            #assert (self.read_size % 4) == 0
 
             self.raw = struct.pack('IBBHI%ds'%self.read_size,return_addr,rq_number,combined_flag,start_addr,size,read_data)
 
@@ -319,27 +327,43 @@ class FPGAMapAnswerPacket(IpcPacket):
 
         if self.rw_flag == 0:
             #Reading
-            assert (raw_size % 4) == 0
-            assert self.size == raw_size
+
+            #print (self.size)
+            #print(raw_size)
+
+            #assert (raw_size % 4) == 0
+            #assert self.size == raw_size
 
             self.read_data = self.read_or_write_content
+
+            dataTypes = ''
+
+            for reg in range(self.start_addr, self.start_addr + self.size): #from start_addr to start_addr+size
+                if REGISTERS[reg] is not None: #if the requested register is defined
+                    dataTypes = dataTypes + REGISTERS[reg][0] #add data type to format string for struct unpack
+                else:
+                    dataTypes = dataTypes + 'B'
+
+            #decode the read_data payload
+            self.decoded_data = struct.unpack(dataTypes,self.read_data)
 
         elif self.rw_flag == 1:
             #Writing
             assert self.size == 0
 
             self.read_data = ''
+            self.decoded_data = ''
 
         else:
             raise
 
-        return self.return_addr, self.rq_number, self.rw_flag, self.error, self.start_addr, self.size, self.read_data
+        return self.return_addr, self.rq_number, self.rw_flag, self.error, self.start_addr, self.size, self.read_data, self.decoded_data
 
     def __str__(self):
         if self.error: status_str = 'Failed'
         else: status_str = 'Success'
         if self.rw_flag == 0:
-            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d bytes from address:0x%04X, data:%d, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, int(self.read_data.decode('ascii'), 16), status_str)
+            return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Read %d registers from address:0x%04X, data:%s, decoded:%s, %s' % (self.return_addr, self.rq_number, self.size, self.start_addr, binascii.hexlify(self.read_data), self.decoded_data, status_str)
         elif self.rw_flag == 1:
             return 'IPC FPGA_MAP_ANSWER_PACKET, PID:%d, request number:%d, Write to address:0x%04X, %s' % (self.return_addr, self.rq_number, self.start_addr, status_str)
 
