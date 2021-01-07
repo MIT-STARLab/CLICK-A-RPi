@@ -11,6 +11,7 @@ import struct
 import psutil
 
 sys.path.append('/root/CLICK-A-RPi/lib/')
+sys.path.append('../lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD
