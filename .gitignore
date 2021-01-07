@@ -1,10 +1,5 @@
 .idea/
-/IPC-demo/cpp-process/build/click-cpp-demo
-/IPC-demo/cpp-process/build/cmake_install.cmake
-/IPC-demo/cpp-process/build/CMakeCache.txt
-/IPC-demo/cpp-process/build/CTestTestfile.cmake
-/IPC-demo/cpp-process/build/Makefile
-/IPC-demo/cpp-process/build/CMakeFiles/
-/camera/ipc/build/CMakeFiles/
-/camera/ipc/build/CMakeFiles/click-cpp-demo.dir/
-lib/__pycache__/options.cpython-37.pyc
+IPC-demo/
+camera/ipc/
+**/*.pyc
+**/__pycache__/
