@@ -178,7 +178,11 @@ class Housekeeping:
                 ##handle fpga health packet
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
+                print("Received CH Heartbeat")
                 message = self.ch_heartbeat_socket.recv()
+                ch_packet = HandlerHeartbeatPacket()
+                ch_packet.decode(message)
+                print(ch_packet) 
                 ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
                 ch_heartbeat_ts = time.time()
 
