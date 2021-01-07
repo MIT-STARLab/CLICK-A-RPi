@@ -36,6 +36,7 @@ typedef struct {
 int main (int argc, char *argv[])
 {
     int fd;
+    uint32_t i;
     uint8_t *buffer = NULL;
     packet_header_t *header = NULL;
     uint16_t offset = 0, len = DEFAULT_WRITE_LEN, repeat = 1, crc = 0;
@@ -79,16 +80,17 @@ int main (int argc, char *argv[])
         header->grouping = 0x3;
         header->len_lsb = (len - PACKET_OVERHEAD - 1) & 0xFF;
         header->len_msb = (len - PACKET_OVERHEAD - 1) >> 8;
-        crc = crc_16_update(0xFFFF, (uint8_t*) header, len - PACKET_SYNC_LEN - 2);
-        buffer[offset + len - 2] = crc >> 8;
-        buffer[offset + len - 1] = crc & 0xFF;
 
         /* Write to kernel driver */
         fd = open("/dev/" DEVICE, O_WRONLY);
         if (fd >= 0)
         {
-            while(repeat--)
+            for(i = 0; i < repeat; i++)
             {
+                *((uint32_t*)(buffer + offset + PACKET_OVERHEAD)) = (i+1);
+                crc = crc_16_update(0xFFFF, (uint8_t*) header, len - PACKET_SYNC_LEN - 2);
+                buffer[offset + len - 2] = crc >> 8;
+                buffer[offset + len - 1] = crc & 0xFF;
                 if(write(fd, buffer, offset + len) != (offset + len))
                 {
                     printf("Failed to write to /dev/" DEVICE "\n");
