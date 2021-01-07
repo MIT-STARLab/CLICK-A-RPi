@@ -11,16 +11,17 @@ import struct
 import psutil
 
 sys.path.append('/root/CLICK-A-RPi/lib/')
+sys.path.append('../lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
-from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT
+from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 FPGA_CHECK_PD = 6000
 CPU_CHECK_PD = 6000
 
 PAT_HEALTH_PD = 6000
-CH_HEARTBEAT_PD = 6000
+#CH_HEARTBEAT_PD = 6000 - import from options (shared with command handler)
 FPGA_ANS_PD = 6000
 
 CPU_APID = 0x312
@@ -177,7 +178,11 @@ class Housekeeping:
                 ##handle fpga health packet
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
+                print("Received CH Heartbeat")
                 message = self.ch_heartbeat_socket.recv()
+                ch_packet = HandlerHeartbeatPacket()
+                ch_packet.decode(message)
+                print(ch_packet) 
                 ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
                 ch_heartbeat_ts = time.time()
 
