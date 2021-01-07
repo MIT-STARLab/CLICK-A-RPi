@@ -304,7 +304,10 @@ while True:
 
     elif(CMD_ID == CMD_PL_ECHO):
         echo_txpacket = TxPacket()
-        raw = echo_txpacket.encode(payload=generic_control_packet.payload) #TBR
+        echo_raw_size = generic_control_packet.size
+        echo_raw = generic_control_packet.payload
+        echo_payload = struct.unpack('%ds'%echo_raw_size,echo_raw)
+        raw = echo_txpacket.encode(payload=echo_payload) #TBR
 
         echo_txpacket.decode(raw) #for Debug printing
         print(echo_txpacket) #Debug printing
