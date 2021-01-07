@@ -394,13 +394,15 @@ class GenericControlPacket(IpcPacket):
         returns
         command: command sent to the process
         payload: raw command contents, bytes'''
-
         self.raw = raw
-        raw_size = len(raw)-4
-
-        self.command, self.size, self.payload = struct.unpack('BxH%ds'%raw_size,raw)
-
-        assert self.size == raw_size
+        if(len(raw) == 1): #accomodate single byte commands
+            self.command = struct.unpack('B', raw)
+            self.size = 1
+            self.payload = '' 
+        else:        
+            raw_size = len(raw)-4
+            self.command, self.size, self.payload = struct.unpack('BxH%ds'%raw_size,raw)
+            assert self.size == raw_size
 
         return self.command, self.payload
 

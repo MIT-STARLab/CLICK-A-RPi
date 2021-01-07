@@ -16,17 +16,17 @@ from zmqTxRx import recv_zmq, send_zmq
 import struct
 
 #Shared Command Parameters with c-code (packetdef.h)
-CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
-CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
-CMD_START_PAT = 0x01
-CMD_END_PAT = 0x02
-CMD_START_PAT_OPEN_LOOP = 0x03
-CMD_START_PAT_STATIC_POINT = 0x04
-CMD_START_PAT_BUS_FEEDBACK = 0x05
-CMD_GET_IMAGE = 0x06
-CMD_CALIB_TEST = 0x07
-CMD_CALIB_LASER_TEST = 0x08
-CMD_FSM_TEST = 0x09
+PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
+PAT_CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
+PAT_CMD_START_PAT_OPEN_LOOP = 0x01
+PAT_CMD_START_PAT_STATIC_POINT = 0x02
+PAT_CMD_START_PAT_BUS_FEEDBACK = 0x03
+PAT_CMD_START_PAT = 0x04
+PAT_CMD_END_PAT = 0x05
+PAT_CMD_GET_IMAGE = 0x06
+PAT_CMD_CALIB_TEST = 0x07
+PAT_CMD_CALIB_LASER_TEST = 0x08
+PAT_CMD_FSM_TEST = 0x09
 
 cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]
 

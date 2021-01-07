@@ -22,6 +22,9 @@ from zmqTxRx import recv_zmq, separate
 topic = str(os.getpid())
 pid = os.getpid()
 
+# parameters
+PAT_MODE_ID = PAT_CMD_START_PAT #set PAT mode to default for execution w/o ground specified mode change
+
 # ZeroMQ inter process communication
 context = zmq.Context()
 
@@ -97,6 +100,31 @@ def getFPGAmap(request_number, num_registers, start_address):
         print(ipc_fpgarqpacket_read)
 
         socket_tx_packets.send(raw)
+
+def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
+        #Define Command Header
+        CMD_HEADER = return_address + '\0' #PID Header
+        #Header format checks and padding
+        assert len(CMD_HEADER) <= CMD_HEADER_SIZE #Ensure CMD_HEADER is the right length
+        if(len(CMD_HEADER) < CMD_HEADER_SIZE):
+                for i in range(CMD_HEADER_SIZE - len(CMD_HEADER)):
+                        CMD_HEADER = CMD_HEADER + '\0' #append null padding
+        assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+
+        #Define Command Payload
+        CMD_PAYLOAD = payload + '\0'
+        assert len(CMD_PAYLOAD) <= CMD_PAYLOAD_SIZE #Ensure CMD_PAYLOAD is the right length
+        if(len(CMD_PAYLOAD) < CMD_PAYLOAD_SIZE):
+                for i in range(CMD_PAYLOAD_SIZE - len(CMD_PAYLOAD)):
+                        CMD_PAYLOAD = CMD_PAYLOAD + '\0'   #append null padding
+        assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+        CMD_PAYLOAD = str(CMD_PAYLOAD).encode('ascii') #format to ascii
+
+        ipc_patControlPacket = PATControlPacket()
+        raw_patControlPacket = ipc_patControlPacket.encode(command,CMD_PAYLOAD) 
+        send_zmq(socket_PAT_control, raw_patControlPacket, CMD_HEADER) 
+        
+        return ipc_patControlPacket
 
 while True:
 
@@ -201,17 +229,65 @@ while True:
         		raw_packet = txpacket.encode(payload=packet)
         		socket_tx_packets.send(raw_packet)
 
-    elif(CMD_ID == CMD_PL_UPLOAD_FILE):
+    elif(CMD_ID == CMD_PL_UPLOAD_FILE_TOSTAGING):
         #TODO
         pass
+
+    elif(CMD_ID == CMD_PL_SET_PAT_MODE):
+        pat_mode_cmd = struct.unpack('B', generic_control_packet.payload) #maps to PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, 
+        if(pat_mode_cmd not in [PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK]):
+            #TODO: send error telemetry
+            PAT_MODE_ID = PAT_CMD_START_PAT #default PAT mode
+        else:
+            PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
 
     elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-        #TODO
-        pass
+        exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
+        if(exp_cmd < 10):
+                print ('Exposure below minimum of 10 us entered. Using 10 us.')
+                exp_cmd = 10
+        elif(exp_cmd > 10000000):
+                print ('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
+                exp_cmd = 10000000
+
+        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+        ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_GET_IMAGE, str(exp_cmd))
+        print(ipc_patControlPacket) #debug print
+        #TODO: acknowledgement telemetry  
+
+    elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
+        exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
+        if(exp_cmd < 10):
+                print ('Exposure below minimum of 10 us entered. Using 10 us.')
+                exp_cmd = 10
+        elif(exp_cmd > 10000000):
+                print ('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
+                exp_cmd = 10000000
+
+        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+        ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
+        print(ipc_patControlPacket) #debug print
+        #TODO: acknowledgement telemetry  
+
+    elif(CMD_ID == CMD_PL_FSM_TEST):
+        exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
+        if(exp_cmd < 10):
+                print ('Exposure below minimum of 10 us entered. Using 10 us.')
+                exp_cmd = 10
+        elif(exp_cmd > 10000000):
+                print ('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
+                exp_cmd = 10000000
+
+        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+        ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_FSM_TEST, str(exp_cmd))
+        print(ipc_patControlPacket) #debug print
+        #TODO: acknowledgement telemetry  
 
     elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
-        #TODO
-        pass
+        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+        ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_CALIB_TEST)
+        print(ipc_patControlPacket) #debug print
+        #TODO: acknowledgement telemetry  
 
     elif(CMD_ID == CMD_PL_SET_FPGA):
         #TODO
@@ -241,8 +317,19 @@ while True:
         pass
 
     elif(CMD_ID == CMD_PL_DWNLINK_MODE):
-        #TODO
-        pass
+        #Start Main PAT Loop:
+        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+        ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_MODE_ID)
+        print(ipc_patControlPacket) #debug print
+        #TODO: acknowledgement telemetry 
+
+        ###TODO: Lasercom experiment...
+
+        #End PAT Process:
+        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+        ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_END_PAT)
+        print(ipc_patControlPacket) #debug print
+        #TODO: acknowledgement telemetry 
 
     elif(CMD_ID == CMD_PL_DEBUG_MODE):
         #TODO
