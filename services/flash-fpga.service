@@ -16,7 +16,7 @@ ExecStartPre=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio36/value"
 ExecStartPre=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio36/value"
 
 ExecStartPre=/bin/sleep 2
-ExecStartPre=/bin/bash /root/fpga/driver/unbind.sh
+ExecStartPre=/bin/bash /root/fpga/unbind.sh
 
 ExecStart=/bin/python -u /root/fpga/fpga.py
 
