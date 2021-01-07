@@ -132,8 +132,9 @@ int main() //int argc, char** argv
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 		
 	//telemetry file names
-	std::string textFileName = timeStamp() + string("_pat_logs.txt"); //used for text telemetry
-	std::string dataFileName = timeStamp() + string("_pat_data.csv"); //used by csv data file generation
+	std::string pathName = string("/root/log/pat/"); //save path
+	std::string textFileName = pathName + timeStamp() + string("_pat_logs.txt"); //used for text telemetry
+	std::string dataFileName = pathName + timeStamp() + string("_pat_data.csv"); //used by csv data file generation
 
 	//Generate text telemetry file, pg
 	ofstream textFileOut; //stream for text telemetry
