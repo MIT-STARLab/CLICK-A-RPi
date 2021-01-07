@@ -350,7 +350,7 @@ void Image::savePNG(std::string fileName)
 //-----------------------------------------------------------------------------
 // Log Image from Camera
 //-----------------------------------------------------------------------------
-void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures, std::string fileType)
+void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures, std::string fileType, std::string filePath)
 {
 	int exposure_init = cameraObj.config->expose_us.read(); //get current camera exposure	
 	int exposures[3];
@@ -373,11 +373,11 @@ void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn,
 			Image frame(cameraObj, textFileIn, pat_health_port);
 			
 			if((fileType.compare(std::string("bmp")) == 0) || (fileType.compare(std::string("BMP")) == 0)){
-				const std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".bmp");
+				const std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".bmp");
 				log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
 				frame.saveBMP(imageFileName);
 			} else if((fileType.compare(std::string("png")) == 0) || (fileType.compare(std::string("PNG")) == 0)){
-				std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".png");
+				std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".png");
 				log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
 				frame.savePNG(imageFileName);
 			} else{
