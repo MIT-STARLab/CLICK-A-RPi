@@ -138,6 +138,9 @@ while True:
     ipc_heartbeatPacket = HandlerHeartbeatPacket()
     curr_time = time.time()
     raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
+    print(ipc_heartbeatPacket) #Debug printing
+    print ('SENDING to %s' % (socket_heartbeat.get_string(zmq.LAST_ENDPOINT))) #Debug printing
+    print(raw_ipc_heartbeatPacket) #Debug printing
     send_zmq(socket_heartbeat, raw_ipc_heartbeatPacket)  
 
     #poll for received commands
