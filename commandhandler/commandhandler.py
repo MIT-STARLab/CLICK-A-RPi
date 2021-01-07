@@ -14,9 +14,10 @@ import hashlib
 #importing options and functions
 sys.path.append('../lib/')
 sys.path.append('/home/pi/CLICK-A/github/lib/')
-from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
-from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket
-from zmqTxRx import recv_zmq, separate
+from options import *
+#from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket
+from zmqTxRx import recv_zmq, send_zmq, separate
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
