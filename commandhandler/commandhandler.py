@@ -140,7 +140,6 @@ while True:
     raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
     print(ipc_heartbeatPacket) #Debug printing
     print ('SENDING to %s' % (socket_heartbeat.get_string(zmq.LAST_ENDPOINT))) #Debug printing
-    print(raw_ipc_heartbeatPacket) #Debug printing
     send_zmq(socket_heartbeat, raw_ipc_heartbeatPacket)  
 
     #poll for received commands
@@ -204,12 +203,8 @@ while True:
 
                 list_file_txpacket = TxPacket()
                 raw = list_file_txpacket.encode(payload=return_data) #TBR
-
-                list_file_txpacket.decode(raw) #for Debug printing
                 print(list_file_txpacket) #Debug printing
                 print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
-                print(raw) #Debug printing
-
                 socket_tx_packets.send(raw) #send packet
 
                 #TODO: Send success telemetry
@@ -325,12 +320,8 @@ while True:
             echo_raw = generic_control_packet.payload
             echo_payload = struct.unpack('%ds'%echo_raw_size,echo_raw)
             raw = echo_txpacket.encode(payload=echo_payload) #TBR
-
-            echo_txpacket.decode(raw) #for Debug printing
             print(echo_txpacket) #Debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
-            print(raw) #Debug printing
-
             socket_tx_packets.send(raw) #send packet
 
         elif(CMD_ID == CMD_PL_NOOP):
