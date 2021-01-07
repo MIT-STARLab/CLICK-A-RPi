@@ -3,3 +3,4 @@ IPC-demo/
 camera/ipc/
 **/*.pyc
 **/__pycache__/
+.DS_Store
