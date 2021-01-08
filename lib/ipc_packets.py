@@ -71,9 +71,9 @@ class RxCommandPacket(IpcPacket):
         self.payload = payload
 
         if self.payload:
-            self.raw = struct.pack('BBHI%ds'%self.size,APID,ts_txed_ms,self.size,ts_txed_s,payload)
+            self.raw = struct.pack('HHII%ds'%self.size,APID,self.size,ts_txed_s,ts_txed_ms,payload)
         else:
-            self.raw = struct.pack('BBHI',APID,ts_txed_ms,self.size,ts_txed_s)
+            self.raw = struct.pack('HHII',APID,self.size,ts_txed_s,ts_txed_ms)
 
         return self.raw
 
@@ -89,7 +89,7 @@ class RxCommandPacket(IpcPacket):
         self.raw = raw
         raw_size = len(raw)-8
 
-        self.APID, self.ts_txed_ms, self.size, self.ts_txed_s, self.payload = struct.unpack('BBHI%ds'%raw_size,raw)
+        self.APID, self.size, self.ts_txed_s, self.ts_txed_ms, self.payload = struct.unpack('HHII%ds'%raw_size,raw)
 
         assert self.size == raw_size
 
@@ -434,8 +434,8 @@ class GenericControlPacket(IpcPacket):
         if(len(raw) == 1): #accomodate single byte commands
             self.command = struct.unpack('B', raw)
             self.size = 1
-            self.payload = '' 
-        else:        
+            self.payload = ''
+        else:
             raw_size = len(raw)-4
             self.command, self.size, self.payload = struct.unpack('BxH%ds'%raw_size,raw)
             assert self.size == raw_size
