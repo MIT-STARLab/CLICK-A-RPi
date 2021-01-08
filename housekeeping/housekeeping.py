@@ -14,19 +14,14 @@ sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('../lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
-from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD
+from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD, TLM_HK_CPU, TLM_HK_PAT, TLM_HK_FPGA_MAP
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 FPGA_CHECK_PD = 6000
 CPU_CHECK_PD = 6000
 
 PAT_HEALTH_PD = 6000
-#CH_HEARTBEAT_PD = 6000 - import from options (shared with command handler)
 FPGA_ANS_PD = 6000
-
-CPU_APID = 0x312
-PAT_HEALTH_APID = 0x313
-FPGA_MAP_APID = 0x314
 
 ## 1 indicates the housekeeper will send packets
 ## 0 indicates the housekeeper will not send packets
@@ -108,13 +103,13 @@ class Housekeeping:
     def handle_hk_pkt(self, data, process):
         pkt = TxPacket()
         if process is 'camera':
-            apid = PAT_HEALTH_APID
+            apid = TLM_HK_PAT
             pat_pkt = PATHealthPacket()
             _, return_addr, size, payload = pat_pkt.decode(data)
             payload = data
 
         elif process is 'fpga':
-            apid = FPGA_MAP_APID
+            apid = TLM_HK_FPGA_MAP
             fpga_pkt = FPGAMapAnswerPacket()
             ##TBD - Should actually check the received packet for errors
             return_addr, rq_number, rw_flag, error, start_addr, size, read_data = fpga_pkt.decode(data)
@@ -124,7 +119,7 @@ class Housekeeping:
                 return
 
         elif process is 'cpu':
-            apid = CPU_APID
+            apid = TLM_HK_CPU
             payload = data
 
         raw_pkt = pkt.encode(apid, payload)

@@ -12,7 +12,7 @@ class IpcPacket:
 class TxPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
-    def encode(self, APID=0x01, payload=''):
+    def encode(self, APID=0x001, payload=''): #telemetry APIDs are between 0x300 and 0x3FF
         '''Encode a packet to be transmited to the bus:
         APID: BCT APID presneted to the bus
         payload: raw contents, bytes
@@ -24,9 +24,9 @@ class TxPacket(IpcPacket):
         self.payload = payload
 
         if self.payload:
-            self.raw = struct.pack('BxH%ds'%self.size,APID,self.size,payload)
+            self.raw = struct.pack('HH%ds'%self.size,APID,self.size,payload)
         else:
-            self.raw = struct.pack('BxH',APID,self.size)
+            self.raw = struct.pack('HH',APID,self.size)
 
         return self.raw
 
@@ -40,7 +40,7 @@ class TxPacket(IpcPacket):
         self.raw = raw
         raw_size = len(raw)-4
 
-        self.APID, self.size, self.payload = struct.unpack('BxH%ds'%raw_size,raw)
+        self.APID, self.size, self.payload = struct.unpack('HH%ds'%raw_size,raw)
 
         assert self.size == raw_size
 
@@ -142,6 +142,42 @@ class HandlerHeartbeatPacket(IpcPacket):
 
     def __str__(self):
         return 'IPC HANDLER_HEARTBEAT_PACKET, PID:%d, time:%d s' % (self.origin, self.ts_txed_s)
+
+class CommandHandlerHealthPacket(IpcPacket):
+    def __init__(self): IpcPacket.__init__(self)
+
+    def encode(self, return_addr, payload=''):
+        '''Encode a packet to be transmited to the bus:
+        return_addr: return address of sender
+        size: size of telemetry contents in bytes
+        payload: raw telemetry contents, bytes
+        returns
+        message bytes'''
+
+        self.return_addr = return_addr
+        self.size = len(payload)
+        self.payload = payload
+
+        self.raw = struct.pack('II%ds'%self.size,return_addr,self.size,payload)
+
+        return self.raw
+
+    def decode(self, raw):
+        '''Decode a packet to be transmited to the bus:
+        raw: message bytes to decode
+        returns
+        return_addr: return address of sender
+        size: size of telemetry contents in bytes
+        payload: raw command contents, bytes'''
+
+        self.raw = raw
+        raw_size = len(raw)-8
+
+        self.return_addr, self.size, self.payload = struct.unpack('II%ds'%raw_size,raw)
+
+        assert self.size == raw_size
+
+        return self.return_addr, self.size, self.payload
 
 class PATHealthPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)

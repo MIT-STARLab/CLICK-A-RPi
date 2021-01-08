@@ -319,10 +319,14 @@ while True:
             echo_raw_size = generic_control_packet.size
             echo_raw = generic_control_packet.payload
             echo_payload = struct.unpack('%ds'%echo_raw_size,echo_raw)
-            raw = echo_txpacket.encode(payload=echo_payload) #TBR
+            raw = echo_txpacket.encode(apid = TLM_ECHO, payload = echo_payload) #TBR
             print(echo_txpacket) #Debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
+            #send command acknowledgement to housekeeping
+            ch_health_packet = CommandHandlerHealthPacket()
+            raw_ch_health_packet = ch_health_packet.encode(pid, 'ACK CMD PL_ECHO')
+            send_zmq(socket_heartbeat, raw_ch_health_packet)  
 
         elif(CMD_ID == CMD_PL_NOOP):
             #TODO
