@@ -91,13 +91,13 @@ class Housekeeping:
                 pkt.extend(struct.pack('L', int(p.cpu_percent())))
                 pkt.extend(struct.pack('L', int(p.memory_percent('uss'))))
 
-        count = 0;
+        count = 0
         with open('/mnt/journal/id.txt', 'r') as boot_id_list:
             for count, l in enumerate(boot_id_list, 1):
                 pass
 
         pkt.extend(struct.pack('B', count))
-    
+
         return pkt
 
     def handle_hk_pkt(self, data, process):
@@ -118,9 +118,15 @@ class Housekeeping:
             else:
                 return
 
+        elif process is 'ch':
+            # do something here...
+            pass
+
         elif process is 'cpu':
             apid = TLM_HK_CPU
             payload = data
+
+
 
         raw_pkt = pkt.encode(apid, payload)
         self.packet_buf.append(raw_pkt)
@@ -173,13 +179,20 @@ class Housekeeping:
                 ##handle fpga health packet
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
-                print("Received CH Heartbeat")
+                print("Received message from CH")
                 message = self.ch_heartbeat_socket.recv()
-                ch_packet = HandlerHeartbeatPacket()
-                ch_packet.decode(message)
-                print(ch_packet) 
-                ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
-                ch_heartbeat_ts = time.time()
+                ##check if just heartbeat or ch health packet
+                if(len(message) == 8):
+                    ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
+                    ch_packet = HandlerHeartbeatPacket()
+                    ch_packet.decode(message)
+                    print(ch_packet)
+                    ch_heartbeat_ts = time.time()
+                else:
+                    self.handle_hk_pkt(message, 'ch')
+                    ##handle ch health packet
+
+
 
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
