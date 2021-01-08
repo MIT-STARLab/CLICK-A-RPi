@@ -47,10 +47,10 @@ class Packetizer:
         tx[3] = 0x53
         tx[4] = (apid >> 8) & 0xFF
         tx[5] = (apid & 0xFF)
-        tx[6] = 0b11000000; #sequence count is 0
-        tx[7] = 0x00; #sequence count is 0
-        tx[8] = (packet_len >> 8) & 0xFF;
-        tx[9] =  packet_len & 0xFF;
+        tx[6] = 0b11000000 #sequence count is 0
+        tx[7] = 0x00 #sequence count is 0
+        tx[8] = (packet_len >> 8) & 0xFF
+        tx[9] =  packet_len & 0xFF
         i = 10
         while ( i < SPI_XFER_LEN-12):
           tx[i] = i % 0xFF
@@ -72,7 +72,7 @@ class Packetizer:
         apid, pkt_data = ipc_pkt.decode(raw_bus_data)
 
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
-        seq_cnt = 0;
+        seq_cnt = 0
         seq_flag = 0b01
         while (len(pkt_data) > (BUS_TX_DATA_LEN)):
             bus_tx_pkt = []
@@ -132,7 +132,7 @@ class Packetizer:
             print(ipc_pkt)
             self.ipc_pkts_buffer.append(ipc_pkt)
 
-            self.handle_ipc_pkts()
+            self.handle_tx_pkts()
             self.send_bus_pkts()
 
 
