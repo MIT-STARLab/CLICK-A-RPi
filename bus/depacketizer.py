@@ -66,9 +66,10 @@ class Depacketizer:
         crc_index = CCSDS_HEADER_LEN + pkt_len - 2
         crc = (buf[crc_index] << 8) | buf[crc_index + 1]
 
+        #Calculate CRC from byte 17 onwards, aka the XB1 command
         crcinst = crc16()
-        crc_check = crc16.calc(buf[:crc_index])
-        #confirm CRC calculated over entire packet
+        crc_check = crc16.calc(buf[17:crc_index])
+
         if (crc == crc_check):
             self.bus_pkts_buffer.append(buf)
         else:
