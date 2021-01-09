@@ -16,7 +16,11 @@ from zmqTxRx import push_zmq, send_zmq, recv_zmq
 SPI_DEV = '/dev/bct'
 
 CCSDS_HEADER_LEN = 6
+APID_INDEX = 1
 PKT_LEN_INDEX = 4
+
+TIME_APID = 0x80
+CMD_APID = 0x01
 
 class Depacketizer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])
@@ -55,6 +59,8 @@ class Depacketizer:
         print('found sync!')
         # Read 6 CCSDS header bytes
         buf = bytearray(self.spi.read(CCSDS_HEADER_LEN))
+
+        apid =  buf[APID_INDEX]
         pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
         # Read payload data bytes and crc bytes
         pkt = bytearray(self.spi.read(pkt_len))
@@ -66,9 +72,14 @@ class Depacketizer:
         crc_index = CCSDS_HEADER_LEN + pkt_len - 2
         crc = (buf[crc_index] << 8) | buf[crc_index + 1]
 
-        #Calculate CRC from byte 17 onwards, aka the XB1 command
+
         crcinst = crc16()
-        crc_check = crc16.calc(buf[17:crc_index])
+        if (apid == TIME_APID):
+            #Calculate CRC over the entire packet
+            crc_check = crc16.calc(buf[:crc_index])
+        elif (apid = CMD_APID):
+            #Calculate CRC from byte 17 onwards, aka the XB1 command
+            crc_check = crc16.calc(buf[17:crc_index])
 
         if (crc == crc_check):
             self.bus_pkts_buffer.append(buf)
