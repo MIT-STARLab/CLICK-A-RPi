@@ -39,6 +39,15 @@ CMD_PL_NOOP = 0x5B
 CMD_PL_DWNLINK_MODE = 0x0500
 CMD_PL_DEBUG_MODE = 0x0501
 
+#Telemetry APIDs
+TLM_DL_FILE = 0x387 #TBR
+TLM_HK_CPU = 0x312 #TBR
+TLM_HK_PAT = 0x313 #TBR
+TLM_HK_FPGA_MAP = 0x314 #TBR
+TLM_ECHO = 0x3FF 
+TLM_LIST_FILE = 0x3E0 
+TLM_GET_FPGA = 0x3C0
+
 #PAT IPC Command IDs [Shared Command Parameters with c-code (packetdef.h)]
 PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
 PAT_CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary

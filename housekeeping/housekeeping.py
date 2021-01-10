@@ -14,19 +14,14 @@ sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('../lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
-from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD
+from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD, TLM_HK_CPU, TLM_HK_PAT, TLM_HK_FPGA_MAP
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 FPGA_CHECK_PD = 6000
 CPU_CHECK_PD = 6000
 
 PAT_HEALTH_PD = 6000
-#CH_HEARTBEAT_PD = 6000 - import from options (shared with command handler)
 FPGA_ANS_PD = 6000
-
-CPU_APID = 0x312
-PAT_HEALTH_APID = 0x313
-FPGA_MAP_APID = 0x314
 
 ## 1 indicates the housekeeper will send packets
 ## 0 indicates the housekeeper will not send packets
@@ -96,25 +91,25 @@ class Housekeeping:
                 pkt.extend(struct.pack('L', int(p.cpu_percent())))
                 pkt.extend(struct.pack('L', int(p.memory_percent('uss'))))
 
-        count = 0;
+        count = 0
         with open('/mnt/journal/id.txt', 'r') as boot_id_list:
             for count, l in enumerate(boot_id_list, 1):
                 pass
 
         pkt.extend(struct.pack('B', count))
-    
+
         return pkt
 
     def handle_hk_pkt(self, data, process):
         pkt = TxPacket()
         if process is 'camera':
-            apid = PAT_HEALTH_APID
+            apid = TLM_HK_PAT
             pat_pkt = PATHealthPacket()
             _, return_addr, size, payload = pat_pkt.decode(data)
             payload = data
 
         elif process is 'fpga':
-            apid = FPGA_MAP_APID
+            apid = TLM_HK_FPGA_MAP
             fpga_pkt = FPGAMapAnswerPacket()
             ##TBD - Should actually check the received packet for errors
             return_addr, rq_number, rw_flag, error, start_addr, size, read_data = fpga_pkt.decode(data)
@@ -123,9 +118,15 @@ class Housekeeping:
             else:
                 return
 
+        elif process is 'ch':
+            # do something here...
+            pass
+
         elif process is 'cpu':
-            apid = CPU_APID
+            apid = TLM_HK_CPU
             payload = data
+
+
 
         raw_pkt = pkt.encode(apid, payload)
         self.packet_buf.append(raw_pkt)
@@ -178,13 +179,20 @@ class Housekeeping:
                 ##handle fpga health packet
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
-                print("Received CH Heartbeat")
+                print("Received message from CH")
                 message = self.ch_heartbeat_socket.recv()
-                ch_packet = HandlerHeartbeatPacket()
-                ch_packet.decode(message)
-                print(ch_packet) 
-                ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
-                ch_heartbeat_ts = time.time()
+                ##check if just heartbeat or ch health packet
+                if(len(message) == 8):
+                    ##handle ch heartbeat packet, currently ignoring timestamp and assuming 1 command handler
+                    ch_packet = HandlerHeartbeatPacket()
+                    ch_packet.decode(message)
+                    print(ch_packet)
+                    ch_heartbeat_ts = time.time()
+                else:
+                    self.handle_hk_pkt(message, 'ch')
+                    ##handle ch health packet
+
+
 
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()

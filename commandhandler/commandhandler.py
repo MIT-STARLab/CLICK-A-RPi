@@ -12,8 +12,8 @@ import struct
 import math
 import hashlib
 #importing options and functions
+sys.path.append('/root/lib/')
 sys.path.append('../lib/')
-sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import *
 #from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket
@@ -38,8 +38,8 @@ socket_test_response_packets.connect("tcp://localhost:%s" % TEST_RESPONSE_PORT) 
 socket_pat_control = context.socket(zmq.PUB) #send messages on this port
 socket_pat_control.connect("tcp://localhost:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
-socket_heartbeat = context.socket(zmq.PUB) #send messages on this port
-socket_heartbeat.connect("tcp://localhost:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
+socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
+socket_housekeeping.connect("tcp://localhost:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
 
 print ("Subscribing to FPGA_MAP_ANSWER topic {}".format(topic))
 print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
@@ -98,7 +98,7 @@ def getFPGAmap(request_number, num_registers, start_address):
     # sending read_data back as TX packet
     if ipc_fpgaaswpacket.read_data:
         not_empty_ipc_txpacket = TxPacket()
-        raw = not_empty_ipc_txpacket.encode(APID=0x02,payload=ipc_fpgaaswpacket.read_data)
+        raw = not_empty_ipc_txpacket.encode(APID = TLM_GET_FPGA, payload=ipc_fpgaaswpacket.read_data)
         not_empty_ipc_txpacket.decode(raw)
         print(not_empty_ipc_txpacket)
 
@@ -133,14 +133,19 @@ def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
     
     return ipc_patControlPacket
 
+def log_to_hk(payload):
+    ipc_healthPacket = CommandHandlerHealthPacket()
+    raw = ipc_healthPacket.encode(pid, payload)
+    send_zmq(socket_housekeeping, raw) 
+
 while True:
     #send heartbeat to housekeeping
     ipc_heartbeatPacket = HandlerHeartbeatPacket()
     curr_time = time.time()
     raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
     print(ipc_heartbeatPacket) #Debug printing
-    print ('SENDING to %s' % (socket_heartbeat.get_string(zmq.LAST_ENDPOINT))) #Debug printing
-    send_zmq(socket_heartbeat, raw_ipc_heartbeatPacket)  
+    print ('SENDING to %s' % (socket_housekeeping.get_string(zmq.LAST_ENDPOINT))) #Debug printing
+    send_zmq(socket_housekeeping, raw_ipc_heartbeatPacket)  
 
     #poll for received commands
     sockets = dict(poller.poll(CH_HEARTBEAT_PD - 1000)) #wait for 5 seconds in between heartbeats (CH_HEARTBEAT_PD = 6000)
@@ -161,35 +166,35 @@ while True:
         CMD_ID = generic_control_packet.command
 
         if(CMD_ID == CMD_PL_REBOOT):
-            #TODO: Acknowledge command receipt via telemetry
+            log_to_hk('ACK CMD PL_REBOOT')
+            time.sleep(1) 
             os.system("sudo shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
 
         elif(CMD_ID == CMD_PL_ENABLE_TIME):
-            #TODO
-            pass
+            #TODO: set mode to sync CPU clock with time at tone packet
+            log_to_hk('ACK CMD PL_ENABLE_TIME')
 
         elif(CMD_ID == CMD_PL_DISABLE_TIME):
-            #TODO
-            pass
+            #TODO: set mode to NOT sync CPU clock with time at tone packet
+            log_to_hk('ACK CMD PL_DISABLE_TIME')
 
         elif(CMD_ID == CMD_PL_EXEC_FILE):
-            #TODO: Acknowledge command receipt via telemetry
             raw_size = generic_control_packet.size - 3 #TBR
             output_to_file, file_out_num, file_path_len, raw_file_path = struct.unpack('BBB%ds'%raw_size,generic_control_packet.payload) #TBR
             file_path = raw_file_path.decode('utf-8') #TBR
             file_path = file_path[0:(file_path_len-1)] #Strip padding
-            try:
-                os.system(file_path) #TBR
-                #if(output_to_file):
-                    #TODO - have the script write to file with file_out_num (= file output number)
+            try:                
+                if(output_to_file):
+                    os.system(file_path + ' > ' + string(file_out_num) + '.log')
+                    #send file...
+                else:
+                    os.system(file_path)
 
-                #TODO: Send success telemetry
+                log_to_hk('ACK CMD PL_EXEC_FILE')
             except:
-                #TODO: Send error telemetry
-                pass
+                log_to_hk('ERROR CMD PL_EXEC_FILE: ' + traceback.format_exc()) 
 
         elif(CMD_ID == CMD_PL_LIST_FILE):
-            #TODO: Acknowledge command receipt via telemetry
             raw_size = generic_control_packet.size - 1 #TBR
             directory_path_len, raw_directory_path = struct.unpack('B%ds'%raw_size,generic_control_packet.payload) #TBR
             directory_path = raw_directory_path.decode('utf-8') #TBR
@@ -202,20 +207,19 @@ while True:
                     return_data = return_data + list_item + '\n' #TBR separator type
 
                 list_file_txpacket = TxPacket()
-                raw = list_file_txpacket.encode(payload=return_data) #TBR
+                raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
                 print(list_file_txpacket) #Debug printing
                 print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
                 socket_tx_packets.send(raw) #send packet
-
-                #TODO: Send success telemetry
+                log_to_hk('ACK CMD PL_LIST_FILE')
             except:
-                #TODO: Send error telemetry
-                pass
+                log_to_hk('ERROR CMD PL_LIST_FILE: ' + traceback.format_exc()) 
 
         elif(CMD_ID == CMD_PL_REQUEST_FILE):
             # simple dumb file chunking
             max_chunk_size = 4068
-            file_name = generic_control_packet.payload #TBR
+            file_path_len, raw_file_path = struct.unpack('B%ds'%raw_size,generic_control_packet.payload) #TBR
+            file_name = raw_file_path.decode('utf-8') #TBR             
             with open(file_name, "rb") as source_file:
                 file_id = hashlib.md5(file_name).digest()
                 file_len = os.stat(file_name).st_size
@@ -226,7 +230,7 @@ while True:
                     packet = struct.pack('%dsHH%ds' % (16, max_chunk_size), file_id, seq_cnt, seq_len, packet_payload)
 
                     txpacket = TxPacket()
-                    raw_packet = txpacket.encode(payload=packet)
+                    raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
                     socket_tx_packets.send(raw_packet)
 
                     seq_cnt += 1
@@ -239,20 +243,23 @@ while True:
                     # print(len(packet))
                     # print(binascii.hexlify(packet))
                     txpacket = TxPacket()
-                    raw_packet = txpacket.encode(payload=packet)
+                    raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
                     socket_tx_packets.send(raw_packet)
 
+            log_to_hk('ACK CMD PL_REQUEST_FILE')
+
         elif(CMD_ID == CMD_PL_UPLOAD_FILE_TOSTAGING):
-            #TODO
-            pass
+            #TODO: receive file chunks and re-assemble file
+            log_to_hk('ACK CMD PL_UPLOAD_FILE_TOSTAGING')
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd = struct.unpack('B', generic_control_packet.payload) #maps to PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, 
             if(pat_mode_cmd not in [PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK]):
-                #TODO: send error telemetry
+                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT_MODE_ID = ' + string(pat_mode_cmd)) 
                 PAT_MODE_ID = PAT_CMD_START_PAT #default PAT mode
             else:
                 PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
+                log_to_hk('ACK CMD PL_SET_PAT_MODE')
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
@@ -266,7 +273,8 @@ while True:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_GET_IMAGE, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
-            #TODO: acknowledgement telemetry  
+            log_to_hk('ACK CMD PL_SINGLE_CAPTURE') 
+            #send image telemetry file...
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
             exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
@@ -280,7 +288,8 @@ while True:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
-            #TODO: acknowledgement telemetry  
+            log_to_hk('ACK CMD PL_CALIB_LASER_TEST') 
+            #send image telemetry file... 
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
             exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
@@ -294,13 +303,15 @@ while True:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_FSM_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
-            #TODO: acknowledgement telemetry  
+            log_to_hk('ACK CMD PL_FSM_TEST') 
+            #send image telemetry files...   
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_CALIB_TEST)
             print(ipc_patControlPacket) #debug print
-            #TODO: acknowledgement telemetry  
+            log_to_hk('ACK CMD PL_RUN_CALIBRATION') 
+            #send image telemetry files...    
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
             #TODO
@@ -319,21 +330,20 @@ while True:
             echo_raw_size = generic_control_packet.size
             echo_raw = generic_control_packet.payload
             echo_payload = struct.unpack('%ds'%echo_raw_size,echo_raw)
-            raw = echo_txpacket.encode(payload=echo_payload) #TBR
+            raw = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload) #TBR
             print(echo_txpacket) #Debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
+            log_to_hk('ACK CMD PL_ECHO') 
 
         elif(CMD_ID == CMD_PL_NOOP):
-            #TODO
-            pass
+            log_to_hk('ACK CMD PL_NOOP') 
 
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             #Start Main PAT Loop:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_MODE_ID)
             print(ipc_patControlPacket) #debug print
-            #TODO: acknowledgement telemetry 
 
             ###TODO: Lasercom experiment...
 
@@ -342,18 +352,11 @@ while True:
             # ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_END_PAT)
             # print(ipc_patControlPacket) #debug print
             #TODO: acknowledgement telemetry 
+            log_to_hk('ACK CMD PL_DWNLINK_MODE') 
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
-            #TODO
-            pass
+            log_to_hk('ACK CMD PL_DEBUG_MODE') 
+            #TODO...
 
         else: #default
-            #TODO
-            pass
-
-        # ~ if ipc_rxcompacket.payload == b'block':
-            # ~ print ("SLEEPING FOR 60 SECONDS")
-            # ~ time.sleep(30)
-        # ~ elif ipc_rxcompacket.payload == b'getMap':
-            # ~ print ("REQUESTING FPGA MAP")
-            # ~ getFPGAmap()
+            log_to_hk('ERROR: Unrecognized CMD_ID = ' + string(CMD_ID))  
