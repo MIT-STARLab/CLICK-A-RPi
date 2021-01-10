@@ -3,20 +3,8 @@ Description=Flash FPGA
 
 [Service]
 Type=oneshot
-
-ExecStartPre=/bin/bash -c "echo 29 >> /sys/class/gpio/export"
-ExecStartPre=/bin/bash -c "echo out >> /sys/class/gpio/gpio29/direction"
-ExecStartPre=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio29/value"
-
-ExecStartPre=/bin/bash -c "echo 36 >> /sys/class/gpio/export"
-ExecStartPre=/bin/bash -c "echo out >> /sys/class/gpio/gpio36/direction"
-ExecStartPre=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio36/value"
-ExecStartPre=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio36/value"
-ExecStartPre=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio36/value"
-
-ExecStartPre=/bin/sleep 2
-ExecStartPre=/bin/bash /root/fpga/unbind.sh
-
+ExecStart=/bin/sleep 1
+ExecStart=/bin/bash /root/fpga/unbind.sh
 ExecStart=/bin/python -u /root/fpga/fpga.py
 
 [Install]
