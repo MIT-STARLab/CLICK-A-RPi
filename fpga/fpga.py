@@ -56,10 +56,7 @@ try:
         # Long delay for renumeration
         # TODO: fix this hack.  The timeout value specified in flAwaitDevice() below doesn't seem to work
         time.sleep(3)
-
-        print("Awaiting renumeration...")
-        if ( not fl.flAwaitDevice(vp, 10000) ):
-            raise fl.FLException("FPGALink device did not renumerate properly as {}".format(vp))
+        fl.flAwaitDevice(vp, 10000)
 
         print("Attempting to open connection to FPGALink device {} again...".format(vp))
         handle = fl.flOpen(vp)
