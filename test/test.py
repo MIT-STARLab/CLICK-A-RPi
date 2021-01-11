@@ -91,7 +91,7 @@ def evaluate_command(command):
     if command == "fpga":
         print ("Options:")
         print ("- read start_addr size")
-        print ("- write start_addr size data")
+        print ("- write start_addr size data data data")
         print ("")
 
         fpga = raw_input ("FPGA: ")
@@ -121,11 +121,29 @@ def evaluate_command(command):
 
         elif options[0] == 'write':
 
+            write_values = []
+
+            for value in range(0, int(options[2])): #iterate over number of registers
+                write_values.append(options[value+3])
+
+            ipc_fpgarqpacket_write = FPGAMapRequestPacket()
+            raw = ipc_fpgarqpacket_write.encode(return_addr=pid, rq_number=0, rw_flag=1, start_addr=int(options[1]), size=int(options[2]), write_data=write_values)
+
+            ipc_fpgarqpacket_write.decode(raw)
+            print(' ')
+            print ('SENDING to %s' % (socket_FPGA_map_request.get_string(zmq.LAST_ENDPOINT)))
+            print(ipc_fpgarqpacket_write)
+            print(' ')
+
+            socket_FPGA_map_request.send(raw)
+
             message = recv_zmq(socket_FPGA_map_answer)
 
             print('===')
             print('INCOMING FPGA_MAP_ANSWER_PACKET:')
-            print(message)
+            ipc_fpgarqpacket_answer = FPGAMapAnswerPacket()
+            ipc_fpgarqpacket_answer.decode(message)
+            print(ipc_fpgarqpacket_answer)
             print('===')
 
         else:
