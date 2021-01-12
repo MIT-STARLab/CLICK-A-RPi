@@ -1,26 +1,20 @@
 #!/usr/bin/env python
-
 import sys
 import zmq
 import time
 import binascii
-
 import math
 import argparse
-import time
 import struct
 import csv
 from datetime import datetime
 
-import sys #importing options and functions
-sys.path.append('../lib/')
 sys.path.append('/root/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
 from fpga_map import REGISTERS
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket
 from zmqTxRx import recv_zmq, send_zmq
 
-sys.path.append('driver/')
 import fl
 from node import NodeFPGA
 import memorymap
@@ -28,52 +22,17 @@ import fsm
 import edfa
 import alignment
 
-
 DEBUG = False
 memMap = memorymap.MemoryMap()
 
-
-
 """ FPGA initialization """
-
-handle = fl.FLHandle()
+conduit = 1
+vp = "1d50:602b:0002"
 
 try:
     fl.flInitialise(0)
-    print("here")
-    vp = "1d50:602b:0002"
-    print("Attempting to open connection to FPGALink device {}...".format(vp))
-    try:
-        handle = fl.flOpen(vp)
-	print("Made it")
-    except fl.FLException as ex:
-        ivp = "04b4:8613" #TODO: needs root?
-        #ivp = '0424:2422' #TODO: why is this different? (USB ADDRESS)
-        print("Loading firmware into {}...".format(ivp))
-        fl.flLoadStandardFirmware(ivp, vp)
-        print type(ivp)
-        print type(vp)
-        # Long delay for renumeration
-        # TODO: fix this hack.  The timeout value specified in flAwaitDevice() below doesn't seem to work
-        time.sleep(3)
-        fl.flAwaitDevice(vp, 10000)
-
-        print("Attempting to open connection to FPGALink device {} again...".format(vp))
-        handle = fl.flOpen(vp)
-
-    time.sleep(2)
-    conduit = 1
-
-    isNeroCapable = fl.flIsNeroCapable(handle)
-    isCommCapable = fl.flIsCommCapable(handle, conduit)
+    handle = fl.flOpen(vp)
     fl.flSelectConduit(handle, conduit)
-    #time.sleep(2)
-    progConfig = "J:A7A0A3A1:/root/bin/fpga.xsvf"
-    print("Programming device with config {}...".format(progConfig))
-    if ( isNeroCapable ):
-        fl.flProgram(handle, progConfig)
-    else:
-        raise fl.FLException("Device program requested but device at {} does not support NeroProg".format(vp))
 
     """ ZMQ inter process communication initialization """
 
@@ -194,9 +153,6 @@ try:
             print(b'| ' + raw)
             print(ipc_fpgaaswpacket_read)
             socket_FPGA_map_answer.send(raw)
-
-
-
 
 
 
