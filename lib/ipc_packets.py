@@ -24,9 +24,9 @@ class TxPacket(IpcPacket):
         self.payload = payload
 
         if self.payload:
-            self.raw = struct.pack('BxH%ds'%self.size,APID,self.size,payload)
+            self.raw = struct.pack('HH%ds'%self.size,APID,self.size,payload)
         else:
-            self.raw = struct.pack('BxH',APID,self.size)
+            self.raw = struct.pack('HH',APID,self.size)
 
         return self.raw
 
@@ -40,7 +40,7 @@ class TxPacket(IpcPacket):
         self.raw = raw
         raw_size = len(raw)-4
 
-        self.APID, self.size, self.payload = struct.unpack('BxH%ds'%raw_size,raw)
+        self.APID, self.size, self.payload = struct.unpack('HH%ds'%raw_size,raw)
 
         assert self.size == raw_size
 
