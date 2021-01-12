@@ -6,4 +6,4 @@ Before=default.target
 [Service]
 Type=simple
 ExecStartPre=/bin/bash /root/fpga/unbind.sh
-ExecStart=/bin/python /root/fpga/flash.py
+ExecStart=/bin/python -u /root/fpga/fpga.py

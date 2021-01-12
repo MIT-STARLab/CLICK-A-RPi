@@ -5,8 +5,7 @@ Before=fpga.service
 [Service]
 Type=oneshot
 ExecStart=/bin/sleep 2
-ExecStart=/bin/bash /root/fpga/unbind.sh
-ExecStart=/bin/python /root/fpga/flash.py
+ExecStart=/bin/python -u /root/fpga/flash.py
 
 [Install]
 WantedBy=default.target

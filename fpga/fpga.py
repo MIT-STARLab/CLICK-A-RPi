@@ -26,10 +26,11 @@ DEBUG = False
 memMap = memorymap.MemoryMap()
 
 """ FPGA initialization """
+conduit = 1
+vp = "1d50:602b:0002"
 
 try:
-    conduit = 1
-    vp = "1d50:602b:0002"
+    fl.flInitialise(0)
     handle = fl.flOpen(vp)
     fl.flSelectConduit(handle, conduit)
 
