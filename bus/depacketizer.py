@@ -9,6 +9,7 @@ import binascii
 from crccheck.crc import Crc16CcittFalse as crc16
 
 sys.path.append('/root/CLICK-A-RPi/lib/')
+sys.path.append('/root/lib/') #flight path 
 from ipc_packets import RxCommandPacket, RxPATPacket
 from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
@@ -20,7 +21,6 @@ APID_INDEX = 1
 PKT_LEN_INDEX = 4
 
 TIME_APID = 0x80
-CMD_APID = 0x01
 
 class Depacketizer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])

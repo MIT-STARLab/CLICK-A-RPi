@@ -238,7 +238,7 @@ while True:
 
             log_to_hk('ACK CMD PL_REQUEST_FILE')
 
-        elif(CMD_ID == CMD_PL_UPLOAD_FILE_TOSTAGING):
+        elif(CMD_ID == CMD_PL_UPLOAD_FILE):
             #TODO: receive file chunks and re-assemble file
             log_to_hk('ACK CMD PL_UPLOAD_FILE_TOSTAGING')
 
