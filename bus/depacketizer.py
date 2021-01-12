@@ -72,14 +72,9 @@ class Depacketizer:
         crc_index = CCSDS_HEADER_LEN + pkt_len - 2
         crc = (buf[crc_index] << 8) | buf[crc_index + 1]
 
-
+        #Calculate CRC over the entire packet
         crcinst = crc16()
-        if (apid == TIME_APID):
-            #Calculate CRC over the entire packet
-            crc_check = crc16.calc(buf[:crc_index])
-        elif (apid = CMD_APID):
-            #Calculate CRC from byte 17 onwards, aka the XB1 command
-            crc_check = crc16.calc(buf[17:crc_index])
+        crc_check = crc16.calc(buf[:crc_index])
 
         if (crc == crc_check):
             self.bus_pkts_buffer.append(buf)
@@ -105,16 +100,14 @@ class Depacketizer:
             apid = ((pkt[0] & 0b00000011) << 8) | pkt[1]
             ts_sec = (((((pkt[6] << 8) | pkt[7]) << 8) | pkt[8]) << 8) | pkt[9]
             ts_subsec = pkt[10]
-            data_len = ((pkt[19] << 8) | pkt[20])
-            data = pkt[21:(21+data_len)]
+            # this is the number of bytes after the primary ccsds header
+            pkt_len = (pkt[4] << 8) | pkt[5] + 1
+            # pkt_len minus secondary header len (6) and crc (2)
+            data_len = pkt_len - 8
+            data = pkt[12:(12+data_len)]
 
             # make Ipc packet, add to outgoing buffer
-            if (apid == 0x01):
-                ipc_pkt = RxCommmandPacket()
-            else: # assume this is PAT idk
-                apid = 0xFF
-                ipc_pkt = RxPATPacket()
-
+            ipc_pkt = RxCommmandPacket()
 
             raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
             self.ipc_pkts_buffer.append(raw_ipc_pkt)
@@ -138,28 +131,27 @@ class Depacketizer:
                 apid = ((pkt[0] & 0b00000011) << 8) | pkt[1]
                 ts_sec = (((((pkt[6] << 8) | pkt[7]) << 8) | pkt[8]) << 8) | pkt[9]
                 ts_subsec = pkt[10]
-                data_len = ((pkt[19] << 8) | pkt[20])
-                data = pkt[21:(21+data_len)]
+                pkt_len = (pkt[4] << 8) | pkt[5] + 1
+                data_len = pkt_len - 8
+                data = pkt[12:(12+data_len)]
 
                 # Get continuation packets
                 pkt = self.bus_pkts_buffer.pop(0)
                 seq_flag = (pkt[2] & 0b11000000) >> 6
                 while(seq_flag == 0b00):
-                    data_len += ((pkt[19] << 8) | pkt[20])
-                    data.extend(pkt[21:(21+data_len)])
+                    pkt_len = (pkt[4] << 8) | pkt[5] + 1
+                    data_len = pkt_len - 8
+                    data.extend(pkt[12:(12+data_len)])
 
                     pkt = self.bus_pkts_buffer.pop(0)
                     seq_flag = (pkt[2] & 0b11000000) >> 6
                 # get last completed packet
-                data_len += ((pkt[19] << 8) | pkt[20])
-                data.extend(pkt[21:(21+data_len)])
+                pkt_len = (pkt[4] << 8) | pkt[5] + 1
+                data_len = pkt_len - 8
+                data.extend(pkt[12:(12+data_len)])
 
                 # make Ipc packet, add to outgoing buffer
-                if (apid == 0x01):
-                    ipc_pkt = RxCommmandPacket()
-                else: # assume this is PAT idk
-                    apid = 0xFF
-                    ipc_pkt = RxPATPacket()
+                ipc_pkt = RxCommmandPacket()
 
                 raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
 
