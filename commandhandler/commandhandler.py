@@ -109,28 +109,18 @@ def getFPGAmap(request_number, num_registers, start_address):
         socket_tx_packets.send(raw)
 
 def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
-    #Define Command Header
-    CMD_HEADER = return_address + '\0' #PID Header
-    #Header format checks and padding
-    assert len(CMD_HEADER) <= PAT_CMD_HEADER_SIZE #Ensure CMD_HEADER is the right length
-    if(len(CMD_HEADER) < PAT_CMD_HEADER_SIZE):
-            for i in range(PAT_CMD_HEADER_SIZE - len(CMD_HEADER)):
-                    CMD_HEADER = CMD_HEADER + '\0' #append null padding
-    assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
-
     #Define Command Payload
     CMD_PAYLOAD = payload + '\0'
     assert len(CMD_PAYLOAD) <= PAT_CMD_PAYLOAD_SIZE #Ensure CMD_PAYLOAD is the right length
     if(len(CMD_PAYLOAD) < PAT_CMD_PAYLOAD_SIZE):
             for i in range(PAT_CMD_PAYLOAD_SIZE - len(CMD_PAYLOAD)):
                     CMD_PAYLOAD = CMD_PAYLOAD + '\0'   #append null padding
-    assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+    assert CMD_PAYLOAD[len(CMD_PAYLOAD)-1] == '\0' #always terminate strings with null character ('\0') for c-code
     CMD_PAYLOAD = str(CMD_PAYLOAD).encode('ascii') #format to ascii
 
     ipc_patControlPacket = PATControlPacket()
     raw_patControlPacket = ipc_patControlPacket.encode(command,CMD_PAYLOAD) 
-    send_zmq(socket_PAT_control, raw_patControlPacket, CMD_HEADER) 
-    
+    send_zmq(socket_PAT_control, raw_patControlPacket)    
     return ipc_patControlPacket
 
 def log_to_hk(payload):

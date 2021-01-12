@@ -139,7 +139,7 @@ try:
 
         # decode the package
         ipc_fpgarqpacket = FPGAMapRequestPacket()
-        return_addr, rq_number, rw_flag, start_addr, size, write_data_raw = ipc_fpgarqpacket.decode(message) #
+        return_addr, rq_number, rw_flag, start_addr, size, write_data_raw, _ = ipc_fpgarqpacket.decode(message) #
         if(rw_flag == 1):
             write_data = int(write_data_raw.encode('hex'), 16) 
         print (ipc_fpgarqpacket)
@@ -175,6 +175,9 @@ try:
             print "New Channel Value: 0x%X" % ch_val
         else:
             print "Error: FPGA not Comm Capable"
+        
+        isCommCapable = True
+        ch_val = write_data 
 
         if ipc_fpgarqpacket.rw_flag == 1:
             print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
@@ -189,18 +192,18 @@ try:
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_write.return_addr))
             print (ipc_fpgaaswpacket_write)
             
-            #Define Header (for PAT code)
-            HEADER_PID = str(ipc_fpgarqpacket.return_addr) + '\0' #PID Header
-            HEADER_SIZE = 8-1 #Send_zmq adds an extra null byte. Must be a multiple of 4 (struct packing) and at least 5 (PID len + null byte)
-            #print "HEADER_PID: " + HEADER_PID
-            #Header format checks and padding
-            assert len(HEADER_PID) <= HEADER_SIZE #Ensure HEADER is the right length
-            if(len(HEADER_PID) < HEADER_SIZE):
-                    for i in range(HEADER_SIZE - len(HEADER_PID)):
-                            HEADER_PID = HEADER_PID + '\0' #append null padding
-            assert HEADER_PID[len(HEADER_PID)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+            # ~ #Define Header (for PAT code)
+            # ~ HEADER_PID = str(ipc_fpgarqpacket.return_addr) + '\0' #PID Header
+            # ~ HEADER_SIZE = 8-1 #Send_zmq adds an extra null byte. Must be a multiple of 4 (struct packing) and at least 5 (PID len + null byte)
+            # ~ #print "HEADER_PID: " + HEADER_PID
+            # ~ #Header format checks and padding
+            # ~ assert len(HEADER_PID) <= HEADER_SIZE #Ensure HEADER is the right length
+            # ~ if(len(HEADER_PID) < HEADER_SIZE):
+                    # ~ for i in range(HEADER_SIZE - len(HEADER_PID)):
+                            # ~ HEADER_PID = HEADER_PID + '\0' #append null padding
+            # ~ assert HEADER_PID[len(HEADER_PID)-1] == '\0' #always terminate strings with null character ('\0') for c-code
             
-            send_zmq(socket_FPGA_map_answer, raw, HEADER_PID)
+            send_zmq(socket_FPGA_map_answer, raw) #, HEADER_PID)
         else:
             print ('| got FPGA_MAP_REQUEST_PACKET with READ in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
             # send the FPGA_map_answer packet (read)
@@ -212,18 +215,18 @@ try:
             print ('SENDING to %s with ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), ipc_fpgaaswpacket_read.return_addr))
             print (ipc_fpgaaswpacket_read)
             
-            #Define Header (for PAT code)
-            HEADER_PID = str(ipc_fpgarqpacket.return_addr) + '\0' #PID Header
-            HEADER_SIZE = 8-1 #Send_zmq adds an extra null byte. Must be a multiple of 4 (struct packing) and at least 5 (PID len + null byte)
-            #print "HEADER_PID: " + HEADER_PID
-            #Header format checks and padding
-            assert len(HEADER_PID) <= HEADER_SIZE #Ensure HEADER is the right length
-            if(len(HEADER_PID) < HEADER_SIZE):
-                    for i in range(HEADER_SIZE - len(HEADER_PID)):
-                            HEADER_PID = HEADER_PID + '\0' #append null padding
-            assert HEADER_PID[len(HEADER_PID)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+            # ~ #Define Header (for PAT code)
+            # ~ HEADER_PID = str(ipc_fpgarqpacket.return_addr) + '\0' #PID Header
+            # ~ HEADER_SIZE = 8-1 #Send_zmq adds an extra null byte. Must be a multiple of 4 (struct packing) and at least 5 (PID len + null byte)
+            # ~ #print "HEADER_PID: " + HEADER_PID
+            # ~ #Header format checks and padding
+            # ~ assert len(HEADER_PID) <= HEADER_SIZE #Ensure HEADER is the right length
+            # ~ if(len(HEADER_PID) < HEADER_SIZE):
+                    # ~ for i in range(HEADER_SIZE - len(HEADER_PID)):
+                            # ~ HEADER_PID = HEADER_PID + '\0' #append null padding
+            # ~ assert HEADER_PID[len(HEADER_PID)-1] == '\0' #always terminate strings with null character ('\0') for c-code
             
-            send_zmq(socket_FPGA_map_answer, raw, HEADER_PID)
+            send_zmq(socket_FPGA_map_answer, raw) #, HEADER_PID)
     
 except fl.FLException as ex:
     print(ex)

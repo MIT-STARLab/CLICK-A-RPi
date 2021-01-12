@@ -15,10 +15,7 @@ def send_zmq(socket, payload, envelope = 'NULL'):
     envelope: string (usually unique identifier for return message, can be PID)
     returns
     error'''
-    if(envelope == 'NULL'):
-        return socket.send(payload)
-    else:
-        return socket.send(str(envelope).encode('ascii') + b' ' + payload)
+    return socket.send(payload)
 
 def recv_zmq(socket):
     '''receive zmq message with envelope
