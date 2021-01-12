@@ -8,7 +8,7 @@ def push_zmq(socket, payload):
     error'''
     return socket.send(payload)
 
-def send_zmq(socket, payload, envelope = 'NULL'):
+def send_zmq(socket, payload):
     '''send zmq message with envelope
     socket: zmq socket
     payload: raw contents, bytes
