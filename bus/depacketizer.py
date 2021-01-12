@@ -173,10 +173,10 @@ class Depacketizer:
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
         print(binascii.hexlify(raw_ipc_pkt))
-        if (APID == 0x01):
-            self.rx_cmd_socket.send(raw_ipc_pkt)
-        else:
-            self.rx_pat_socket.send(raw_ipc_pkt)
+
+        # in the future, consider the pat packets and send those separately
+        self.rx_cmd_socket.send(raw_ipc_pkt)
+
 
     def run(self):
         print("Start Depacketizer")
