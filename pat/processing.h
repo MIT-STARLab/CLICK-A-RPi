@@ -4,8 +4,8 @@
 #define __PROCESSING
 #include <vector>
 #include "camera.h"
-#include "EasyBMP.h"
-#include "lodepng.h"
+#include "export/EasyBMP.h"
+#include "export/lodepng.h"
 
 #define MAX_GROUPS 50					// Failsafe - max allowed pixel groups to process
 #define MAX_ACTIVE_PIXELS 100000		// Failsafe - max allowed active pixels in frame

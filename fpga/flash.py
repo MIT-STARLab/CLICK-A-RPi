@@ -29,7 +29,7 @@ try:
     if ( isNeroCapable ):
         print("Programming FPGA with {}...".format(progConfig))
         fl.flProgram(handle, progConfig)
-        print("Success")
+        print("Programming successful")
     else:
         raise fl.FLException("Device does not support NeroProg")
 
