@@ -16,7 +16,7 @@ sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 from options import *
 #from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
-from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket, CHHealthPacket
 from zmqTxRx import recv_zmq, send_zmq, separate
 
 # use PID as unique identifier for this progress
@@ -124,7 +124,7 @@ def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
     return ipc_patControlPacket
 
 def log_to_hk(payload):
-    ipc_healthPacket = CommandHandlerHealthPacket()
+    ipc_healthPacket = CHHealthPacket()
     raw = ipc_healthPacket.encode(pid, payload)
     send_zmq(socket_housekeeping, raw) 
 
@@ -149,11 +149,7 @@ while True:
         ipc_rxcompacket.decode(message)
         print (ipc_rxcompacket)
         print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
-
-        # Parse received command payload as per control packet format (TBR)
-        generic_control_packet = GenericControlPacket()
-        generic_control_packet.decode(ipc_rxcompacket.payload)
-        CMD_ID = generic_control_packet.command
+        CMD_ID = ipc_rxcompacket.APID
 
         if(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
@@ -317,8 +313,8 @@ while True:
 
         elif(CMD_ID == CMD_PL_ECHO):
             echo_txpacket = TxPacket()
-            echo_raw_size = generic_control_packet.size
-            echo_raw = generic_control_packet.payload
+            echo_raw_size = ipc_rxcompacket.size
+            echo_raw = ipc_rxcompacket.payload
             echo_payload = struct.unpack('%ds'%echo_raw_size,echo_raw)
             raw = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload) #TBR
             print(echo_txpacket) #Debug printing

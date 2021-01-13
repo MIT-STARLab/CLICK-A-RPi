@@ -106,7 +106,6 @@ class Housekeeping:
             apid = TLM_HK_PAT
             pat_pkt = PATHealthPacket()
             _, return_addr, size, payload = pat_pkt.decode(data)
-            payload = data
 
         elif process is 'fpga':
             apid = TLM_HK_FPGA_MAP
@@ -119,8 +118,9 @@ class Housekeeping:
                 return
 
         elif process is 'ch':
-            # do something here...
-            pass
+            apid = TLM_HK_CH
+            ch_pkt = CHHealthPacket()
+            return_addr, size, payload = ch_pkt.decode(data)
 
         elif process is 'cpu':
             apid = TLM_HK_CPU
