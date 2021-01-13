@@ -76,12 +76,16 @@ class Packetizer:
         seq_flag = 0b01
         while (len(pkt_data) > (BUS_TX_DATA_LEN)):
             bus_tx_pkt = []
-            bus_tx_pkt[0] = ((apid >> 8) & 0b00000111)
-            bus_tx_pkt[1] = (apid & 0xFF)
-            bus_tx_pkt[2] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
-            bus_tx_pkt[3] = (seq_cnt & 0xFF)
-            bus_tx_pkt[4] = ((BUS_DATA_LEN - 1) >> 8) & 0xFF
-            bus_tx_pkt[5] = (BUS_DATA_LEN -1) & 0xFF
+            bus_tx_pkt[0] = 0x35
+            bus_tx_pkt[1] = 0x2E
+            bus_tx_pkt[2] = 0xF8
+            bus_tx_pkt[3] = 0x53
+            bus_tx_pkt[4] = ((apid >> 8) & 0b00000111)
+            bus_tx_pkt[5] = (apid & 0xFF)
+            bus_tx_pkt[6] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
+            bus_tx_pkt[7] = (seq_cnt & 0xFF)
+            bus_tx_pkt[8] = ((BUS_DATA_LEN - 1) >> 8) & 0xFF
+            bus_tx_pkt[9] = (BUS_DATA_LEN -1) & 0xFF
 
             bus_tx_pkt.extend(pkt_data[:BUS_DATA_LEN])
             crc = crc16.calc(bus_tx_pkt)
@@ -101,12 +105,17 @@ class Packetizer:
             seq_flag = 0b10
 
         bus_tx_pkt = []
-        bus_tx_pkt[0] = ((apid >> 8) & 0b00000111)
-        bus_tx_pkt[1] = (apid & 0xFF)
-        bus_tx_pkt[2] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
-        bus_tx_pkt[3] = (seq_cnt & 0xFF)
-        bus_tx_pkt[4] = ((len(pkt_data) - 1) >> 8) & 0xFF
-        bus_tx_pkt[5] = (len(pkt_data) - 1) & 0xFF
+        bus_tx_pkt = []
+        bus_tx_pkt[0] = 0x35
+        bus_tx_pkt[1] = 0x2E
+        bus_tx_pkt[2] = 0xF8
+        bus_tx_pkt[3] = 0x53
+        bus_tx_pkt[4] = ((apid >> 8) & 0b00000111)
+        bus_tx_pkt[5] = (apid & 0xFF)
+        bus_tx_pkt[6] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
+        bus_tx_pkt[7] = (seq_cnt & 0xFF)
+        bus_tx_pkt[8] = ((len(pkt_data) - 1) >> 8) & 0xFF
+        bus_tx_pkt[9] = (len(pkt_data) - 1) & 0xFF
 
         bus_tx_pkt.extend(pkt_data)
         crc = crc16.calc(bus_tx_pkt)
