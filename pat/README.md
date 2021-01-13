@@ -1,9 +1,10 @@
-README for Pointing, Acquisition, and Tracking (PAT) Software
+## README for Pointing, Acquisition, and Tracking (PAT) Software
 Authors: Ondrej Cierny & Peter Grenfell
 
-Basic Overview: The PAT software performs fine pointing control for the CLICK A payload's transmission laser. The ground station beacon beam spot is received by the camera and used for pointing feedback. The payload also produces an internal calibration beam that is coaxial with the transmit beam and received on the camera. The optical design is such that when the calibration beam spot is mirrored across the origin of the camera coordinate frame from the beacon spot, the transmit laser is coaxial with the beacon laser, which means that a laser communications link can be set up. The software maintains this configuration via feedback control throughout the duration of the experiment. 
+## Basic Overview
+The PAT software performs fine pointing control for the CLICK A payload's transmission laser. The ground station beacon beam spot is received by the camera and used for pointing feedback. The payload also produces an internal calibration beam that is coaxial with the transmit beam and received on the camera. The optical design is such that when the calibration beam spot is mirrored across the origin of the camera coordinate frame from the beacon spot, the transmit laser is coaxial with the beacon laser, which means that a laser communications link can be set up. The software maintains this configuration via feedback control throughout the duration of the experiment. 
 
-Execution Logic and Telemetry
+## Execution Logic and Telemetry
 
 pat:
 -Executable run via shell command: ./pat
@@ -32,7 +33,7 @@ main.cpp:
 6. CL_BEACON: process new frame of beacon spot. If spot is lost, there is a timeout, which when finished will move back to ACQUISITION. Otherwise, move to CL_CALIB.
 7. CL_CALIB: process new frame of calibration spot. Move to CL_BEACON. 
 
-Partner Processes for Inter-Process Communication:
+## Partner Processes for Inter-Process Communication:
 
 CLICK-A-RPi/fpga/driver/fpga-ipc.py:
 -FPGA driver and command line output for running PAT on flat sat via ssh (execute this before executing ./pat)
@@ -56,7 +57,8 @@ testIPC_tx_adcs.py:
 testIPC.cpp: 
 -Depreciated cpp IPC test script (slated for deletion)
 
-Hardware Abstraction: The hardware components used include the camera, calibration laser, fast steering mirror (fsm) and associated electronics (fpga, daughter board for driving the fsm). These primary classes are all initialized as objects during the initial setup phase in main.cpp before being passed (by reference) to the more abstract algorithm classes.
+## Hardware Abstraction
+The hardware components used include the camera, calibration laser, fast steering mirror (fsm) and associated electronics (fpga, daughter board for driving the fsm). These primary classes are all initialized as objects during the initial setup phase in main.cpp before being passed (by reference) to the more abstract algorithm classes.
 
 camera.h, camera.cpp:
 -Camera class for Matrix Vision camera communications and control. 
@@ -74,7 +76,7 @@ fsm.h, fsm.cpp:
 -Uses FPGA class.
 -Used by Calibration and Tracking classes
 
-Image Processing and Control Algorithms:
+## Image Processing and Control Algorithms
 These classes are the heart of the control system and use the hardware abstraction classes to implement the fine pointing control capability.
 
 processing.h, processing.cpp: 
