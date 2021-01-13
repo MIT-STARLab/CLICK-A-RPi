@@ -315,9 +315,9 @@ while True:
             echo_txpacket = TxPacket()
             echo_raw_size = ipc_rxcompacket.size
             echo_raw = ipc_rxcompacket.payload
-            echo_payload = struct.unpack('%ds'%echo_raw_size,echo_raw)
-            print('echo_payload = ', echo_payload)
-            raw = echo_txpacket.encode(APID = TLM_ECHO, payload = str(echo_payload)) #TBR
+            echo_payload_tuple = struct.unpack('%ds'%echo_raw_size,echo_raw)
+            echo_payload = echo_payload_tuple[0] #python returns a tuple by default
+            raw = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload) #TBR
             print(echo_txpacket) #Debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
