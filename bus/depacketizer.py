@@ -107,7 +107,7 @@ class Depacketizer:
             data = pkt[12:(12+data_len)]
 
             # make Ipc packet, add to outgoing buffer
-            ipc_pkt = RxCommmandPacket()
+            ipc_pkt = RxCommandPacket()
 
             raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
             self.ipc_pkts_buffer.append(raw_ipc_pkt)
@@ -151,7 +151,7 @@ class Depacketizer:
                 data.extend(pkt[12:(12+data_len)])
 
                 # make Ipc packet, add to outgoing buffer
-                ipc_pkt = RxCommmandPacket()
+                ipc_pkt = RxCommandPacket()
 
                 raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
 
