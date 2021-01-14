@@ -175,9 +175,6 @@ try:
             print "New Channel Value: 0x%X" % ch_val
         else:
             print "Error: FPGA not Comm Capable"
-        
-        isCommCapable = True
-        ch_val = write_data 
 
         if ipc_fpgarqpacket.rw_flag == 1:
             print ('| got FPGA_MAP_REQUEST_PACKET with WRITE in ENVELOPE %d' % (ipc_fpgarqpacket.return_addr))
