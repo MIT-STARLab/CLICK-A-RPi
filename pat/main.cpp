@@ -45,7 +45,7 @@ bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answe
 	// Send command to FPGA:
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
 	// Check that message was received and FPGA was written to:
-	return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+	bool return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	return return_val; 
 }
@@ -54,7 +54,7 @@ bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answe
 bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number = 0){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
 	// Check that message was received and FPGA was written to:
-	return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+	bool return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	return return_val;
 }
