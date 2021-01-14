@@ -7,7 +7,7 @@ import zmq
 
 from crccheck.crc import Crc16CcittFalse as crc16
 
-sys.path.append('/root/CLICK-A-RPi/lib/')
+sys.path.append('/root/lib/')
 from ipc_packets import TxPacket
 from options import TX_PACKETS_PORT
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
@@ -69,23 +69,23 @@ class Packetizer:
             return
 
         ipc_pkt = TxPacket()
-        apid, pkt_data = ipc_pkt.decode(raw_bus_data)
+        apid, pkt_data = ipc_pkt.decode(raw_ipc_pkt)
 
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
         seq_cnt = 0
         seq_flag = 0b01
-        while (len(pkt_data) > (BUS_TX_DATA_LEN)):
+        while (len(pkt_data) > (BUS_DATA_LEN)):
             bus_tx_pkt = []
-            bus_tx_pkt[0] = 0x35
-            bus_tx_pkt[1] = 0x2E
-            bus_tx_pkt[2] = 0xF8
-            bus_tx_pkt[3] = 0x53
-            bus_tx_pkt[4] = ((apid >> 8) & 0b00000111)
-            bus_tx_pkt[5] = (apid & 0xFF)
-            bus_tx_pkt[6] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
-            bus_tx_pkt[7] = (seq_cnt & 0xFF)
-            bus_tx_pkt[8] = ((BUS_DATA_LEN - 1) >> 8) & 0xFF
-            bus_tx_pkt[9] = (BUS_DATA_LEN -1) & 0xFF
+            bus_tx_pkt.append(0x35)
+            bus_tx_pkt.append(0x2E)
+            bus_tx_pkt.append(0xF8)
+            bus_tx_pkt.append(0x53)
+            bus_tx_pkt.append((apid >> 8) & 0b00000111)
+            bus_tx_pkt.append(apid & 0xFF)
+            bus_tx_pkt.append((seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111))
+            bus_tx_pkt.append(seq_cnt & 0xFF)
+            bus_tx_pkt.append(((BUS_DATA_LEN - 1) >> 8) & 0xFF)
+            bus_tx_pkt.append((BUS_DATA_LEN -1) & 0xFF)
 
             bus_tx_pkt.extend(pkt_data[:BUS_DATA_LEN])
             crc = crc16.calc(bus_tx_pkt)
@@ -105,17 +105,16 @@ class Packetizer:
             seq_flag = 0b10
 
         bus_tx_pkt = []
-        bus_tx_pkt = []
-        bus_tx_pkt[0] = 0x35
-        bus_tx_pkt[1] = 0x2E
-        bus_tx_pkt[2] = 0xF8
-        bus_tx_pkt[3] = 0x53
-        bus_tx_pkt[4] = ((apid >> 8) & 0b00000111)
-        bus_tx_pkt[5] = (apid & 0xFF)
-        bus_tx_pkt[6] = (seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111)
-        bus_tx_pkt[7] = (seq_cnt & 0xFF)
-        bus_tx_pkt[8] = ((len(pkt_data) - 1) >> 8) & 0xFF
-        bus_tx_pkt[9] = (len(pkt_data) - 1) & 0xFF
+        bus_tx_pkt.append(0x35)
+        bus_tx_pkt.append(0x2E)
+        bus_tx_pkt.append(0xF8)
+        bus_tx_pkt.append(0x53)
+        bus_tx_pkt.append((apid >> 8) & 0b00000111)
+        bus_tx_pkt.append(apid & 0xFF)
+        bus_tx_pkt.append((seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111))
+        bus_tx_pkt.append(seq_cnt & 0xFF)
+        bus_tx_pkt.append(((len(pkt_data) - 1) >> 8) & 0xFF)
+        bus_tx_pkt.append((len(pkt_data) - 1) & 0xFF)
 
         bus_tx_pkt.extend(pkt_data)
         crc = crc16.calc(bus_tx_pkt)
