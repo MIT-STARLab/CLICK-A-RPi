@@ -6,17 +6,13 @@ import json
 import time
 import argparse
 import fl
-#from node import NodeFPGA
 import sys
 import memorymap
-#import fsm
-#import edfa
-#import alignment
+import spi
 
 import sys #importing options and functions
 sys.path.append('../lib/')
 sys.path.append('../../lib/')
-#sys.path.append('/home/pi/CLICK-A/github/lib/')
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket
 from zmqTxRx import recv_zmq, send_zmq
@@ -153,12 +149,16 @@ try:
 
         if(start_addr == 0x20):
             if(write_data == 0x55):
-                print "Prior to Cal Laser ON - Writing 0x55 to channel 35"
+                print "Prior to Cal Laser ON - Ensure channel 35 is set to 0x55"
                 if(isCommCapable):
-                    fl.flWriteChannel(handle, 35, 0x55)
-                    time.sleep(0.001)
-                    ch35_val = fl.flReadChannel(handle, 35)
-                    print "Channel 35 Value: 0x%X" % ch35_val
+                    ch35_val = spi.read_register(35)
+                    #ch35_val = fl.flReadChannel(handle, 35)
+                    if(ch35_val != 0x55):
+                        spi.write_register(35, 0x55)
+                        #fl.flWriteChannel(handle, 35, 0x55)
+                        time.sleep(0.001)
+                        ch35_val = spi.read_register(35)
+                    print "Channel 35 Value: 0x%X" % ch35_val                
                 else:
                     print "Error: FPGA not Comm Capable"
 
@@ -166,12 +166,16 @@ try:
         if(isCommCapable):
             if(start_addr == 0x08):
                 print "Prior to FSM Command - Writing 0x55 to channel 33"
-                fl.flWriteChannel(handle, 33, 0x55)
+                spi.write_register(33, 0x55)
+                #fl.flWriteChannel(handle, 33, 0x55)
                 time.sleep(0.001)
             print "Writing to Channel: 0x%X" % start_addr
             print "Data to Write: 0x%X" % write_data
-            fl.flWriteChannel(handle, start_addr, write_data)
-            ch_val = fl.flReadChannel(handle, start_addr) 
+            spi.write_register(start_addr, write_data)
+            #fl.flWriteChannel(handle, start_addr, write_data)
+            time.sleep(0.001)
+            ch_val = spi.read_register(start_addr)
+            #ch_val = fl.flReadChannel(handle, start_addr) 
             print "New Channel Value: 0x%X" % ch_val
         else:
             print "Error: FPGA not Comm Capable"

@@ -235,7 +235,7 @@ int main() //int argc, char** argv
 					camera.config->expose_us.write(command_exposure);
 
 					//set to sufficiently large window size (but not too large)
-					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CAMERA_HEIGHT);
+					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
 
 					//save image
 					logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
