@@ -278,12 +278,12 @@ int main() //int argc, char** argv
 
 					for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
 						//switch laser on
-						if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
+						if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 							//save image
 							logImage(string("CMD_CALIB_LASER_TEST_ON"), camera, textFileOut, pat_health_port);
 
 							//switch laser off
-							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){ //turn calibration laser off
 								log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_LASER_TEST - laserOff FPGA command failed!");
 							}	
 							logImage(string("CMD_CALIB_LASER_TEST_OFF"), camera, textFileOut, pat_health_port);
