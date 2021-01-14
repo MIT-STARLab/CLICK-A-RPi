@@ -46,7 +46,7 @@ bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answe
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
 	//std::this_thread::sleep_for(std::chrono::seconds(1));
 	// Check that message was received and FPGA was written to:
-	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, request_number);
+	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
 }
 
 //Turn Off Calibration Laser
@@ -54,7 +54,7 @@ bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answ
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
 	//std::this_thread::sleep_for(std::chrono::seconds(1));
 	// Check that message was received and FPGA was written to:
-	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, request_number);
+	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -184,7 +184,7 @@ int main() //int argc, char** argv
 	}
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
 	
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port);
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
 	Tracking track(camera, calibration, textFileOut, pat_health_port);
 	std::this_thread::sleep_for(std::chrono::seconds(1));

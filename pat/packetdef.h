@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define MAX_FPGA_RESPONSE_ATTEMPTS 20 //number of messages to look through on the FPGA answer port when checking a sent message
+#define MAX_FPGA_RESPONSE_ATTEMPTS 10 //number of messages to look through on the FPGA answer port when checking a sent message
 #define POLL_TIME_FPGA_RESPONSE 10 //milliseconds, time to wait between each poll of the FPGA answer port
 #define TX_ADCS_APID 0x250 //(CLICK-A CPU Software Architecture on Google Drive)
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
@@ -106,7 +106,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 
 // TODO: receive_packet_pat_rx (commands from bus)
 
-bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number);
+bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint16_t channel, uint8_t request_number);
 
 
 #endif

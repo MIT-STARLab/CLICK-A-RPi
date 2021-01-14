@@ -8,8 +8,8 @@
 
 // Initialize MEMS FSM control board over SPI; filter = cutoff in Hz
 //-----------------------------------------------------------------------------
-FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, uint16_t vBias_dac, uint16_t vMax_dac, float filter) :
-fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_port(fpga_map_request_port_in)
+FSM::FSM(std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& fpga_map_request_port_in, zmq::socket_t& fpga_map_answer_port_in, std::vector<zmq::pollitem_t>& poll_fpga_answer_in, uint16_t vBias_dac, uint16_t vMax_dac, float filter) :
+fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_port(fpga_map_request_port_in), fpga_map_answer_port(fpga_map_answer_port_in), poll_fpga_answer(poll_fpga_answer_in)
 //-----------------------------------------------------------------------------
 {
 	// Voltage setting (ref. PicoAmp datasheet)
@@ -111,6 +111,10 @@ void FSM::fsmWrite(uint16_t channel, uint8_t data)
 //-----------------------------------------------------------------------------
 {
 	//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
-	send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, 0); //TBR request_number
-	std::this_thread::sleep_for(std::chrono::milliseconds(3));
+	send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, fsm_request_number); //TBR request_number
+	if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
+		log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
+	};
+	fsm_request_number = (fsm_request_number + 1) % 0xFF //increment request number modulo size(uint8_t)
+	//std::this_thread::sleep_for(std::chrono::milliseconds(3));
 }
