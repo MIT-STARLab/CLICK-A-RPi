@@ -9,7 +9,7 @@ LIBS = -lmvPropHandling -lmvDeviceManager -lpthread -lzmq
 OBJ_DIR = ./build
 BIN_DIR = ./bin
 SOURCES = main.cpp camera.cpp processing.cpp fsm.cpp tracking.cpp calibration.cpp packetdef.cpp log.cpp export/EasyBMP.cpp export/lodepng.cpp
-OBJECTS= $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
+OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
 
 all: dir pat enumerate
 
