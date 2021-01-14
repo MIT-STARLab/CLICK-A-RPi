@@ -188,7 +188,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
 
 // Check FPGA write request
-bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer)
+bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number)
 {
 	// Listen for FPGA answer:
 	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
@@ -197,7 +197,7 @@ bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vect
 			// received something on the first (only) socket
 			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
 			//make sure message is for PAT process:
-			if(((uint32_t) getpid()) == write_ans_struct.return_address){
+			if((((uint32_t) getpid()) == write_ans_struct.return_address) && (request_number = write_ans_struct.request_number)){
 				return !write_ans_struct.error_flag;
 			} 
 		}
