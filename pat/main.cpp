@@ -56,7 +56,7 @@ bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answ
 	// Check that message was received and FPGA was written to:
 	return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	return return_val
+	return return_val;
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
