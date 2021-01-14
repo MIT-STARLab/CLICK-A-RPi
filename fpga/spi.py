@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import time
 import spidev
 import memorymap
 
@@ -79,7 +78,7 @@ def edfa(cmd):
                 timeout = timeout - 1
 
         if i != len(cmd):
-            print("EDFA timeout, written " + str(i))
+            print("EDFA timeout, written " + str(i) + " bytes")
 
         else:
             while timeout > 0:
@@ -96,17 +95,18 @@ def edfa(cmd):
                     timeout = timeout - 1
 
             if value != 62:
-                print("EDFA timeout, read " + str(len(reply)))
+                print("EDFA timeout, read " + str(len(reply)) + " bytes")
             
             else:
                 for i, char in enumerate(reply):
                     if char == 13:
                         reply[i] = 10
                 reply = ''.join([chr(x) for x in reply]).split('\n')
-                for msg in reply:
-                    if len(msg) > 10:
+                for i, msg in enumerate(reply):
+                    if len(msg) > 1 and i < (len(reply) - 1):
                         result = msg
-    return result
 
     except Exception, err:
         print(str(err))
+
+    return result
