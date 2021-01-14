@@ -202,6 +202,7 @@ bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vect
 			std::cout << "In packedef.cpp - check_fpga_map_write_request: return_address (Rx) = " << write_ans_struct.return_address << std::endl;
 			std::cout << "In packedef.cpp - check_fpga_map_write_request: request_number (Tx) = " << unsigned(request_number) << std::endl;
 			std::cout << "In packedef.cpp - check_fpga_map_write_request: request_number (Rx) = " << unsigned(write_ans_struct.request_number) << std::endl;
+			std::cout << "In packedef.cpp - check_fpga_map_write_request: start_address (Rx) = " << write_ans_struct.start_address << std::endl;
 			if((((uint32_t) getpid()) == write_ans_struct.return_address) && (request_number == write_ans_struct.request_number)){
 				return !write_ans_struct.error_flag;
 			} 
