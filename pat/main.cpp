@@ -26,6 +26,7 @@
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
+#define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off
 
 using namespace std;
 using namespace std::chrono;
@@ -46,7 +47,7 @@ bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answe
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
 	// Check that message was received and FPGA was written to:
 	bool return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
-	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	std::this_thread::sleep_for(std::chrono::milliseconds(LASER_RISE_TIME));
 	return return_val; 
 }
 
@@ -55,7 +56,7 @@ bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answ
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
 	// Check that message was received and FPGA was written to:
 	bool return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
-	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	std::this_thread::sleep_for(std::chrono::milliseconds(LASER_RISE_TIME));
 	return return_val;
 }
 
