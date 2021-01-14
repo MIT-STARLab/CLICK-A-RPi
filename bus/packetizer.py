@@ -87,9 +87,10 @@ class Packetizer:
             bus_tx_pkt.append(((BUS_DATA_LEN - 1) >> 8) & 0xFF)
             bus_tx_pkt.append((BUS_DATA_LEN -1) & 0xFF)
 
-            bus_tx_pkt.extend(pkt_data[:BUS_DATA_LEN])
+            bus_tx_pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
             crc = crc16.calc(bus_tx_pkt)
-            bus_tx_pkt.extend(crc)
+            bus_tx_pkt.extend([crc >> 8, crc & 0xFF])
+
 
             self.bus_pkts_buffer.append(bus_tx_pkt)
 
@@ -116,9 +117,9 @@ class Packetizer:
         bus_tx_pkt.append(((len(pkt_data) - 1) >> 8) & 0xFF)
         bus_tx_pkt.append((len(pkt_data) - 1) & 0xFF)
 
-        bus_tx_pkt.extend(pkt_data)
+        bus_tx_pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
         crc = crc16.calc(bus_tx_pkt)
-        bus_tx_pkt.extend(crc)
+        bus_tx_pkt.extend([crc >> 8, crc & 0xFF])
 
         self.bus_pkts_buffer.append(bus_tx_pkt)
 
