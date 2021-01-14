@@ -31,7 +31,7 @@ socket_FPGA_map_request.setsockopt(zmq.SUBSCRIBE, b'')
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
-WRITE_DELAY_S = 1
+WRITE_DELAY_S = 0.001
 DEBUG = False
 memMap = memorymap.MemoryMap()
 # FPGA image
