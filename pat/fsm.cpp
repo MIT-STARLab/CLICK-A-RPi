@@ -115,6 +115,6 @@ void FSM::fsmWrite(uint16_t channel, uint8_t data)
 	if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
 		log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
 	};
-	fsm_request_number = (fsm_request_number + 1) % 0xFF //increment request number modulo size(uint8_t)
+	fsm_request_number = (fsm_request_number + 1) % 0xFF; //increment request number modulo size(uint8_t)
 	//std::this_thread::sleep_for(std::chrono::milliseconds(3));
 }
