@@ -273,21 +273,25 @@ int main() //int argc, char** argv
 					//set to sufficiently large window size (but not too large)
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
 
-					//switch laser on
-					if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
-						//ensure FSM is centered
-						fsm.setNormalizedAngles(0,0); 	
+					//ensure FSM is centered
+					fsm.setNormalizedAngles(0,0); 
 
-						//save image
-						logImage(string("CMD_CALIB_LASER_TEST"), camera, textFileOut, pat_health_port);
-						
-						//switch laser off
-						if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
-							log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_LASER_TEST - laserOff FPGA command failed!");
+					for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
+						//switch laser on
+						if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
+							//save image
+							logImage(string("CMD_CALIB_LASER_TEST_ON"), camera, textFileOut, pat_health_port);
+														
+							//switch laser off
+							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+								log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_LASER_TEST - laserOff FPGA command failed!");
+							}	
+							logImage(string("CMD_CALIB_LASER_TEST_OFF"), camera, textFileOut, pat_health_port);
+						} else{
+							log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_LASER_TEST - laserOn FPGA command failed!");
 						}	
-					} else{
-						log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_LASER_TEST - laserOn FPGA command failed!");
-					}		
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+					}
 					break;
 
 				case CMD_FSM_TEST:

@@ -14,11 +14,14 @@
 #define CALIB_BIG_WINDOW 600		// Initial camera window for FSM 0,0 acquisition
 #define CALIB_SMALL_WINDOW 300		// Camera window for calibration pattern tracking
 
-#define CALIB_MIN_BRIGHTNESS 300	// Minimum brightness of calib laser spot to work with
-#define CALIB_MAX_EXPOSURE 1000 	// Max exposure in us to check for range tuning
+#define CALIB_MIN_BRIGHTNESS 100	// Minimum brightness of calib laser spot to work with
+#define CALIB_MAX_EXPOSURE 500 	// Max exposure in us to check for range tuning
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow
 #define CALIB_EXP_DIVIDER 15		// Exposure tuning division factor, the higher the finer tuning, but slower; for range search
 #define CALIB_MAX_SMOOTHING 3		// Maximum blurring of frames allowed
+#define CALIB_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
+												// I.e. difference between most pixels (background) and active (brightest) pixels
+#define CALIB_HAPPY_BRIGHTNESS 300				// Good brightness for auto exposure tuning
 
 // A pair of source and destination points (Detector -> FSM)
 class Pair
@@ -38,7 +41,7 @@ class Calibration
 	// Calculation functions
 	void calculateSensitivityMatrix(std::vector<Pair>& data);
 	void calculateAffineParameters(std::vector<Pair>& data);
-	bool findExposureRange(Group& calib);
+	bool findExposureRange(Group& calib, std::string filePath = std::string("/root/log/pat/"));
 public:
 	// Affine transform parameters
 	double a00, a01, a10, a11, t0, t1;
@@ -52,7 +55,7 @@ public:
 	double transformDy(double x, double y);
 	double affineTransformX(double x, double y);
 	double affineTransformY(double x, double y);
-	bool run(Group& calib);
+	bool run(Group& calib, std::string filePath = std::string("/root/log/pat/"));
 };
 
 #endif
