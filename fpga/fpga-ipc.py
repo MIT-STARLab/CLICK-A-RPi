@@ -31,7 +31,7 @@ socket_FPGA_map_request.setsockopt(zmq.SUBSCRIBE, b'')
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
-
+#WRITE_DELAY_S = 0.001
 DEBUG = False
 memMap = memorymap.MemoryMap()
 # FPGA image
@@ -156,7 +156,7 @@ try:
                     if(ch35_val != 0x55):
                         spi.write_register(35, 0x55)
                         #fl.flWriteChannel(handle, 35, 0x55)
-                        time.sleep(0.001)
+                        #time.sleep(WRITE_DELAY_S)
                         ch35_val = spi.read_register(35)
                     print "Channel 35 Value: 0x%X" % ch35_val                
                 else:
@@ -168,12 +168,12 @@ try:
                 print "Prior to FSM Command - Writing 0x55 to channel 33"
                 spi.write_register(33, 0x55)
                 #fl.flWriteChannel(handle, 33, 0x55)
-                time.sleep(0.001)
+                #time.sleep(WRITE_DELAY_S)
             print "Writing to Channel: 0x%X" % start_addr
             print "Data to Write: 0x%X" % write_data
             spi.write_register(start_addr, write_data)
             #fl.flWriteChannel(handle, start_addr, write_data)
-            time.sleep(0.001)
+            #time.sleep(WRITE_DELAY_S)
             ch_val = spi.read_register(start_addr)
             #ch_val = fl.flReadChannel(handle, start_addr) 
             print "New Channel Value: 0x%X" % ch_val
