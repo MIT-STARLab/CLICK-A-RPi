@@ -197,7 +197,7 @@ bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vect
 			// received something on the first (only) socket
 			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
 			//make sure message is for PAT process:
-			if((((uint32_t) getpid()) == write_ans_struct.return_address) && (request_number = write_ans_struct.request_number)){
+			if((((uint32_t) getpid()) == write_ans_struct.return_address) && (request_number == write_ans_struct.request_number)){
 				return !write_ans_struct.error_flag;
 			} 
 		}
