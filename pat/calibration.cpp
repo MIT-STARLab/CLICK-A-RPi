@@ -10,7 +10,7 @@
 // Also find the gains (function) associated with this range
 // Also save properties of spot for re-use in main routine
 //-----------------------------------------------------------------------------
-bool Calibration::findExposureRange(Group& calib)
+bool Calibration::findExposureRange(Group& calib, std::string filePath)
 //-----------------------------------------------------------------------------
 {
 	int gain = 0, exposure = CALIB_MAX_EXPOSURE/10, skip = camera.queuedCount;
@@ -38,7 +38,7 @@ bool Calibration::findExposureRange(Group& calib)
 			"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 			return false;
@@ -49,20 +49,20 @@ bool Calibration::findExposureRange(Group& calib)
 			"(init.histBrightest = ", init.histBrightest, ") <= (init.histPeak = ", init.histPeak, ")");
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 			return false;
 		}
 
-		if(init.histBrightest - init.histPeak <= TRACK_GOOD_PEAKTOMAX_DISTANCE){
+		if(init.histBrightest - init.histPeak <= CALIB_GOOD_PEAKTOMAX_DISTANCE){
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
 			"(init.histBrightest = ", init.histBrightest, ") - ",
 			"(init.histPeak = ", init.histPeak, ") = ", init.histBrightest - init.histPeak, 
-			" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE, ")");
+			" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE, ")");
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 			return false;
@@ -95,14 +95,15 @@ bool Calibration::findExposureRange(Group& calib)
 				{
 					Image frame(camera, fileStream, pat_health_port, smoothing);
 					if(frame.histBrightest > frame.histPeak &&
-					   frame.histBrightest - frame.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
+					   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE &&
 					   frame.performPixelGrouping() > 0)
 					{
 						spot = frame.groups[0];
 						// Find preferred exposure time (good brightness with no gain)
-						if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < TRACK_HAPPY_BRIGHTNESS)
+						if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < CALIB_HAPPY_BRIGHTNESS)
 						{
 							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
 							preferredExpo = exposure;
 							if(smoothing == 0)
 							{
@@ -147,13 +148,14 @@ bool Calibration::findExposureRange(Group& calib)
 			calib.valueMax = spot.valueMax;
 			calib.valueSum = spot.valueSum;
 			calib.pixelCount = spot.pixelCount;
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
 			return true;
 		}
 		else{
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: (num_groups = ", num_groups,") <= 0");
 			//save image debug telemetry
 			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 			log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
 			init.savePNG(imageFileName);
 		}
@@ -168,7 +170,7 @@ bool Calibration::findExposureRange(Group& calib)
 // Performs a spiral calibration pattern on detector with FSM
 // Collects 100 point pairs and calculates Detector -> FSM transformation parameters
 //-----------------------------------------------------------------------------
-bool Calibration::run(Group& calib)
+bool Calibration::run(Group& calib, std::string filePath)
 //-----------------------------------------------------------------------------
 {
 	std::vector<Pair> points;
@@ -212,7 +214,7 @@ bool Calibration::run(Group& calib)
 						"centerOffsetX = ", centerOffsetX, ", centerOffsetY = ", centerOffsetY);
 
 						std::string nameTag = std::string("CALIBRATION");
-						std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Saving image telemetry as: ", imageFileName);
 						frame.savePNG(imageFileName);
 					}
