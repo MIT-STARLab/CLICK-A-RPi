@@ -44,17 +44,19 @@ public:
 bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
 	// Send command to FPGA:
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
-	//std::this_thread::sleep_for(std::chrono::seconds(1));
 	// Check that message was received and FPGA was written to:
-	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+	return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	return return_val; 
 }
 
 //Turn Off Calibration Laser
 bool laserOff(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number = 0){
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, (bool) WRITE, request_number);
-	//std::this_thread::sleep_for(std::chrono::seconds(1));
 	// Check that message was received and FPGA was written to:
-	return check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+	return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	return return_val
 }
 
 //Convert Beacon Centroid to Error Angles for the Bus
@@ -284,7 +286,6 @@ int main() //int argc, char** argv
 						if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 							//save image
 							logImage(string("CMD_CALIB_LASER_TEST_ON"), camera, textFileOut, pat_health_port);
-
 							//switch laser off
 							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){ //turn calibration laser off
 								log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_LASER_TEST - laserOff FPGA command failed!");
