@@ -14,9 +14,11 @@ from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
 
-BUS_DATA_LEN = 4100 - 12 # from bus interface doc
+#TODO: confirm this length again
+BUS_DATA_LEN = 4100 - 14 # from bus interface doc
 
-SPI_XFER_LEN = 105
+TEST_PKT_DATA_LEN = 105
+TEST_PKT_APID = 0x305
 
 class Packetizer:
     context = zmq.Context()
@@ -37,27 +39,31 @@ class Packetizer:
         self.tx_socket.subscribe("")
 
     def send_test_pkt(self):
-        tx = []
-        tx = [0 for i in range(SPI_XFER_LEN)]
-        apid = 0x250
-        packet_len = SPI_XFER_LEN - 11
-        tx[0] = 0x35
-        tx[1] = 0x2E
-        tx[2] = 0xF8
-        tx[3] = 0x53
-        tx[4] = (apid >> 8) & 0xFF
-        tx[5] = (apid & 0xFF)
-        tx[6] = 0b11000000 #sequence count is 0
-        tx[7] = 0x00 #sequence count is 0
-        tx[8] = (packet_len >> 8) & 0xFF
-        tx[9] =  packet_len & 0xFF
-        i = 10
-        while ( i < SPI_XFER_LEN-12):
-          tx[i] = i % 0xFF
-          i += 1
-        crc = crc16.calc(tx[:SPI_XFER_LEN-2])
-        tx[SPI_XFER_LEN-2] = (crc >> 8) & 0xFF
-        tx[SPI_XFER_LEN-1] =  crc & 0xFF
+
+        pkt_data = [i for i in range(SPI_XFER_LEN)]
+
+        sync = []
+        sync.append(0x35)
+        sync.append(0x2E)
+        sync.append(0xF8)
+        sync.append(0x53)
+
+        pkt = [0 for i in range(TEST_PKT_DATA_LEN)]
+        pkt.append((apid >> 8) & 0b00000111)
+        pkt.append(apid & 0xFF)
+        pkt.append(0b11000000) #sequence count is 0
+        pkt.append(0x00) #sequence count is 0
+        pkt.append(((len(pkt_data) + 1) >> 8) & 0xFF)
+        pkt.append((len(pkt_data) + 1) & 0xFF)
+
+        pkt.extend(bytearray(pkt_data))
+
+        crc = crc16.calc(pkt)
+        pkt.extend([crc >> 8, crc & 0xFF])
+
+        bus_tx_pkt = []
+        bus_tx_pkt.extend(sync)
+        bus_tx_pkt.extend(pkt)
 
         self.spi.write(bytearray(tx))
 
@@ -74,23 +80,29 @@ class Packetizer:
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
         seq_cnt = 0
         seq_flag = 0b01
+
+
         while (len(pkt_data) > (BUS_DATA_LEN)):
+            sync = []
+            sync.append(0x35)
+            sync.append(0x2E)
+            sync.append(0xF8)
+            sync.append(0x53)
+
+            pkt = []
+            pkt.append((apid >> 8) & 0b00000111)
+            pkt.append(apid & 0xFF)
+            pkt.append((seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111))
+            pkt.append(seq_cnt & 0xFF)
+            pkt.append(((BUS_DATA_LEN + 1) >> 8) & 0xFF)
+            pkt.append((BUS_DATA_LEN + 1) & 0xFF)
+            pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
+            crc = crc16.calc(pkt)
+            pkt.extend([crc >> 8, crc & 0xFF])
+
             bus_tx_pkt = []
-            bus_tx_pkt.append(0x35)
-            bus_tx_pkt.append(0x2E)
-            bus_tx_pkt.append(0xF8)
-            bus_tx_pkt.append(0x53)
-            bus_tx_pkt.append((apid >> 8) & 0b00000111)
-            bus_tx_pkt.append(apid & 0xFF)
-            bus_tx_pkt.append((seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111))
-            bus_tx_pkt.append(seq_cnt & 0xFF)
-            bus_tx_pkt.append(((BUS_DATA_LEN - 1) >> 8) & 0xFF)
-            bus_tx_pkt.append((BUS_DATA_LEN -1) & 0xFF)
-
-            bus_tx_pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
-            crc = crc16.calc(bus_tx_pkt)
-            bus_tx_pkt.extend([crc >> 8, crc & 0xFF])
-
+            bus_tx_pkt.extend(sync)
+            bus_tx_pkt.extend(pkt)
 
             self.bus_pkts_buffer.append(bus_tx_pkt)
 
