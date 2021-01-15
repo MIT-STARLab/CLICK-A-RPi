@@ -340,6 +340,13 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut,  "In main.cpp CMD_FSM_TEST - laserOn FPGA command failed!");
 					}
 					break;
+
+				case CMD_BCN_ALIGN:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_BCN_ALIGN command. Proceeding to main PAT loop...");	
+					phase = ACQUISITION; //skip calibration for beacon alignment with GSE
+					openLoop = true; //transition to open-loop pointing after acquisition for alignment
+					STANDBY = false;
+					break;
 					
 				default:
 					log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
