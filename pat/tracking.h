@@ -12,6 +12,7 @@
 #define TRACK_MIN_EXPOSURE 1000 //minimum exposure limit, pg-comment
 #define TRACK_MAX_EXPOSURE 20000 //maximum exposure limit, pg
 #define TRACK_ACQUISITION_EXP_INCREMENT 1000 //exposure increment during acquisition, pg
+#define TRACK_MAX_GAIN 10 //maximum gain limit
 
 #define TRACK_ACQUISITION_BRIGHTNESS 300		// Minimum spot brightness to work with for acquisition
 #define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared

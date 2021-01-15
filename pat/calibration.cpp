@@ -144,10 +144,6 @@ bool Calibration::findExposureRange(Group& calib, std::string filePath)
 			lowestExpo = exposure;
 			gainMax = gain;
 			if(gain == 0 && preferredExpo > CALIB_MAX_EXPOSURE) preferredExpo = exposure;
-			// Copy over group parameters
-			calib.valueMax = spot.valueMax;
-			calib.valueSum = spot.valueSum;
-			calib.pixelCount = spot.pixelCount;
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
 			return true;
 		}
@@ -208,11 +204,18 @@ bool Calibration::run(Group& calib, std::string filePath)
 					Group& spot = frame.groups[0];
 					points.emplace_back(frame.area.x + spot.x, frame.area.y + spot.y, x, y);
 					if(i == 0){
+						//set center offset
 						centerOffsetX = (frame.area.x + spot.x) - CAMERA_WIDTH/2;
 						centerOffsetY = (frame.area.y + spot.y) - CAMERA_HEIGHT/2;
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - ",
 						"centerOffsetX = ", centerOffsetX, ", centerOffsetY = ", centerOffsetY);
-
+						//copy spot properties to calib
+						calib.x = frame.area.x + spot.x;
+						calib.y = frame.area.y + spot.y;
+						calib.valueMax = spot.valueMax;
+						calib.valueSum = spot.valueSum;
+						calib.pixelCount = spot.pixelCount;
+						//save image telemetry
 						std::string nameTag = std::string("CALIBRATION");
 						std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::run - Saving image telemetry as: ", imageFileName);

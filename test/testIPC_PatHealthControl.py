@@ -154,6 +154,8 @@ while True:
                 print "CMD_CALIB_LASER_TEST = ", CMD_CALIB_LASER_TEST
                 print "CMD_FSM_TEST = ", CMD_FSM_TEST
                 print "CMD_BCN_ALIGN = ", CMD_BCN_ALIGN
+                print "CMD_UPDATE_TX_OFFSET_X = ", CMD_UPDATE_TX_OFFSET_X
+                print "CMD_UPDATE_TX_OFFSET_Y = ", CMD_UPDATE_TX_OFFSET_Y
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
                         if(user_cmd in [CMD_GET_IMAGE, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]):
