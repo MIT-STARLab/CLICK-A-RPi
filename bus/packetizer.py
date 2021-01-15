@@ -104,13 +104,14 @@ class Packetizer:
             seq_flag = 0b11
         else:
             seq_flag = 0b10
-        ###Start Revised Packet Definition###
+
+        ###Start Revised Packet Definition - Tested and Works###
         sync = []
         sync.append(0x35)
         sync.append(0x2E)
         sync.append(0xF8)
         sync.append(0x53)
-        print('sync: ', sync)
+
         pkt = []
         pkt.append((apid >> 8) & 0b00000111)
         pkt.append(apid & 0xFF)
@@ -119,14 +120,13 @@ class Packetizer:
         pkt.append(((len(pkt_data) + 1) >> 8) & 0xFF) #include length of CRC = 2
         pkt.append((len(pkt_data) + 1) & 0xFF) #include length of CRC = 2
         pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
-        crc = crc16.calc(pkt)
+        crc = crc16.calc(pkt) #do not include sync bytes in this calculation (hence the separation of sync and pkt)
         pkt.extend([crc >> 8, crc & 0xFF])
-        print ('pkt: ', pkt)
 
         bus_tx_pkt = []
         bus_tx_pkt.extend(sync)
         bus_tx_pkt.extend(pkt)
-        print('bus_tx_pkt: ', bus_tx_pkt)
+        print('bus_tx_pkt: ', bus_tx_pkt) #for debug
         ###End Revised Packet Definition###
 
         self.bus_pkts_buffer.append(bus_tx_pkt)
