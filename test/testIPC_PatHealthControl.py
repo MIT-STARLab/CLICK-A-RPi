@@ -28,8 +28,10 @@ CMD_CALIB_TEST = 0x07
 CMD_CALIB_LASER_TEST = 0x08
 CMD_FSM_TEST = 0x09
 CMD_BCN_ALIGN = 0x0A
+CMD_UPDATE_TX_OFFSET_X = 0x0B
+CMD_UPDATE_TX_OFFSET_Y = 0x0C
 
-cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST, CMD_BCN_ALIGN]
+cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST, CMD_BCN_ALIGN, CMD_UPDATE_TX_OFFSET, CMD_UPDATE_TX_OFFSET_Y]
 
 # ~ class IpcPacket:
     # ~ def __init__(self): pass
@@ -164,6 +166,14 @@ while True:
                                         exp_cmd = 10000000
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(exp_cmd))     
+                        elif(user_cmd == CMD_UPDATE_TX_OFFSET_X):
+                                tx_offset_x = int(input("Update Tx Offset X: "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_x))
+                        elif(user_cmd == CMD_UPDATE_TX_OFFSET_Y):
+                                tx_offset_y = int(input("Update Tx Offset Y: "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_y))
                         else:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
