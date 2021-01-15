@@ -119,13 +119,14 @@ class Packetizer:
         pkt.append(((len(pkt_data) + 1) >> 8) & 0xFF) #include length of CRC = 2
         pkt.append((len(pkt_data) + 1) & 0xFF) #include length of CRC = 2
         pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
-        print ('pkt: ', pkt)
         crc = crc16.calc(pkt)
         pkt.extend([crc >> 8, crc & 0xFF])
+        print ('pkt: ', pkt)
 
         bus_tx_pkt = []
         bus_tx_pkt.extend(sync)
         bus_tx_pkt.extend(pkt)
+        print('bus_tx_pkt: ', bus_tx_pkt)
         ###End Revised Packet Definition###
 
         self.bus_pkts_buffer.append(bus_tx_pkt)
