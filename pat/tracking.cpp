@@ -9,6 +9,7 @@ bool Tracking::runAcquisition(Group& beacon)
 //-----------------------------------------------------------------------------
 {
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
+	uint16_t command;
 
 	camera.setFullWindow();
 	camera.config->binningMode.write(cbmBinningHV);
