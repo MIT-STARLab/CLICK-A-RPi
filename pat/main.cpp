@@ -159,7 +159,7 @@ int main() //int argc, char** argv
 	double propertyDifference = 0;
 	//int centerOffsetX = OFFSET_X; 
 	//int centerOffsetY = OFFSET_Y; 
-	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
+	bool openLoop = false, staticPoint = false, sendBusFeedback = false, bcnAlignment = false; 
 	uint16_t command; 
 	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
@@ -344,6 +344,7 @@ int main() //int argc, char** argv
 				case CMD_BCN_ALIGN:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_BCN_ALIGN command. Proceeding to main PAT loop...");	
 					phase = ACQUISITION; //skip calibration for beacon alignment with GSE
+					bcnAlignment = true; //ignore laser off commands
 					openLoop = true; //transition to open-loop pointing after acquisition for alignment
 					STANDBY = false;
 					break;
@@ -478,7 +479,7 @@ int main() //int argc, char** argv
 			// Beacon acquisition phase, internal laser has to be off!
 			case ACQUISITION:
 				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switching off Cal Laser.");
-				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for acquistion
+				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for acquistion
 					if(track.runAcquisition(beacon)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 					{
 						// Acquisition passed!
@@ -852,7 +853,7 @@ int main() //int argc, char** argv
 
 			// Control in open-loop, sampling only beacon spot!
 			case OPEN_LOOP:
-				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for open-loop
+				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for open-loop
 					// Request new frame
 					camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
 					camera.setWindow(beaconWindow);
