@@ -1,5 +1,4 @@
 from multiprocessing import Process
-from time import sleep
 
 import sys
 import time
@@ -9,6 +8,7 @@ import zmq
 
 import struct
 import psutil
+import binascii
 
 sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('../lib/')
@@ -17,11 +17,11 @@ from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, CH_HEARTBEAT_PD, TLM_HK_CPU, TLM_HK_PAT, TLM_HK_FPGA_MAP
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
-FPGA_CHECK_PD = 6000
-CPU_CHECK_PD = 6000
-
-PAT_HEALTH_PD = 6000
-FPGA_ANS_PD = 6000
+FPGA_CHECK_PD = 1
+CPU_CHECK_PD = 1000
+CH_HEARTBEAT_PD = 1000
+PAT_HEALTH_PD = 1000
+FPGA_ANS_PD = 1000
 
 ## 1 indicates the housekeeper will send packets
 ## 0 indicates the housekeeper will not send packets
@@ -57,46 +57,48 @@ class Housekeeping:
         self.poller.register(self.hk_control_socket, zmq.POLLIN)
         self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
         self.poller.register(self.fpga_ans_socket, zmq.POLLIN)
-        # self.poller.register(fpga_req_socket, zmq.POLLOUT)
-        # self.poller.register(tx_socket, zmq.POLLOUT)
         self.fpga_ans_socket.setsockopt(zmq.SUBSCRIBE, str(self.pid).encode('ascii'))
 
     def check_fpga_mmap(self):
+        print("Sending request to FPGA")
         pkt = FPGAMapRequestPacket()
+
         tc_pkt = pkt.encode(self.pid, 0, 0, 0, 15) # registers 0 through 14
-        self.fpga_req_socket.send(tc_pkt)
-        tc_pkt = pkt.encode(self.pid, 1, 0, 32, 7) # registers 32 through 38
-        self.fpga_req_socket.send(tc_pkt)
+        # self.fpga_req_socket.send(tc_pkt)
+
+        #tc_pkt = pkt.encode(self.pid, 1, 0, 32, 7) # registers 32 through 38
+        tc_pkt = pkt.encode(self.pid, 1, 0, POWER_MANAGEMENT_BLOCK[0], POWER_MANAGEMENT_BLOCK[1])
+        # self.fpga_req_socket.send(tc_pkt)
+
         tc_pkt = pkt.encode(self.pid, 2, 0, 49, 20) # registers 49 through 68
-        self.fpga_req_socket.send(tc_pkt)
+        # self.fpga_req_socket.send(tc_pkt)
         tc_pkt = pkt.encode(self.pid, 3, 0, 96, 22) # registers 96 through 117
+
         return
 
     def check_cpu(self):
-
         pkt = bytearray()
 
         mem = psutil.virtual_memory()
-        mem_total = mem.total
         mem_available = mem.available
-        #print("MemTotal: ", mem_total, "MemAvailable: ", mem_available)
-
         pkt.extend(struct.pack('L', mem_available))
 
         for p in psutil.process_iter(['pid','name','cpu_percent','memory_percent']):
             p_name = p.info['name']
             if p_name in self.procs:
-                print(p_name, ": ", p.cpu_percent(), " - ", p.memory_percent('uss'))
                 pkt.extend(struct.pack('B', self.procs[p_name]))
                 pkt.extend(struct.pack('L', int(p.cpu_percent())))
                 pkt.extend(struct.pack('L', int(p.memory_percent('uss'))))
 
         count = 0
-        with open('/mnt/journal/id.txt', 'r') as boot_id_list:
-            for count, l in enumerate(boot_id_list, 1):
-                pass
-
-        pkt.extend(struct.pack('B', count))
+        # Add error handling on this!!
+        try:
+            with open('/mnt/journal/id.txt', 'r') as boot_id_list:
+                for count, l in enumerate(boot_id_list, 1):
+                    pass
+            pkt.extend(struct.pack('B', count))
+        except:
+            pkt.extend([0xFF])
 
         return pkt
 
@@ -128,11 +130,12 @@ class Housekeeping:
 
 
 
-        raw_pkt = pkt.encode(apid, payload)
+        raw_pkt = pkt.encode(apid, str(payload))
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process):
-        status = subprocess.call("systemctl --user restart " + process)
+        #status = subprocess.call("systemctl --user restart " + process)
+        print("Restart process: "+"systemctl --user restart " + process)
 
     def handle_hk_command(self, command):
         hk = HousekeepingControlPacket()
@@ -150,7 +153,7 @@ class Housekeeping:
         ch_heartbeat_ts = curr_time
         fpga_ans_ts = curr_time
 
-        hk_send_mode = HK_SEND_MODE
+        fpga_req_num_cnt = 0
 
         while True:
             ## Check if it's time to check FPGA health or memory, do so if necessary
@@ -176,6 +179,7 @@ class Housekeeping:
             elif self.fpga_ans_socket in sockets and sockets[self.fpga_ans_socket] == zmq.POLLIN:
                 message = self.fpga_ans_socket.recv()
                 self.handle_hk_pkt(message, 'fpga')
+                fpga_ans_ts = time.time()
                 ##handle fpga health packet
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
@@ -192,8 +196,6 @@ class Housekeeping:
                     self.handle_hk_pkt(message, 'ch')
                     ##handle ch health packet
 
-
-
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
                 self.handle_hk_command(message)
@@ -202,17 +204,26 @@ class Housekeeping:
             curr_time = time.time()
             if ((curr_time - pat_health_packet_ts) > PAT_HEALTH_PD):
                 self.restart_process("camera")
+                pat_health_packet_ts = curr_time
 
             if ((curr_time - ch_heartbeat_ts) > CH_HEARTBEAT_PD):
                 self.restart_process("commandhandler")
+                ch_heartbeat_ts = curr_time
 
-            if ((fpga_ans_ts - fpga_check_ts) < 0) and ((curr_time - fpga_check_ts) > FPGA_CHECK_PD):
+            if ((fpga_ans_ts - fpga_check_ts) < 0) and ((curr_time - fpga_check_ts) > FPGA_ANS_PD):
                 self.restart_process("fpga")
+                fpga_ans_ts = curr_time
+                fpga_check_ts = curr_time
 
             if (HK_SEND_MODE):
                 ## Send to tx socket
                 while self.packet_buf:
                     self.tx_socket.send(self.packet_buf.pop(0))
+            else:
+                while self.packet_buf:
+                    print(binascii.hexlify(self.packet_buf.pop(0)))
+
+            time.sleep(1)
 
 if __name__ == '__main__':
     housekeeper = Housekeeping()
