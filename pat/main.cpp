@@ -27,6 +27,8 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
+#define TX_OFFSET_X 0 //pixels, from GSE calibration
+#define TX_OFFSET_Y 0 //pixels, from GSE calibration
 
 using namespace std;
 using namespace std::chrono;
@@ -157,8 +159,7 @@ int main() //int argc, char** argv
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
-	//int centerOffsetX = OFFSET_X; 
-	//int centerOffsetY = OFFSET_Y; 
+	int tx_offset_x = TX_OFFSET_X, tx_offset_y = TX_OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false, bcnAlignment = false; 
 	uint16_t command; 
 	int command_exposure;  
@@ -397,9 +398,16 @@ int main() //int argc, char** argv
 		zmq::poll(poll_pat_control.data(), 1, 10); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN) {
 			// received something on the first (only) socket
-			command = receive_packet_pat_control(pat_control_port);
+			char command_data[CMD_PAYLOAD_SIZE];
+			command = receive_packet_pat_control(pat_control_port, command_data);
 			if (command == CMD_END_PAT){
 			  break;
+			} else if(command == CMD_UPDATE_TX_OFFSET_X){
+				tx_offset_x = atoi(command_data); 
+				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", tx_offset_x);
+			} else if(command == CMD_UPDATE_TX_OFFSET_Y){
+				tx_offset_y = atoi(command_data); 
+				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", tx_offset_y);
 			}
 		}
 		if(track.received_end_pat_cmd){ break;}
@@ -758,8 +766,8 @@ int main() //int argc, char** argv
 											calib.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, calibWindow);
 											// Control in closed loop!
-											double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-											double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+											double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
+											double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
 											track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 
 											check_csv_write = steady_clock::now(); // Record current time
