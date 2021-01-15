@@ -188,7 +188,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
 
 // Check FPGA write request
-bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint8_t request_number)
+bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint16_t channel, uint8_t request_number)
 {
 	// Listen for FPGA answer:
 	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
@@ -197,17 +197,21 @@ bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vect
 			// received something on the first (only) socket
 			fpga_answer_struct write_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, WRITE);
 			//make sure message is for PAT process:
-			std::cout << "In packedef.cpp - check_fpga_map_write_request: Response Attempt = " << i << std::endl;
-			std::cout << "In packedef.cpp - check_fpga_map_write_request: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
-			std::cout << "In packedef.cpp - check_fpga_map_write_request: return_address (Rx) = " << write_ans_struct.return_address << std::endl;
-			std::cout << "In packedef.cpp - check_fpga_map_write_request: request_number (Tx) = " << unsigned(request_number) << std::endl;
-			std::cout << "In packedef.cpp - check_fpga_map_write_request: request_number (Rx) = " << unsigned(write_ans_struct.request_number) << std::endl;
-			std::cout << "In packedef.cpp - check_fpga_map_write_request: start_address (Rx) = " << write_ans_struct.start_address << std::endl;
-			if((((uint32_t) getpid()) == write_ans_struct.return_address) && (request_number == write_ans_struct.request_number)){
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: Response Attempt = " << i << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: return_address (Rx) = " << write_ans_struct.return_address << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: request_number (Tx) = " << unsigned(request_number) << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: request_number (Rx) = " << unsigned(write_ans_struct.request_number) << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: start_address (Tx) = " << channel << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: start_address (Rx) = " << write_ans_struct.start_address << std::endl;
+			// std::cout << "In packedef.cpp - check_fpga_map_write_request: error_flag = " << write_ans_struct.error_flag << std::endl;
+			if((((uint32_t) getpid()) == write_ans_struct.return_address) &&
+				(request_number == write_ans_struct.request_number) && 
+				(channel == write_ans_struct.start_address)){
 				return !write_ans_struct.error_flag;
 			} 
 		}
 	}
-	std::cout << "In packedef.cpp - check_fpga_map_write_request: FPGA MAP Check Timeout!" << std::endl; 
+	// std::cout << "In packedef.cpp - check_fpga_map_write_request: FPGA MAP Check Timeout!" << std::endl; 
 	return false; //timeout
 }
