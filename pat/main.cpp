@@ -345,7 +345,7 @@ int main() //int argc, char** argv
 				case CMD_BCN_ALIGN:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_BCN_ALIGN command. Proceeding to main PAT loop...");	
 					phase = ACQUISITION; //skip calibration for beacon alignment with GSE
-					bcnAlignment = true; //ignore laser off commands
+					bcnAlignment = true; //ignore laser off commands and skip open-loop fsm commands
 					openLoop = true; //transition to open-loop pointing after acquisition for alignment
 					STANDBY = false;
 					break;
@@ -449,7 +449,7 @@ int main() //int argc, char** argv
 					{
 						haveCalibKnowledge = true; 
 						calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
-						log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure = ", calibExposure, " us.");
+						log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
 						if(staticPoint)
 						{
 							phase = STATIC_POINT;

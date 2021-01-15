@@ -204,7 +204,6 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 			}
 			else break;
 		}
-		else return false;
 	}
 	log(pat_health_port, fileStream, "In tracking.cpp Tracking::windowAndTune - Camera tuning failed.");
 	return false;
@@ -233,8 +232,8 @@ bool Tracking::autoTuneExposure(Group& beacon)
 				beacon.valueMax = spot.valueMax;
 				beacon.valueSum = spot.valueSum;
 				beacon.pixelCount = spot.pixelCount;
-				if(desaturating && spot.valueMax <= TRACK_HAPPY_BRIGHTNESS) return true;
-				if(!desaturating && spot.valueMax >= TRACK_HAPPY_BRIGHTNESS) return true;
+				if(desaturating && (spot.valueMax <= TRACK_HAPPY_BRIGHTNESS)) return true;
+				if(!desaturating && (spot.valueMax >= TRACK_HAPPY_BRIGHTNESS)) return true;
 				updateTrackingWindow(test, spot, tuningWindow);
 				camera.setWindow(tuningWindow);
 			}
@@ -254,58 +253,89 @@ bool Tracking::autoTuneExposure(Group& beacon)
 
 			if(frame.performPixelGrouping() > 0)
 			{
-				// Check if we are actually good?
-				if(abs((int)frame.groups[0].valueMax - TRACK_HAPPY_BRIGHTNESS) < TRACK_TUNING_TOLERANCE) return true;
-
-				// Nah, update window and start changing parameters
-				updateTrackingWindow(frame, frame.groups[0], tuningWindow);
+				Group& spot = frame.groups[0];
+				// Check if tuning is necessary
+				if(abs((int)spot.valueMax - TRACK_HAPPY_BRIGHTNESS) < TRACK_TUNING_TOLERANCE){
+					// Copy properties
+					beacon.x = frame.area.x + spot.x;
+					beacon.y = frame.area.y + spot.y;
+					beacon.valueMax = spot.valueMax;
+					beacon.valueSum = spot.valueSum;
+					beacon.pixelCount = spot.pixelCount;
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Tuning unneccessary. Exiting...");
+					return true;
+				}
+				// Start Tuning
+				updateTrackingWindow(frame, spot, tuningWindow);
 				camera.setWindow(tuningWindow);
+				bool desaturating;
 
-				if(frame.groups[0].valueMax > TRACK_HAPPY_BRIGHTNESS)
+				if(spot.valueMax > TRACK_HAPPY_BRIGHTNESS)
 				{
-					// Start decreasing gain if it's non-zero
-					for(int gain = camera.config->gain_dB.read(); gain > 0; gain--)
-					{
-						camera.config->gain_dB.write(gain - 1);
-						if(test(true)) return true;
-					}
-
+					desaturating = true;
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
+					"(frame.groups[0].valueMax = ", frame.groups[0].valueMax, ") > (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Reducing exposure..."); 
 					// Start decreasing exposure
 					for(int exposure = camera.config->expose_us.read(); exposure >= TRACK_MIN_EXPOSURE && exposure/TRACK_TUNING_EXP_DIVIDER >= 1; exposure -= exposure/TRACK_TUNING_EXP_DIVIDER)
 					{
-						camera.config->expose_us.write(exposure - exposure/TRACK_TUNING_EXP_DIVIDER);
-						if(test(true)) return true;
+						exposure = exposure - exposure/TRACK_TUNING_EXP_DIVIDER); 
+						camera.config->expose_us.write(exposure);
+						if(test(desaturating)){
+							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning successful. exposure = ", exposure);
+							return true;
+						}
+					}
+
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning failed. Reducing gain...");
+					// Start decreasing gain if it's non-zero
+					for(int gain = camera.config->gain_dB.read(); gain > 0; gain--)
+					{
+						gain = gain - 1;
+						camera.config->gain_dB.write(gain);
+						if(test(desaturating)){
+							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain, " (exposure = ", exposure,")");
+							return true;
+						}
 					}
 
 					// Camera reached lower limit, too high power
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to desaturate camera");
-					return true;
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reduce brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with minimum parameters: TRACK_MIN_EXPOSURE = ", TRACK_MIN_EXPOSURE, ", gain = 0");
 				}
 				// Otherwise, have to increase exposure
 				else
 				{
-					// Start increasing exposure; again here top limit should be calib laser saturation
+					desaturating = false; 
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
+					"(frame.groups[0].valueMax = ", frame.groups[0].valueMax, ") <= (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Increasing exposure...");
+					// Start increasing exposure
 					for(int exposure = camera.config->expose_us.read(); exposure <= TRACK_MAX_EXPOSURE; exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
 					{
-						camera.config->expose_us.write(exposure + exposure/TRACK_TUNING_EXP_DIVIDER);
-						if(test(false)) return true;
+						exposure = exposure + exposure/TRACK_TUNING_EXP_DIVIDER;
+						camera.config->expose_us.write(exposure);
+						if(test(desaturating)){
+							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning successful. exposure = ", exposure);
+							return true;
+						}
 					}
 
 					// Start increasing gain
-					for(int gain = camera.config->gain_dB.read(); gain <= 10; gain++)
+					for(int gain = camera.config->gain_dB.read(); gain <= TRACK_MAX_GAIN; gain++)
 					{
-						camera.config->gain_dB.write(gain + 1);
-						if(test(false)) return true;
+						gain = gain + 1;
+						camera.config->gain_dB.write(gain);
+						if(test(desaturating)){
+							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain, " (exposure = ", exposure,")");
+							return true;
+						}
 					}
 
 					// Very high parameters reached
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reach desired brightness with maximum parameters");
-					return true;
+					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: TRACK_MAX_EXPOSURE = ", TRACK_MAX_EXPOSURE, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
 				}
 			}
 		}
 	}
-	log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure auto tuning failed.");
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure auto tuning failed!");
 	return false;
 }
 
@@ -418,8 +448,8 @@ void Tracking::controlOpenLoop(FSM& fsm, double x, double y)
 	actionY = calibration.affineTransformY(x, y);
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = steady_clock::now();
-	log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Updating FSM position to: ",
-	"x_pxls = ", x, " -> x_normalized = ", actionX, ". ", "y_pxls = ", y, " -> y_normalized = ", actionY, ". ");
+	// log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Updating FSM position to: ",
+	// "x_pxls = ", x, " -> x_normalized = ", actionX, ". ", "y_pxls = ", y, " -> y_normalized = ", actionY, ". ");
 	//if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
 	//if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
@@ -464,9 +494,9 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	// Update output
 	fsm.setNormalizedAngles(actionX, actionY);
 	lastUpdate = now;
-	log(pat_health_port, fileStream, "In Tracking::control - Updating FSM position: ",
-	"x_current = ", x, " -> x_setpoint = ", spX, " -> x_normalized = ", actionX, ". ", 
-	"y_current = ", y, " -> y_setpoint = ", spY, " -> y_normalized = ", actionY, ". ");
+	// log(pat_health_port, fileStream, "In Tracking::control - Updating FSM position: ",
+	// "x_current = ", x, " -> x_setpoint = ", spX, " -> x_normalized = ", actionX, ". ", 
+	// "y_current = ", y, " -> y_setpoint = ", spY, " -> y_normalized = ", actionY, ". ");
 	//if((actionX > 0.3) || (actionX < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionX| = |", actionX, "|) > 0.3");}
 	//if((actionY > 0.3) || (actionY < -0.3)){log(pat_health_port, fileStream, "In Tracking::controlOpenLoop - Warning: (|actionY| = |", actionY, "|) > 0.3");}
 }
