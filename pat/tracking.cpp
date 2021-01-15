@@ -33,6 +33,18 @@ bool Tracking::runAcquisition(Group& beacon)
 	exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
 
 	while(searching_up || searching_down){
+		// Listen for CMD_END_PAT 		
+		zmq::poll(poll_pat_control.data(), 1, 10); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(poll_pat_control[0].revents & ZMQ_POLLIN) {
+			// received something on the first (only) socket
+			command = receive_packet_pat_control(pat_control_port);
+			if (command == CMD_END_PAT){
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PAT");
+			  	received_end_pat_cmd = true;
+			  	return false; 
+			}
+		}
+
 		//try search up:
 		if(exposure_up <= TRACK_MAX_EXPOSURE){
 			log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_up);
@@ -47,6 +59,18 @@ bool Tracking::runAcquisition(Group& beacon)
 		} else{
 			searching_up = false;
 		}		
+
+		// Listen for CMD_END_PAT 		
+		zmq::poll(poll_pat_control.data(), 1, 10); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(poll_pat_control[0].revents & ZMQ_POLLIN) {
+			// received something on the first (only) socket
+			command = receive_packet_pat_control(pat_control_port);
+			if (command == CMD_END_PAT){
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PAT");
+			  	received_end_pat_cmd = true;
+			  	return false; 
+			}
+		}
 		
 		//try search down:
 		if(exposure_down >= TRACK_MIN_EXPOSURE){

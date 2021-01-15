@@ -9,9 +9,9 @@
 #include "log.h"
 
 #define TRACK_GUESS_EXPOSURE 300000 //guess at beacon exposure
-#define TRACK_MIN_EXPOSURE 10000 //minimum exposure limit, pg-comment
+#define TRACK_MIN_EXPOSURE 100000 //minimum exposure limit, pg-comment
 #define TRACK_MAX_EXPOSURE 1000000 //maximum exposure limit, pg
-#define TRACK_ACQUISITION_EXP_INCREMENT 10000 //exposure increment during acquisition, pg
+#define TRACK_ACQUISITION_EXP_INCREMENT 100000 //exposure increment during acquisition, pg
 
 #define TRACK_ACQUISITION_BRIGHTNESS 300		// Minimum spot brightness to work with for acquisition
 #define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared
@@ -49,14 +49,16 @@ class Tracking
 	time_point<steady_clock> lastUpdate;
 	std::ofstream &fileStream;
 	zmq::socket_t &pat_health_port;
-
+	zmq::socket_t &pat_control_port;
+	std::vector<zmq::pollitem_t>& poll_pat_control;
+	bool received_end_pat_cmd = false; 
 	bool verifyFrame(Image& frame);
 	bool windowAndTune(Image& frame, Group& beacon);
 	bool autoTuneExposure(Group& beacon);
 public:
 	int beaconSmoothing;
 	double actionX, actionY;
-	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_health_port(pat_health_port_in), beaconSmoothing(0), actionX(0), actionY(0) {};
+	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), beaconSmoothing(0), actionX(0), actionY(0) {};
 	bool runAcquisition(Group& beacon);
 	int findSpotCandidate(Image& frame, Group& oldSpot, double *difference);
 	void updateTrackingWindow(Image& frame, Group& spot, AOI& window);

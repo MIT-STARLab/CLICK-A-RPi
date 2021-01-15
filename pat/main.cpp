@@ -21,12 +21,12 @@
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
 #define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
-#define MAX_ACQUISITION_ATTEMPTS 3 //number of times to attempt beacon acquisition
+#define MAX_ACQUISITION_ATTEMPTS 100 //number of times to attempt beacon acquisition
 #define PERIOD_BEACON_LOSS 5.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
-#define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off
+#define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 
 using namespace std;
 using namespace std::chrono;
@@ -189,7 +189,7 @@ int main() //int argc, char** argv
 	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port);
+	Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 	
 	// Standby for command:
@@ -394,6 +394,7 @@ int main() //int argc, char** argv
 			  break;
 			}
 		}
+		if(track.received_end_pat_cmd){ break;}
 		
 		check_heartbeat = steady_clock::now(); // Record current time
 		elapsed_time_heartbeat = check_heartbeat - time_prev_heartbeat; // Calculate time since heartbeat tlm
@@ -498,6 +499,7 @@ int main() //int argc, char** argv
 					}
 					else
 					{
+						if(track.received_end_pat_cmd){ break;}
 						haveBeaconKnowledge = false; 
 						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - track.runAcquisition failed!");
 						num_acquisition_attempts++;

@@ -26,6 +26,7 @@ fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_
 	sendCommand(DAC_ENABLE_ALL_DAC_CHANNELS);
 	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding DAC_ENABLE_SOFTWARE_LDAC = ", DAC_ENABLE_SOFTWARE_LDAC);
 	sendCommand(DAC_ENABLE_SOFTWARE_LDAC);
+	std::this_thread::sleep_for(std::chrono::milliseconds(5)); //initialization delay
 	log(pat_health_port, fileStream, "Initializing FSM DAC - Commanding Normalized Angles to (0,0).");
 	setNormalizedAngles(0, 0);
 }
@@ -116,5 +117,5 @@ void FSM::fsmWrite(uint16_t channel, uint8_t data)
 		log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
 	};
 	fsm_request_number = (fsm_request_number + 1) % 0xFF; //increment request number modulo size(uint8_t)
-	//std::this_thread::sleep_for(std::chrono::milliseconds(3));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1)); //cmd delay
 }
