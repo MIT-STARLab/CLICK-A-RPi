@@ -144,6 +144,12 @@ bool Tracking::verifyFrame(Image& frame)
 		}
 		else log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
 	}
+	else{
+		log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame property check failed! ",
+			"frame.histBrightest = ", frame.histBrightest, " should be >= TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,
+			", and frame.histBrightest = ", frame.histBrightest, " should be > frame.histPeak = ", frame.histPeak,
+			", and (frame.histBrightest - frame.histPeak) = ", frame.histBrightest - frame.histPeak, " should be > TRACK_GOOD_PEAKTOMAX_DISTANCE = ", TRACK_GOOD_PEAKTOMAX_DISTANCE);
+	}
 	return false;
 }
 
