@@ -26,6 +26,7 @@
 #define CMD_CALIB_LASER_TEST 0x08
 #define CMD_FSM_TEST 0x09
 #define CMD_BCN_ALIGN 0x0A
+#define CMD_UPDATE_TX_OFFSET 0x0B
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{
