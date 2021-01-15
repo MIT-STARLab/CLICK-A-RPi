@@ -27,8 +27,9 @@ CMD_GET_IMAGE = 0x06
 CMD_CALIB_TEST = 0x07
 CMD_CALIB_LASER_TEST = 0x08
 CMD_FSM_TEST = 0x09
+CMD_BCN_ALIGN = 0x0A
 
-cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]
+cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST, CMD_BCN_ALIGN]
 
 # ~ class IpcPacket:
     # ~ def __init__(self): pass
@@ -150,6 +151,7 @@ while True:
                 print "CMD_CALIB_TEST = ", CMD_CALIB_TEST
                 print "CMD_CALIB_LASER_TEST = ", CMD_CALIB_LASER_TEST
                 print "CMD_FSM_TEST = ", CMD_FSM_TEST
+                print "CMD_BCN_ALIGN = ", CMD_BCN_ALIGN
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
                         if(user_cmd in [CMD_GET_IMAGE, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]):
