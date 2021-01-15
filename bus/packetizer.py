@@ -104,22 +104,29 @@ class Packetizer:
             seq_flag = 0b11
         else:
             seq_flag = 0b10
+        ###Start Revised Packet Definition###
+        sync = []
+        sync.append(0x35)
+        sync.append(0x2E)
+        sync.append(0xF8)
+        sync.append(0x53)
+        print('sync: ', sync)
+        pkt = []
+        pkt.append((apid >> 8) & 0b00000111)
+        pkt.append(apid & 0xFF)
+        pkt.append((seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111))
+        pkt.append(seq_cnt & 0xFF)
+        pkt.append(((len(pkt_data) + 1) >> 8) & 0xFF) #include length of CRC = 2
+        pkt.append((len(pkt_data) + 1) & 0xFF) #include length of CRC = 2
+        pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
+        print ('pkt: ', pkt)
+        crc = crc16.calc(pkt)
+        pkt.extend([crc >> 8, crc & 0xFF])
 
         bus_tx_pkt = []
-        bus_tx_pkt.append(0x35)
-        bus_tx_pkt.append(0x2E)
-        bus_tx_pkt.append(0xF8)
-        bus_tx_pkt.append(0x53)
-        bus_tx_pkt.append((apid >> 8) & 0b00000111)
-        bus_tx_pkt.append(apid & 0xFF)
-        bus_tx_pkt.append((seq_flag << 6) | ((seq_cnt >> 8) & 0b00111111))
-        bus_tx_pkt.append(seq_cnt & 0xFF)
-        bus_tx_pkt.append(((len(pkt_data) - 1) >> 8) & 0xFF)
-        bus_tx_pkt.append((len(pkt_data) - 1) & 0xFF)
-
-        bus_tx_pkt.extend(bytearray(pkt_data[:BUS_DATA_LEN]))
-        crc = crc16.calc(bus_tx_pkt)
-        bus_tx_pkt.extend([crc >> 8, crc & 0xFF])
+        bus_tx_pkt.extend(sync)
+        bus_tx_pkt.extend(pkt)
+        ###End Revised Packet Definition###
 
         self.bus_pkts_buffer.append(bus_tx_pkt)
 
