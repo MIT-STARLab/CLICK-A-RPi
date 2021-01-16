@@ -27,6 +27,8 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
+#define TX_OFFSET_X 0 //pixels, from GSE calibration
+#define TX_OFFSET_Y 0 //pixels, from GSE calibration
 
 using namespace std;
 using namespace std::chrono;
@@ -157,9 +159,8 @@ int main() //int argc, char** argv
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
-	//int centerOffsetX = OFFSET_X; 
-	//int centerOffsetY = OFFSET_Y; 
-	bool openLoop = false, staticPoint = false, sendBusFeedback = false;
+	int tx_offset_x = TX_OFFSET_X, tx_offset_y = TX_OFFSET_Y; 
+	bool openLoop = false, staticPoint = false, sendBusFeedback = false, bcnAlignment = false; 
 	uint16_t command; 
 	int command_exposure;  
 	int cl_beacon_num_groups, cl_calib_num_groups;
@@ -340,6 +341,14 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut,  "In main.cpp CMD_FSM_TEST - laserOn FPGA command failed!");
 					}
 					break;
+
+				case CMD_BCN_ALIGN:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_BCN_ALIGN command. Proceeding to main PAT loop...");	
+					phase = ACQUISITION; //skip calibration for beacon alignment with GSE
+					bcnAlignment = true; //ignore laser off commands and skip open-loop fsm commands
+					openLoop = true; //transition to open-loop pointing after acquisition for alignment
+					STANDBY = false;
+					break;
 					
 				default:
 					log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
@@ -389,9 +398,16 @@ int main() //int argc, char** argv
 		zmq::poll(poll_pat_control.data(), 1, 10); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN) {
 			// received something on the first (only) socket
-			command = receive_packet_pat_control(pat_control_port);
+			char command_data[CMD_PAYLOAD_SIZE];
+			command = receive_packet_pat_control(pat_control_port, command_data);
 			if (command == CMD_END_PAT){
 			  break;
+			} else if(command == CMD_UPDATE_TX_OFFSET_X){
+				tx_offset_x = atoi(command_data); 
+				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", tx_offset_x);
+			} else if(command == CMD_UPDATE_TX_OFFSET_Y){
+				tx_offset_y = atoi(command_data); 
+				log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", tx_offset_y);
 			}
 		}
 		if(track.received_end_pat_cmd){ break;}
@@ -433,7 +449,7 @@ int main() //int argc, char** argv
 					{
 						haveCalibKnowledge = true; 
 						calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
-						log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib Exposure = ", calibExposure, " us.");
+						log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
 						if(staticPoint)
 						{
 							phase = STATIC_POINT;
@@ -471,7 +487,7 @@ int main() //int argc, char** argv
 			// Beacon acquisition phase, internal laser has to be off!
 			case ACQUISITION:
 				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switching off Cal Laser.");
-				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for acquistion
+				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for acquistion
 					if(track.runAcquisition(beacon)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 					{
 						// Acquisition passed!
@@ -750,8 +766,8 @@ int main() //int argc, char** argv
 											calib.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, calibWindow);
 											// Control in closed loop!
-											double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-											double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+											double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
+											double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
 											track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 
 											check_csv_write = steady_clock::now(); // Record current time
@@ -845,7 +861,7 @@ int main() //int argc, char** argv
 
 			// Control in open-loop, sampling only beacon spot!
 			case OPEN_LOOP:
-				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for open-loop
+				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for open-loop
 					// Request new frame
 					camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
 					camera.setWindow(beaconWindow);
