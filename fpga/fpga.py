@@ -1,7 +1,151 @@
 #!/usr/bin/env python
 import sys
+sys.path.append('/root/lib/')
 import zmq
-import time
+import struct
+import options
+import ipc_helper
+import fpga_map
+
+
+class FPGABusBase:
+    def __init__(self): pass
+    
+    def read_register(self, addr):
+        return self.transfer( (addr,), (0,), (0,) )[0][0]
+        
+    def write_register(self, addr, value):
+        return self.transfer( (addr,), (1,), (value,) )[0][0]
+
+class SPIBus(FPGABusBase):
+    def __init__(self):
+        FPGABus.__init__(self)
+        import spidev
+        
+        self.spi = spidev.SpiDev()
+           
+    def transfer(self, addr_in, is_write, values):
+    
+        # Prepare data
+        iter_input = zip(addr_in, is_write, values)
+        def enc(addr, w_f, val): return [(addr & 0x7F) | ((w_f & 1) << 7), (val & 0xFF)]
+        data_in = sum([enc(addr, w_f, val) for addr, w_f, val in iter_input])
+        
+        # Run transfer
+        self.spi.open(1, 0)
+        data_out = self.spi.xfer(data_in+[0,0], options.SPI_FREQ)
+        self.spi.close()
+        
+        # Check return addresses
+        errors = [ain == aout for ain, aout in zip(data_in[0::2], data_out[0::2])]
+        
+        values_out = data_out[1::2]
+        return errors,values_out
+        
+    def verify_boot():
+        addr = 0
+        value = self.transfer( (addr,), (0,), (0,) )[0][0]
+        addr_error = self.transfer( (addr,), (0,), (0,) )[1][0]
+        dcm_locked = value & 1
+        crc_err = (value >> 4) & 1
+        if addr_error == 0 and dcm_locked == 1 and crc_err == 0: return True
+        return False
+        
+class USBBus(FPGABusBase):
+    def __init__(self):
+        FPGABus.__init__(self)
+        import fl  
+
+        fl.flInitialise(0)
+        self.handle = fl.flOpen(options.USB_DEVICE_ID)
+        fl.flSelectConduit(self.handle, 1)
+        
+    def transfer(self, addr_in, is_write, values):
+        
+        # Prepare data
+        iter_input = zip(addr_in, is_write, values)
+        
+        # Run transfer
+        values_out = []
+        for addr, w_f, val in iter_input:
+            if w_f:
+                fl.flWriteChannel(self.handle, addr, byte[num])
+                values_out.append(None)
+            else:
+                values_out.append(fl.flReadChannel(self.handle, addr))
+        
+        #no error check for USB
+        errors = [0]*len(addr_in)
+        
+        return errors,values_out
+        
+    def verify_boot():
+        # LOL nope
+        return True
+
+def loop():
+
+    #ZMQ i/f. Keep timout low to update ZMQ internal logic before clients time-out.
+    ipc_server = ipc_helper.FPGAServerInterface(timeout=100)
+
+    #FPGA i/f
+    if options.USE_SPI: fpga_bus = SPIBus()
+    else: fpga_bus = USBBus()
+    
+    # Check if the FPGA is alive
+    assert fpga_bus.verify_boot()
+
+    while 1:
+    
+        try:
+            req = ipc_server.get_request()
+        except zmq.ZMQError as e:
+            if e.errno == zmq.EAGAIN: continue
+            
+        register_number = req.size//4
+        addresses = range(req.start_addr, req.start_addr+register_number)
+        
+        if req.start_addr < 128:
+            # Raw registers
+            write_flag = [req.rw_flag]*register_number
+            if req.rw_flag:
+                values_in = struct.unpack('%dI' % register_number, req.write_data)
+            else:
+                values_in = [0]*register_number
+                
+            errors,values_out = fpga_bus.transfer(addresses, write_flag, values)
+            
+            error_flag = sum(errors)
+            data_out = struct.pack('%dI' % register_number, *values_out)
+            
+            req.answer(data_out,error_flag)
+            
+        else:
+            # Virtual registers
+            # TO BE IMPLEMENTED
+            
+            values_out = []
+            for addr in addresses:
+            
+                if addr in fpga_map.TEMPERATURE_BLOCK:
+                    msb = fpga_map.BYTE_1[addr]
+                    lsb = fpga_map.BYTE_2[addr]
+                    temp = fpga_map.decode_temperature(msb.lsb)
+                    values_out.append(struct.pack('f',temp))
+                
+                elif addr in fpga_map.CURRENT_BLOCK:
+                    pass
+               
+                else:
+                    req.answer(''.join(values_out),error_flag=1)
+            
+            
+        
+loop()
+        
+'''
+
+
 import binascii
 import math
 import argparse
@@ -9,7 +153,7 @@ import struct
 import csv
 from datetime import datetime
 
-sys.path.append('/root/lib/')
+
 from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT
 from fpga_map import REGISTERS
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket
@@ -160,3 +304,4 @@ except fl.FLException as ex:
     print(ex)
 finally:
     fl.flClose(handle)
+'''

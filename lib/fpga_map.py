@@ -8,7 +8,60 @@ All blocks are specified as (starting reg address, length of block)
 Human readable value block starts at reg 200;
 
 '''
+import math
 
+REGISTER_TYPE = {}
+BYTE_1 = {}
+BYTE_2 = {}
+BYTE_3 = {}
+
+# ----------------- Base registers ----------------- 
+for reg in range(  0, 128):
+    REGISTER_TYPE[reg] = 'xxxB'
+    
+    
+# ----------------- Temperatures --------------------
+
+TEMPERATURE_BLOCK = list(range(200, 206))
+for reg in TEMPERATURE_BLOCK:
+    REGISTER_TYPE[reg] = 'f'
+    BYTE_1[reg] = 2*reg - 302    
+    BYTE_2[reg] = 2*reg - 301
+    
+def decode_temperature(msb, lsb):
+    # 12 bit ADC
+    val = msb*256 + lsb # complete value
+    Vadc = val*2.5/2**12 # volatge as a float
+    
+    # Wheatstone bridge
+    R = 920.0
+    Vs = 3.3
+    Rrtd = (R*Vs - 2*R*Vadc) / (R*Vs + 2*R*Vadc) * R
+    
+    # RTD probe
+    A =  3.81e-3
+    B = -6.02e-7
+    R0 = 1000.0
+    Temp = (-A + math.sqrt(A**2 - 4*B*(1-Rrtd/R0))) / (2*B)
+    
+    return Temp
+    
+# ----------------- Current consumption ----------------- 
+CURRENT_BLOCK = list(range(206, 210))
+for reg in CURRENT_BLOCK:
+    REGISTER_TYPE[reg] = 'f'
+
+# ----------------- Temp Set Point ----------------- 
+REGISTER_TYPE[217] = 'I'
+
+# ----------------- Bias Current ----------------- 
+REGISTER_TYPE[218] = 'I'
+
+# ----------------- Thresholds ----------------- 
+for reg in range(219, 223):
+    REGISTER_TYPE[reg] = 'I'
+
+'''
 REGISTERS = [None] * 300 # [encoding B = byte, I = unsigned int, ? = bool, [physical registers, least to most significant bits], rw flag]
 
 POWER_MANAGEMENT_BLOCK = [32, 7]
@@ -53,7 +106,7 @@ REGISTERS[3] = ['B', [3], True] #Bias Current (MSB)
 REGISTERS[4] = ['B', [4], True] #Bias Current (LSB)
 
 '''
-Human readable
+#Human readable
 '''
 
 TEMPERATURE_BLOCK_C = [200, 6]
@@ -84,3 +137,4 @@ REGISTERS[217] = ['I', [2,1], True] #Temp Set Point
 
 CURRENT_CONTROLLER_BLOCK_I = [218, 1]
 REGISTERS[218] = ['I', [4,3], True] #Bias Current
+'''
