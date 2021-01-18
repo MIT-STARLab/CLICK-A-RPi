@@ -55,7 +55,12 @@ class FPGAClientInterface:
             if not self.valid: self.handler._receive(self)
             return self.value
                 
-            
+    def verify_boot(self):
+        try: reg0 = self.read_reg(0)
+        except ValueError: return False
+        dcm_locked = reg0 & 1
+        crc_err = (reg0 >> 4) & 1
+        return (dcm_locked and not crc_err)
     
     def _get_token(self):
         self._token = (self._token+1) % 255
@@ -97,9 +102,10 @@ class FPGAClientInterface:
             payload = struct.pack('%dI'%len_pck,*value)
             len_pck *= 4
         elif type(value) is str:
-            len_pck = len(value)
-            assert (len(value) % 4) == 0
-            payload = value
+            lstr = len(value)
+            value = value + 'X'*(-lstr%4)
+            payload = struct.pack('I',lstr) + value
+            len_pck = len(payload)
         else:
             raise TypeError('Can only send int, list, or string')
         
@@ -111,7 +117,7 @@ class FPGAClientInterface:
             size = len_pck,
             data = payload)
            
-        future = FPGAClientInterface._Future(self,request_id,addr,1,0)
+        future = FPGAClientInterface._Future(self,request_id,addr,1,len_pck)
         self._pending.append(future)
         return future
         
@@ -159,10 +165,11 @@ class FPGAClientInterface:
             
             pck = self._get_packet()
             
-            assert pck.start_addr == current_fut.addr
-            assert pck.rq_number == current_fut.token
-            assert pck.rw_flag == current_fut.wr_flag
-            assert pck.size == current_fut.size
+            if options.CHECK_ASSERTS:
+                assert pck.start_addr == current_fut.addr
+                assert pck.rq_number == current_fut.token
+                assert pck.rw_flag == current_fut.wr_flag
+                #assert pck.size == current_fut.size
             
             if pck.error:
                 raise ValueError('Error flag set on FPGA answer')
@@ -171,8 +178,10 @@ class FPGAClientInterface:
             current_fut.valid = True
     
     def _decode_payload(self,pck):
-        
         if not pck.size: return None
+        if fpga_map.REGISTER_TYPE[pck.start_addr] == 'str':
+            lstr = struct.unpack('I',pck.read_data[0:4])[0]
+            return pck.read_data[4:lstr+4]
         elif pck.size > 4:
             reg_size = pck.size/4
             addr_range = range(pck.start_addr, pck.start_addr+4)
@@ -208,6 +217,8 @@ class FPGAServerInterface:
             self.handler = handler
             
         def answer(self,data,error_flag=0):
+        
+            enc_data = self._encode_payload(self.start_addr,data)
             
             asw_pck = ipc_packets.FPGAMapAnswerPacket()
             raw = asw_pck.encode(
@@ -216,14 +227,19 @@ class FPGAServerInterface:
                 rw_flag = self.rw_flag,
                 error_flag = error_flag,
                 start_addr = self.start_addr,
-                size = len(data)*4,
-                read_data = self._encode_payload(self.start_addr,data))
+                size = len(enc_data),
+                read_data = enc_data)
                 
             self.handler.send_answer(raw)
             
         def _encode_payload(self,addr,value):
             
-            if type(value) is list:
+            if fpga_map.REGISTER_TYPE[addr] == 'str':
+                lstr = len(value)
+                value = value + 'X'*(-lstr%4)
+                return struct.pack('I',lstr) + value
+                
+            elif type(value) is list:
                 raw = [self._encode_reg(a,v) for a,v in zip(range(addr,addr+len(value)),value)]
                 return ''.join(raw)
             

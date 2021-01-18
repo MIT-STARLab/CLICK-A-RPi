@@ -1,10 +1,6 @@
 import sys
 import struct
-import binascii
-
-sys.path.append('../lib/')
-sys.path.append('/root/lib/')
-from fpga_map import REGISTERS
+import options
 
 class IpcPacket:
     def __init__(self): pass
@@ -42,7 +38,7 @@ class TxPacket(IpcPacket):
 
         self.APID, self.size, self.payload = struct.unpack('HH%ds'%raw_size,raw)
 
-        assert self.size == raw_size
+        if options.CHECK_ASSERTS: assert self.size == raw_size
 
         return self.APID, self.payload
 
@@ -90,7 +86,7 @@ class RxCommandPacket(IpcPacket):
         raw_size = len(raw)-12
         self.APID, self.size, self.ts_txed_s, self.ts_txed_ms, self.payload = struct.unpack('HHII%ds'%raw_size,raw)
 
-        assert self.size == raw_size
+        if options.CHECK_ASSERTS: assert self.size == raw_size
 
         return self.APID, self.ts_txed_s, self.ts_txed_ms, self.payload
 
@@ -174,7 +170,7 @@ class CHHealthPacket(IpcPacket):
 
         self.return_addr, self.size, self.payload = struct.unpack('II%ds'%raw_size,raw)
 
-        assert self.size == raw_size
+        if options.CHECK_ASSERTS: assert self.size == raw_size
 
         return self.return_addr, self.size, self.payload
 
@@ -210,7 +206,7 @@ class PATHealthPacket(IpcPacket):
 
         self.return_addr, self.size, self.payload = struct.unpack('II%ds'%raw_size,raw)
 
-        assert self.size == raw_size
+        if options.CHECK_ASSERTS: assert self.size == raw_size
 
         payload_list = self.payload.split(b'\n')
 
@@ -242,16 +238,16 @@ class FPGAMapRequestPacket(IpcPacket):
 
         if self.rw_flag == 0:
             #Reading
-            
-            assert self.write_size == 0
+            if options.CHECK_ASSERTS:
+                assert self.write_size == 0
 
             self.raw = struct.pack('IBBHI',return_addr,rq_number,rw_flag,start_addr,size)
 
         elif self.rw_flag == 1:
             #Writing
-            
-            assert (self.write_size % 4) == 0
-            assert self.write_size == size
+            if options.CHECK_ASSERTS:
+                assert (self.write_size % 4) == 0
+                assert self.write_size == size
 
             self.raw = struct.pack('IBBHI%ds'%size,return_addr,rq_number,rw_flag,start_addr,size,write_data)
 
@@ -278,15 +274,15 @@ class FPGAMapRequestPacket(IpcPacket):
 
         if self.rw_flag == 0:
             #Reading
-            
-            assert raw_size == 0
+            if options.CHECK_ASSERTS:
+                assert raw_size == 0
             
 
         elif self.rw_flag == 1:
             #Writing
-            
-            assert (raw_size % 4) == 0
-            assert self.size == raw_size
+            if options.CHECK_ASSERTS:
+                assert (raw_size % 4) == 0
+                assert self.size == raw_size
 
         else:
             raise
@@ -326,22 +322,10 @@ class FPGAMapAnswerPacket(IpcPacket):
 
         assert self.read_size == size
 
-        if self.rw_flag == 0:
-            #Read results
-            
+        if options.CHECK_ASSERTS:
             assert (self.read_size % 4) == 0
 
-            self.raw = struct.pack('IBBHI%ds'%self.read_size,return_addr,rq_number,combined_flag,start_addr,size,read_data)
-
-        elif self.rw_flag == 1:
-            #Writing
-            
-            assert size == 0
-
-            self.raw = struct.pack('IBBHI',return_addr,rq_number,combined_flag,start_addr,size)
-
-        else:
-            raise
+        self.raw = struct.pack('IBBHI%ds'%self.read_size,return_addr,rq_number,combined_flag,start_addr,size,read_data)
 
         return self.raw
 
@@ -364,32 +348,9 @@ class FPGAMapAnswerPacket(IpcPacket):
         self.rw_flag = flags & 0x01
         self.error = (flags & 0x02) >> 1
 
-        if self.rw_flag == 0:
-            #Reading
-
+        if options.CHECK_ASSERTS:
             assert (raw_size % 4) == 0
             assert self.size == raw_size
-
-            #self.read_data = self.read_or_write_content
-            #dataTypes = ''
-            #for reg in range(self.start_addr, self.start_addr + self.size): #from start_addr to start_addr+size
-            #    if REGISTERS[reg] is not None: #if the requested register is defined
-            #        dataTypes = dataTypes + REGISTERS[reg][0] #add data type to format string for struct unpack
-            #    else:
-            #        dataTypes = dataTypes + 'B'
-            #decode the read_data payload
-            #self.decoded_data = struct.unpack(dataTypes,self.read_data)
-
-        elif self.rw_flag == 1:
-            #Writing
-            
-            assert self.size == 0
-            
-            #self.read_data = ''
-            #self.decoded_data = ''
-
-        else:
-            raise
 
         return self.return_addr, self.rq_number, self.rw_flag, self.error, self.start_addr, self.size, self.read_data
 

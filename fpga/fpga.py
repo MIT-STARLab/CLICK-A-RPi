@@ -5,83 +5,9 @@ import zmq
 import struct
 import options
 import ipc_helper
-import fpga_map
-
-
-class FPGABusBase:
-    def __init__(self): pass
-    
-    def read_register(self, addr):
-        return self.transfer( (addr,), (0,), (0,) )[0][0]
-        
-    def write_register(self, addr, value):
-        return self.transfer( (addr,), (1,), (value,) )[0][0]
-
-class SPIBus(FPGABusBase):
-    def __init__(self):
-        FPGABus.__init__(self)
-        import spidev
-        
-        self.spi = spidev.SpiDev()
-           
-    def transfer(self, addr_in, is_write, values):
-    
-        # Prepare data
-        iter_input = zip(addr_in, is_write, values)
-        def enc(addr, w_f, val): return [(addr & 0x7F) | ((w_f & 1) << 7), (val & 0xFF)]
-        data_in = sum([enc(addr, w_f, val) for addr, w_f, val in iter_input])
-        
-        # Run transfer
-        self.spi.open(1, 0)
-        data_out = self.spi.xfer(data_in+[0,0], options.SPI_FREQ)
-        self.spi.close()
-        
-        # Check return addresses
-        errors = [ain == aout for ain, aout in zip(data_in[0::2], data_out[0::2])]
-        
-        values_out = data_out[1::2]
-        return errors,values_out
-        
-    def verify_boot():
-        addr = 0
-        value = self.transfer( (addr,), (0,), (0,) )[0][0]
-        addr_error = self.transfer( (addr,), (0,), (0,) )[1][0]
-        dcm_locked = value & 1
-        crc_err = (value >> 4) & 1
-        if addr_error == 0 and dcm_locked == 1 and crc_err == 0: return True
-        return False
-        
-class USBBus(FPGABusBase):
-    def __init__(self):
-        FPGABus.__init__(self)
-        import fl  
-
-        fl.flInitialise(0)
-        self.handle = fl.flOpen(options.USB_DEVICE_ID)
-        fl.flSelectConduit(self.handle, 1)
-        
-    def transfer(self, addr_in, is_write, values):
-        
-        # Prepare data
-        iter_input = zip(addr_in, is_write, values)
-        
-        # Run transfer
-        values_out = []
-        for addr, w_f, val in iter_input:
-            if w_f:
-                fl.flWriteChannel(self.handle, addr, byte[num])
-                values_out.append(None)
-            else:
-                values_out.append(fl.flReadChannel(self.handle, addr))
-        
-        #no error check for USB
-        errors = [0]*len(addr_in)
-        
-        return errors,values_out
-        
-    def verify_boot():
-        # LOL nope
-        return True
+import fpga_map as mmap
+import fpga_bus
+import edfa
 
 def loop():
 
@@ -89,11 +15,14 @@ def loop():
     ipc_server = ipc_helper.FPGAServerInterface(timeout=100)
 
     #FPGA i/f
-    if options.USE_SPI: fpga_bus = SPIBus()
-    else: fpga_bus = USBBus()
+    if options.IPC_USES_SPI: fpgabus = fpga_bus.SPIBus()
+    else: fpgabus = fpga_bus.USBBus()
     
     # Check if the FPGA is alive
-    assert fpga_bus.verify_boot()
+    if options.CHECK_ASSERTS: assert fpgabus.verify_boot()
+    
+    # Buffer for virtual regs
+    reg_buffer = {}
 
     while 1:
     
@@ -108,38 +37,65 @@ def loop():
         if req.start_addr < 128:
             # Raw registers
             write_flag = [req.rw_flag]*register_number
-            if req.rw_flag:
+            if req.rw_flag and register_number:
                 values_in = struct.unpack('%dI' % register_number, req.write_data)
             else:
                 values_in = [0]*register_number
                 
-            errors,values_out = fpga_bus.transfer(addresses, write_flag, values)
+            errors,values_out = fpgabus.transfer(addresses, write_flag, values_in)
             
             error_flag = sum(errors)
-            data_out = struct.pack('%dI' % register_number, *values_out)
+            req.answer(values_out,error_flag)
             
-            req.answer(data_out,error_flag)
+        elif req.start_addr == mmap.EDFA_IN_STR:
+        
+            edfa.reset_fifo(fpgabus)
+            
+            if options.CHECK_ASSERTS: assert req.size > 3
+            
+            len_str = struct.unpack('I', req.write_data[0:4])[0]
+            
+            if options.CHECK_ASSERTS: assert req.size >= (len_str+4)
+            
+            values_in = req.write_data[4:4+len_str]
+            
+            error_flag = edfa.write_string(fpgabus, values_in)
+            req.answer('',error_flag)
+            
+        elif req.start_addr == mmap.EDFA_OUT_STR:
+            
+            error,edfa_out_str = edfa.read_string(fpgabus)
+            req.answer(edfa_out_str,error)
             
         else:
             # Virtual registers
             # TO BE IMPLEMENTED
             
+            # if any in the EDFA block, get FLINE
+            if any([x in mmap.EDFA_PARSED_BLOCK for x in addresses]):
+                fline = edfa.fline(fpgabus)
+                flist = fline.split()          
+                reg_buffer = edfa.parse(reg_buffer, flist)
+            
             values_out = []
             for addr in addresses:
             
-                if addr in fpga_map.TEMPERATURE_BLOCK:
-                    msb = fpga_map.BYTE_1[addr]
-                    lsb = fpga_map.BYTE_2[addr]
-                    temp = fpga_map.decode_temperature(msb.lsb)
+                if addr in mmap.TEMPERATURE_BLOCK:
+                    msb = mmap.BYTE_1[addr]
+                    lsb = mmap.BYTE_2[addr]
+                    temp = mmap.decode_temperature(msb.lsb)
                     values_out.append(struct.pack('f',temp))
                 
-                elif addr in fpga_map.CURRENT_BLOCK:
+                elif addr in mmap.CURRENT_BLOCK:
                     pass
+                    
+                elif addr in mmap.EDFA_PARSED_BLOCK:
+                    values_out.append(reg_buffer[addr])
                
-                else:
-                    req.answer(''.join(values_out),error_flag=1)
-            
-            
+                else: req.answer('',error_flag=1)
+                
+                
+            req.answer(values_out,error_flag)
         
 loop()
         

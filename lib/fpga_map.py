@@ -10,6 +10,25 @@ Human readable value block starts at reg 200;
 '''
 import math
 
+CTL = 0
+CTL_TX_EN      = 0b00000001
+CTL_SPI2_EN    = 0b00000100
+CTL_STALL      = 0b00001000
+CTL_ERX_FIFO   = 0b00010000
+
+FLG = 63
+FLG_DCM_LOCKED = 0b00000001
+FLG_CRC_ERROR  = 0b00010000
+FLG_RX_NEW     = 0b00100000
+FLG_TX_READY   = 0b01000000
+FLG_MOD_ERROR  = 0b10000000
+
+ETX = 11
+ERX = 65
+ERF = 66
+EFL = 67
+EFL_EMPTY      = 0b00000010
+
 REGISTER_TYPE = {}
 BYTE_1 = {}
 BYTE_2 = {}
@@ -19,10 +38,9 @@ BYTE_3 = {}
 for reg in range(  0, 128):
     REGISTER_TYPE[reg] = 'xxxB'
     
-    
 # ----------------- Temperatures --------------------
-
 TEMPERATURE_BLOCK = list(range(200, 206))
+
 for reg in TEMPERATURE_BLOCK:
     REGISTER_TYPE[reg] = 'f'
     BYTE_1[reg] = 2*reg - 302    
@@ -47,19 +65,51 @@ def decode_temperature(msb, lsb):
     return Temp
     
 # ----------------- Current consumption ----------------- 
-CURRENT_BLOCK = list(range(206, 210))
+CURRENT_BLOCK = list(range(300, 304))
+
 for reg in CURRENT_BLOCK:
     REGISTER_TYPE[reg] = 'f'
 
 # ----------------- Temp Set Point ----------------- 
-REGISTER_TYPE[217] = 'I'
+REGISTER_TYPE[400] = 'I'
 
 # ----------------- Bias Current ----------------- 
-REGISTER_TYPE[218] = 'I'
+REGISTER_TYPE[401] = 'I'
 
 # ----------------- Thresholds ----------------- 
-for reg in range(219, 223):
+for reg in range(500, 504):
     REGISTER_TYPE[reg] = 'I'
+    
+# ----------------- EDFA -----------------
+EDFA_IN_STR    = 600
+EDFA_OUT_STR   = 601
+REGISTER_TYPE[EDFA_IN_STR]  = 'str'
+REGISTER_TYPE[EDFA_OUT_STR] = 'str'
+
+EDFA_PARSED_BLOCK = list(range(602, 612))
+EDFA_EN_PIN   = 602
+REGISTER_TYPE[EDFA_EN_PIN] = 'xxxB'
+EDFA_MODE      = 603
+EDFA_MODE_ACC  = 1
+EDFA_MODE_AOPC = 2
+EDFA_MODE_APC  = 3
+REGISTER_TYPE[EDFA_MODE] = 'xxxB'
+EDFA_DIODE_ON  = 604
+REGISTER_TYPE[EDFA_DIODE_ON] = 'xxxB'
+EDFA_MISTERY_TEMP = 605
+REGISTER_TYPE[EDFA_MISTERY_TEMP] = 'f'
+EDFA_POWER_IN  = 606
+REGISTER_TYPE[EDFA_POWER_IN] = 'f'
+EDFA_POWER_OUT = 607
+REGISTER_TYPE[EDFA_POWER_OUT] = 'f'
+EDFA_PRE_CURRENT = 608
+REGISTER_TYPE[EDFA_PRE_CURRENT] = 'I'
+EDFA_PRE_POWER = 609
+REGISTER_TYPE[EDFA_PRE_POWER] = 'I'
+EDFA_PUMP_CURRENT = 610
+REGISTER_TYPE[EDFA_PUMP_CURRENT] = 'I'
+EDFA_CASE_TEMP = 611
+REGISTER_TYPE[EDFA_CASE_TEMP] = 'f'
 
 '''
 REGISTERS = [None] * 300 # [encoding B = byte, I = unsigned int, ? = bool, [physical registers, least to most significant bits], rw flag]
