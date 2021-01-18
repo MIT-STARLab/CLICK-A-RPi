@@ -14,8 +14,7 @@ from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
 
-#TODO: confirm this length again
-BUS_DATA_LEN = 4100 - 14 # from bus interface doc
+BUS_DATA_LEN = 4082
 
 TEST_PKT_DATA_LEN = 105
 TEST_PKT_APID = 0x305
@@ -65,7 +64,7 @@ class Packetizer:
         bus_tx_pkt.extend(sync)
         bus_tx_pkt.extend(pkt)
 
-        self.spi.write(bytearray(tx))
+        self.spi.write(bytearray(bus_tx_pkt))
 
     def handle_tx_pkts(self):
         try:
