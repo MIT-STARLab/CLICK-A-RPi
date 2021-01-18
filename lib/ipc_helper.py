@@ -40,6 +40,8 @@ class FPGAClientInterface:
                     raise error   
         self.socket_answer.setsockopt(zmq.RCVTIMEO, options.MESSAGE_TIMEOUT) # Set timout
         
+        self.edfa = fpga_map.EDFA(self)
+        
     class _Future:
         def __init__(self,handler,token,addr,wr_flag,size):
             self.handler = handler

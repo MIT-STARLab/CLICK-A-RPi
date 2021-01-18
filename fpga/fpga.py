@@ -8,6 +8,7 @@ import ipc_helper
 import fpga_map as mmap
 import fpga_bus
 import edfa
+import time
 
 def loop():
 
@@ -23,6 +24,7 @@ def loop():
     
     # Buffer for virtual regs
     reg_buffer = {}
+    last_edfa_update = 0
 
     while 1:
     
@@ -73,9 +75,10 @@ def loop():
             
             # if any in the EDFA block, get FLINE
             if any([x in mmap.EDFA_PARSED_BLOCK for x in addresses]):
-                fline = edfa.fline(fpgabus)
-                flist = fline.split()          
-                reg_buffer = edfa.parse(reg_buffer, flist)
+                if time.time() - last_edfa_update > options.EDFA_VIRTUAL_REGS_GOOD_FOR:
+                    fline = edfa.fline(fpgabus)
+                    flist = fline.split()          
+                    reg_buffer = edfa.parse(reg_buffer, flist)
             
             values_out = []
             for addr in addresses:

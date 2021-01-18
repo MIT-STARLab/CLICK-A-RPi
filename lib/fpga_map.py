@@ -111,6 +111,60 @@ REGISTER_TYPE[EDFA_PUMP_CURRENT] = 'I'
 EDFA_CASE_TEMP = 611
 REGISTER_TYPE[EDFA_CASE_TEMP] = 'f'
 
+   
+class EDFA:
+    def __init__(self, handler):
+        self.handler = handler
+        
+    def write_string(self,tx_str):
+        return self.handler.write_reg(EDFA_IN_STR,tx_str)
+        
+    def read_string(self):
+        return self.handler.read_reg(EDFA_OUT_STR)
+        
+    def send_command(self,tx_str):
+        self.handler.write_reg(EDFA_IN_STR,tx_str)
+        res_str = self.handler.read_reg(EDFA_OUT_STR)
+        if res_str[1] == 'S': return True
+        else: return False
+        
+    def turn_on(self):
+        return self.send_command('edfa on\n')
+        
+    def turn_off(self):
+        return self.send_command('edfa off\n')
+        
+    def is_pin_high(self):
+        return self.handler.read_reg(EDFA_EN_PIN)
+        
+    def get_mode(self):
+        return self.handler.read_reg(EDFA_MODE)
+        
+    def is_pump_on(self):
+        return self.handler.read_reg(EDFA_DIODE_ON)
+        
+    def get_mistery_temp(self):
+        return self.handler.read_reg(EDFA_MISTERY_TEMP)
+
+    def get_input_power_dBm(self):
+        return self.handler.read_reg(EDFA_POWER_IN)
+
+    def get_output_power_dBm(self):
+        return self.handler.read_reg(EDFA_POWER_OUT)
+
+    def get_preamp_current(self):
+        return self.handler.read_reg(EDFA_PRE_CURRENT)
+ 
+     def get_preamp_power(self):
+        return self.handler.read_reg(EDFA_PRE_POWER)
+ 
+     def get_pump_current(self):
+        return self.handler.read_reg(EDFA_PUMP_CURRENT)
+ 
+    def get_case_temp(self):
+        return self.handler.read_reg(EDFA_CASE_TEMP)
+
+
 '''
 REGISTERS = [None] * 300 # [encoding B = byte, I = unsigned int, ? = bool, [physical registers, least to most significant bits], rw flag]
 

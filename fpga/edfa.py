@@ -45,7 +45,7 @@ def fline(fpgabus):
     tx_str = 'fline\r'
     reset_fifo(fpgabus)
     write_string(fpgabus,tx_str)
-    time.sleep(0.1)
+    time.sleep(options.EDFA_READ_WRITE_DELAY)
     reply = read_string(fpgabus)[1]
     reply = reply.split('\n')
     if len(reply) > 1:
@@ -95,15 +95,3 @@ def parse(regs,flist):
     except: regs[mmap.EDFA_CASE_TEMP] = -1000.0
     
     return regs
-    
-    
-class EDFA:
-    def __init__(self, handler):
-        self.handler = handler
-        
-    def write_string(tx_str):
-        return self.handler.write_reg(mmap.EDFA_IN_STR,tx_str)
-        
-    def read_string():
-        return self.handler.write_reg(mmap.EDFA_OUT_STR)
-        
