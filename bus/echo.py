@@ -1,6 +1,9 @@
 import binascii
 from crccheck.crc import Crc16CcittFalse as crc16
 
+# Echo bus packets back with apid 0x3FF
+# Based on Hannah's depacketizer code
+
 SPI_DEV = '/dev/bct'
 
 CCSDS_HEADER_LEN = 6
@@ -9,7 +12,7 @@ PKT_LEN_INDEX = 4
 class Echoer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])
 
-    spi = open(SPI_DEV, 'rwb', buffering=0)
+    spi = open(SPI_DEV, 'r+b', buffering=0)
 
     bus_pkts_buffer = []
 
@@ -23,6 +26,8 @@ class Echoer:
             except Exception, err:
                 print(str(err))
                 pass
+
+        return buf
 
     def acquire_bus_pkt(self):
         # returns a full bus packet
@@ -78,7 +83,7 @@ class Echoer:
 
         # Add sync marker and send
         pkt = []
-        pkt.extend(ccsds_sync)
+        pkt.extend(self.ccsds_sync)
         pkt.extend(buf)
         self.spi.write(bytearray(pkt))
 
@@ -87,6 +92,7 @@ class Echoer:
         while True:
             self.acquire_bus_pkt()
             self.echo_pkt()
+            self.bus_pkts_buffer[:] = []
 
 if __name__ == '__main__':
     echoer = Echoer()
