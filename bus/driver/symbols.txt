@@ -21,7 +21,7 @@ __kfifo_to_user
 spi_async
 memset
 _dev_warn
-wait_for_completion
+wait_for_completion_interruptible
 _dev_notice
 unregister_chrdev_region
 arm_copy_from_user
