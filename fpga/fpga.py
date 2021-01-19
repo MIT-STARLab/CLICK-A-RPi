@@ -8,6 +8,7 @@ import ipc_helper
 import fpga_map as mmap
 import fpga_bus
 import edfa
+import dac
 import time
 
 def loop():
@@ -35,14 +36,19 @@ def loop():
             
         register_number = req.size//4
         addresses = range(req.start_addr, req.start_addr+register_number)
+        write_flag = [req.rw_flag]*register_number
+        if req.rw_flag and register_number:
+            values_in = []
+            for addr,idx in zip(addresses,xrange(0,req.size,4)):
+                try: frmt = mmap.REGISTER_TYPE[addr]
+                except: frmt = 'xxxB'
+                pl = req.write_data[idx,idx+4]
+                values_in.append(struct.unpack(frmt,pl)[0])
+        else:
+            values_in = [0]*register_number
+        
         
         if req.start_addr < 128:
-            # Raw registers
-            write_flag = [req.rw_flag]*register_number
-            if req.rw_flag and register_number:
-                values_in = struct.unpack('%dI' % register_number, req.write_data)
-            else:
-                values_in = [0]*register_number
                 
             errors,values_out = fpgabus.transfer(addresses, write_flag, values_in)
             
@@ -81,7 +87,7 @@ def loop():
                     reg_buffer = edfa.parse(reg_buffer, flist)
             
             values_out = []
-            for addr in addresses:
+            for addr,value in zip(addresses,values_in):
             
                 if addr in mmap.TEMPERATURE_BLOCK:
                     msb = mmap.BYTE_1[addr]
@@ -94,6 +100,15 @@ def loop():
                     
                 elif addr in mmap.EDFA_PARSED_BLOCK:
                     values_out.append(reg_buffer[addr])
+                    
+                elif addr ==  mmap.DAC_ENABLE:
+                    dac.set_ouput_mode(fpgabus, value)
+               
+                elif addr in mmap.DAC_BLOCK:
+                    if req.rw_flag:
+                        target_chan = addr - mmap.DAC_BLOCK[0]
+                        dac.write_and_update(fpgabus,target_chan,value)
+                    values_out.append(value)
                
                 else: req.answer('',error_flag=1)
                 

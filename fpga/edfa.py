@@ -2,7 +2,6 @@ import sys
 sys.path.append('/root/lib/')
 import options
 import fpga_map as mmap
-import edfa
 import time
 
 def reset_fifo(fpgabus):

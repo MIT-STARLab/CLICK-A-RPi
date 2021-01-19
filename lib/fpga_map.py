@@ -16,6 +16,13 @@ CTL_SPI2_EN    = 0b00000100
 CTL_STALL      = 0b00001000
 CTL_ERX_FIFO   = 0b00010000
 
+THRa = 5
+THRb = 6
+THRc = 7
+FSMa = 8
+FSMb = 9
+FSMc = 10
+
 FLG = 63
 FLG_DCM_LOCKED = 0b00000001
 FLG_CRC_ERROR  = 0b00010000
@@ -77,8 +84,24 @@ REGISTER_TYPE[400] = 'I'
 REGISTER_TYPE[401] = 'I'
 
 # ----------------- Thresholds ----------------- 
-for reg in range(500, 504):
-    REGISTER_TYPE[reg] = 'I'
+DAC_ENABLE = 500
+DAC_BIST_A = 0b00000001
+DAC_BIST_B = 0b00000010
+DAC_BIST_C = 0b00000100
+DAC_BIST_D = 0b00001000
+DAC_FSM_A  = 0b00010000
+DAC_FSM_B  = 0b00100000
+DAC_FSM_C  = 0b01000000
+DAC_FSM_D  = 0b10000000
+DAC_OEN    = 0b00 << 8
+DAC_1K     = 0b01 << 8
+DAC_100K   = 0b10 << 8
+DAC_HIGHZ  = 0b11 << 8
+REGISTER_TYPE[BIST_DAC_ENABLE] = 'xxH'
+
+DAC_BLOCK = list(range(501, 509))
+for reg in BIST_DAC_BLOCK:
+    REGISTER_TYPE[reg] = 'xxH'
     
 # ----------------- EDFA -----------------
 EDFA_IN_STR    = 600
