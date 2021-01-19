@@ -16,18 +16,18 @@
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 #define CMD_PAYLOAD_SIZE 256
 #define CMD_HEADER_SIZE 5
+#define CMD_START_PAT 0x00
 #define CMD_START_PAT_OPEN_LOOP 0x01
 #define CMD_START_PAT_STATIC_POINT 0x02
 #define CMD_START_PAT_BUS_FEEDBACK 0x03
-#define CMD_START_PAT 0x04
-#define CMD_END_PAT 0x05
-#define CMD_GET_IMAGE 0x06
-#define CMD_CALIB_TEST 0x07
-#define CMD_CALIB_LASER_TEST 0x08
-#define CMD_FSM_TEST 0x09
-#define CMD_BCN_ALIGN 0x0A
-#define CMD_UPDATE_TX_OFFSET_X 0x0B
-#define CMD_UPDATE_TX_OFFSET_Y 0x0C
+#define CMD_END_PAT 0x04
+#define CMD_GET_IMAGE 0x05
+#define CMD_CALIB_TEST 0x06
+#define CMD_CALIB_LASER_TEST 0x07
+#define CMD_FSM_TEST 0x08
+#define CMD_BCN_ALIGN 0x09
+#define CMD_UPDATE_TX_OFFSET_X 0x0A
+#define CMD_UPDATE_TX_OFFSET_Y 0x0B
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{

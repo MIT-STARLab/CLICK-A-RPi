@@ -165,13 +165,12 @@ while True:
             log_to_hk('ACK CMD PL_DISABLE_TIME')
 
         elif(CMD_ID == CMD_PL_EXEC_FILE):
-            raw_size = generic_control_packet.size - 3 #TBR
-            output_to_file, file_out_num, file_path_len, raw_file_path = struct.unpack('BBB%ds'%raw_size,generic_control_packet.payload) #TBR
-            file_path = raw_file_path.decode('utf-8') #TBR
-            file_path = file_path[0:(file_path_len-1)] #Strip padding
+            ex_raw_size = ipc_rxcompacket.size - 4
+            output_to_file, file_out_num, file_path_len, file_path_payload = struct.unpack('BBH%ds'%ex_raw_size, ipc_rxcompacket.payload) 
+            file_path = file_path_payload[0:(file_path_len-1)] #Strip padding
             try:                
                 if(output_to_file):
-                    os.system(file_path + ' > ' + string(file_out_num) + '.log')
+                    os.system(file_path + ' > /root/log/' + string(file_out_num) + '.log')
                     #send file...
                 else:
                     os.system(file_path)
@@ -181,10 +180,9 @@ while True:
                 log_to_hk('ERROR CMD PL_EXEC_FILE: ' + traceback.format_exc()) 
 
         elif(CMD_ID == CMD_PL_LIST_FILE):
-            raw_size = generic_control_packet.size - 1 #TBR
-            directory_path_len, raw_directory_path = struct.unpack('B%ds'%raw_size,generic_control_packet.payload) #TBR
-            directory_path = raw_directory_path.decode('utf-8') #TBR
-            directory_path = directory_path[0:(directory_path_len-1)] #Strip padding
+            list_raw_size = ipc_rxcompacket.size - 2
+            directory_path_len, directory_path_payload = struct.unpack('H%ds'%list_raw_size, ipc_rxcompacket.payload)
+            directory_path = directory_path_payload[0:(directory_path_len-1)] #Strip padding
             try:
                 directory_listing = os.listdir(directory_path) #Get directory list
                 #Convert list to single string for telemetry:
@@ -194,7 +192,7 @@ while True:
 
                 list_file_txpacket = TxPacket()
                 raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
-                print(list_file_txpacket) #Debug printing
+                print (list_file_txpacket) #Debug printing
                 print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
                 socket_tx_packets.send(raw) #send packet
                 log_to_hk('ACK CMD PL_LIST_FILE')
@@ -204,8 +202,9 @@ while True:
         elif(CMD_ID == CMD_PL_REQUEST_FILE):
             # simple dumb file chunking
             max_chunk_size = 4068
-            file_path_len, raw_file_path = struct.unpack('B%ds'%raw_size,generic_control_packet.payload) #TBR
-            file_name = raw_file_path.decode('utf-8') #TBR             
+            req_raw_size = ipc_rxcompacket.size - 6
+            transfer_id, chunk_size, file_path_len, file_path_payload = struct.unpack('HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
+            file_name = file_path_payload[0:(file_path_len-1)] #Strip padding           
             with open(file_name, "rb") as source_file:
                 file_id = hashlib.md5(file_name).digest()
                 file_len = os.stat(file_name).st_size
@@ -239,16 +238,17 @@ while True:
             log_to_hk('ACK CMD PL_UPLOAD_FILE_TOSTAGING')
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
-            pat_mode_cmd = struct.unpack('B', generic_control_packet.payload) #maps to PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, 
-            if(pat_mode_cmd not in [PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK]):
-                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT_MODE_ID = ' + string(pat_mode_cmd)) 
-                PAT_MODE_ID = PAT_CMD_START_PAT #default PAT mode
+            pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload) #maps to PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, 
+            pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK]
+            pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Bus Feedback']
+            if(pat_mode_cmd not in pat_mode_list):
+                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + string(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID]) 
             else:
                 PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
-                log_to_hk('ACK CMD PL_SET_PAT_MODE')
+                log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
+            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
                     print ('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -263,7 +263,7 @@ while True:
             #send image telemetry file...
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
-            exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
+            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
                     print ('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -278,7 +278,7 @@ while True:
             #send image telemetry file... 
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
-            exp_cmd = struct.unpack('I', generic_control_packet.payload) #TBR
+            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
                     print ('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10

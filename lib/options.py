@@ -56,15 +56,18 @@ TLM_ECHO = 0x3FF
 #PAT IPC Command IDs [Shared Command Parameters with c-code (packetdef.h)]
 PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
 PAT_CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
+PAT_CMD_START_PAT = 0x00
 PAT_CMD_START_PAT_OPEN_LOOP = 0x01
 PAT_CMD_START_PAT_STATIC_POINT = 0x02
 PAT_CMD_START_PAT_BUS_FEEDBACK = 0x03
-PAT_CMD_START_PAT = 0x04
-PAT_CMD_END_PAT = 0x05
-PAT_CMD_GET_IMAGE = 0x06
-PAT_CMD_CALIB_TEST = 0x07
-PAT_CMD_CALIB_LASER_TEST = 0x08
-PAT_CMD_FSM_TEST = 0x09
+PAT_CMD_END_PAT = 0x04
+PAT_CMD_GET_IMAGE = 0x05
+PAT_CMD_CALIB_TEST = 0x06
+PAT_CMD_CALIB_LASER_TEST = 0x07
+PAT_CMD_FSM_TEST = 0x08
+PAT_CMD_BCN_ALIGN = 0x09
+PAT_CMD_UPDATE_TX_OFFSET_X = 0x0A
+PAT_CMD_UPDATE_TX_OFFSET_Y = 0x0B
 
 # HK Options Settings
 HK_FPGA_REQ_ENABLE = True
