@@ -17,7 +17,7 @@ sys.path.append('../lib/')
 from options import *
 #from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket, CHHealthPacket
-from zmqTxRx import recv_zmq, send_zmq, separate
+from zmqTxRx import recv_zmq, separate
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
@@ -132,14 +132,14 @@ def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
 
     ipc_patControlPacket = PATControlPacket()
     raw_patControlPacket = ipc_patControlPacket.encode(command,CMD_PAYLOAD) 
-    send_zmq(socket_PAT_control, raw_patControlPacket)    
+    socket_PAT_control.send(raw_patControlPacket)    
     return ipc_patControlPacket
 
 def log_to_hk(payload):
     print (payload) #debug printing
     ipc_healthPacket = CHHealthPacket()
     raw = ipc_healthPacket.encode(pid, payload)
-    send_zmq(socket_housekeeping, raw) 
+    socket_housekeeping.send(raw) 
 
 start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
 counter_ground_test = 0 #used to count the number of repetitive process tasks
@@ -184,7 +184,7 @@ while True:
         ipc_heartbeatPacket = HandlerHeartbeatPacket()
         raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
         print(ipc_heartbeatPacket) #Debug printing
-        send_zmq(socket_housekeeping, raw_ipc_heartbeatPacket)
+        socket_housekeeping.send(raw_ipc_heartbeatPacket)
         counter_heartbeat += 1
     
     #poll for received commands
@@ -216,7 +216,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_EXEC_FILE):
             ex_raw_size = ipc_rxcompacket.size - 4
-            output_to_file, file_out_num, file_path_len, file_path_payload = struct.unpack('BBH%ds'%ex_raw_size, ipc_rxcompacket.payload) 
+            output_to_file, file_out_num, file_path_len, file_path_payload = struct.unpack('!BBH%ds'%ex_raw_size, ipc_rxcompacket.payload) 
             file_path = file_path_payload[0:(file_path_len-1)] #Strip padding
             try:                
                 if(output_to_file):
@@ -231,7 +231,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_LIST_FILE):
             list_raw_size = ipc_rxcompacket.size - 2
-            directory_path_len, directory_path_payload = struct.unpack('H%ds'%list_raw_size, ipc_rxcompacket.payload)
+            directory_path_len, directory_path_payload = struct.unpack('!H%ds'%list_raw_size, ipc_rxcompacket.payload)
             directory_path = directory_path_payload[0:(directory_path_len-1)] #Strip padding
             try:
                 directory_listing = os.listdir(directory_path) #Get directory list
@@ -253,7 +253,7 @@ while True:
             # simple dumb file chunking
             max_chunk_size = 4068
             req_raw_size = ipc_rxcompacket.size - 6
-            transfer_id, chunk_size, file_path_len, file_path_payload = struct.unpack('HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
+            transfer_id, chunk_size, file_path_len, file_path_payload = struct.unpack('!HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
             file_name = file_path_payload[0:(file_path_len-1)] #Strip padding           
             with open(file_name, "rb") as source_file:
                 file_id = hashlib.md5(file_name).digest()
@@ -350,27 +350,64 @@ while True:
             #send image telemetry files...    
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
-            #TODO
-            pass
+            sf_raw_size = ipc_rxcompacket.size - 4
+            rq_number, start_addr, num_registers, write_data = struct.unpack('!BHB%dI'%sf_raw_size, ipc_rxcompacket.payload)
+            rw_flag = 1
+            
+            #send fpga request
+            fpga_req_pkt = FPGAMapRequestPacket()
+            raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers, write_data)
+            socket_FPGA_map_request.send(raw_fpga_req_pkt) 
+            
+            #get fpga answer
+            fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
+            ipc_fpgaaswpacket = FPGAMapAnswerPacket()
+            ipc_fpgaaswpacket.decode(fpga_answer_message)
+            print (ipc_fpgaaswpacket) #debug print            
+            if(ipc_fpgaaswpacket.error):
+                log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+            else:
+                log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
 
+            
         elif(CMD_ID == CMD_PL_GET_FPGA):
-            #TODO
-            pass
-
+            rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
+            rw_flag = 0
+            
+            #send fpga request
+            fpga_req_pkt = FPGAMapRequestPacket()
+            raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers)
+            socket_FPGA_map_request.send(raw_fpga_req_pkt) 
+            
+            #get fpga answer
+            fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
+            ipc_fpgaaswpacket = FPGAMapAnswerPacket()
+            ipc_fpgaaswpacket.decode(fpga_answer_message)
+            print (ipc_fpgaaswpacket) #debug print            
+            if(ipc_fpgaaswpacket.error):
+                log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+            else:
+                log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+                #send on tx port
+                fpga_read_payload = struct.pack('!BHB%ds'%ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.rq_number, ipc_fpgaaswpacket.start_addr, ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.read_data)
+                print (fpga_read_payload)
+                fpga_read_txpacket = TxPacket()
+                raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload) 
+                socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
+                
         elif(CMD_ID == CMD_PL_SET_HK):
+            log_to_hk('ACK CMD PL_SET_HK') 
             #TODO
-            pass
 
         elif(CMD_ID == CMD_PL_ECHO):
-            echo_txpacket = TxPacket()
             echo_raw_size = ipc_rxcompacket.size
-            echo_raw = ipc_rxcompacket.payload
-            echo_payload_tuple = struct.unpack('%ds'%echo_raw_size,echo_raw)
+            echo_payload_tuple = struct.unpack('!%ds'%echo_raw_size, ipc_rxcompacket.payload)
             echo_payload = echo_payload_tuple[0] #python returns a tuple by default
-            raw = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload) #TBR
+            echo_txpacket = TxPacket()
+            raw_echo_txpacket = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload)
             print (echo_payload) #debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
-            socket_tx_packets.send(raw) #send packet
+            socket_tx_packets.send(raw_echo_txpacket) #send packet
             log_to_hk('ACK CMD PL_ECHO') 
 
         elif(CMD_ID == CMD_PL_NOOP):
@@ -383,7 +420,7 @@ while True:
             
             #Start Main PAT Loop:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_MODE_ID)
+            ipc_patControlPacket = send_pat_command(socket_PAT_control, str(pid), PAT_MODE_ID)
             print(ipc_patControlPacket) #debug print
 
             ###TODO: add any other lasercom experiment process start-up tasks
