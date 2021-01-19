@@ -15,7 +15,6 @@ import hashlib
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 from options import *
-#from options import FPGA_MAP_ANSWER_PORT, FPGA_MAP_REQUEST_PORT, TX_PACKETS_PORT, RX_CMD_PACKETS_PORT, MESSAGE_TIMEOUT, PAT_CONTROL_PORT, TEST_RESPONSE_PORT
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket, CHHealthPacket
 from zmqTxRx import recv_zmq, separate
 
@@ -76,51 +75,7 @@ poller.register(socket_rx_command_packets, zmq.POLLIN)
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
 
-def getFPGAmap(request_number, num_registers, start_address):
-    ipc_fpgarqpacket_read = FPGAMapRequestPacket()
-
-    #create bytes object (struct) for reading
-    '''do we need error handling for struct generation?'''
-    raw = ipc_fpgarqpacket_read.encode(return_addr=pid, rq_number=request_number, rw_flag=0, start_addr=start_address, size=num_registers)
-    ipc_fpgarqpacket_read.decode(raw)
-
-    print ('SENDING to %s with ENVELOPE %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), ipc_fpgarqpacket_read.return_addr))
-    print(raw)
-    print(ipc_fpgarqpacket_read)
-
-    #send message
-    socket_FPGA_map_request.send(raw)
-
-    print ('RECEIVING on %s with TIMEOUT %d for ENVELOPE %d' % (socket_FPGA_map_answer.get_string(zmq.LAST_ENDPOINT), socket_FPGA_map_answer.get(zmq.RCVTIMEO), ipc_fpgarqpacket_read.return_addr))
-    # message, envelope = separate(recv_zmq(socket_FPGA_map_answer))
-    message = recv_zmq(socket_FPGA_map_answer)
-
-    print (message)
-
-    # decode the package
-    ipc_fpgaaswpacket = FPGAMapAnswerPacket()
-    ipc_fpgaaswpacket.decode(message)
-    print (ipc_fpgaaswpacket)
-    print ('| got PAYLOAD %s' % (ipc_fpgaaswpacket.read_data))
-
-    envelope = ipc_fpgaaswpacket.return_addr
-    print(envelope)
-
-
-    # sending read_data back as TX packet
-    if ipc_fpgaaswpacket.read_data:
-        not_empty_ipc_txpacket = TxPacket()
-        raw = not_empty_ipc_txpacket.encode(APID = TLM_GET_FPGA, payload=ipc_fpgaaswpacket.read_data)
-        not_empty_ipc_txpacket.decode(raw)
-        print(not_empty_ipc_txpacket)
-
-        print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT)))
-        print(raw)
-        print(ipc_fpgarqpacket_read)
-
-        socket_tx_packets.send(raw)
-
-def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
+def send_pat_command(socket_PAT_control, command, payload = ''):
     #Define Command Payload
     CMD_PAYLOAD = payload + '\0'
     assert len(CMD_PAYLOAD) <= PAT_CMD_PAYLOAD_SIZE #Ensure CMD_PAYLOAD is the right length
@@ -307,7 +262,7 @@ while True:
                     exp_cmd = 10000000
 
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_GET_IMAGE, str(exp_cmd))
+            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_SINGLE_CAPTURE') 
             #send image telemetry file...
@@ -322,7 +277,7 @@ while True:
                     exp_cmd = 10000000
 
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
+            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_CALIB_LASER_TEST') 
             #send image telemetry file... 
@@ -337,14 +292,14 @@ while True:
                     exp_cmd = 10000000
 
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_FSM_TEST, str(exp_cmd))
+            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_FSM_TEST') 
             #send image telemetry files...   
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_CALIB_TEST)
+            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_RUN_CALIBRATION') 
             #send image telemetry files...    
@@ -420,7 +375,7 @@ while True:
             
             #Start Main PAT Loop:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, str(pid), PAT_MODE_ID)
+            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID)
             print(ipc_patControlPacket) #debug print
 
             ###TODO: add any other lasercom experiment process start-up tasks
