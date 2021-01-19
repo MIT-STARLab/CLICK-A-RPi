@@ -23,8 +23,20 @@ from zmqTxRx import recv_zmq, send_zmq, separate
 topic = str(os.getpid())
 pid = os.getpid()
 
-# parameters
+# mode parameters
+CH_MODE_GROUND_TEST = 0
+CH_MODE_DEBUG = 1
+CH_MODE_DOWNLINK = 2
+CH_MODE_ID = CH_MODE_GROUND_TEST #default for ground testing (can replace with debug for flight)
 PAT_MODE_ID = PAT_CMD_START_PAT #set PAT mode to default for execution w/o ground specified mode change
+
+# timing parameters
+#ground test mode doesn't timeout for convenience during testing (can remove this mode for flight)
+TIMEOUT_PD_DEBUG = 1800 #seconds, timeout period for debug mode (TBR)
+TIMEOUT_PD_DOWNLINK = 900 #seconds, timeout period for debug mode (TBR)
+UPDATE_PD_GROUND_TEST = 10 #seconds, time period for any repeated process commands needed during this mode
+UPDATE_PD_DEBUG = 10 #seconds, time period for any repeated process commands needed during this mode
+UPDATE_PD_DOWNLINK = 10 #seconds, time period for any repeated process commands needed during this mode
 
 # ZeroMQ inter process communication
 context = zmq.Context()
@@ -124,21 +136,59 @@ def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
     return ipc_patControlPacket
 
 def log_to_hk(payload):
+    print (payload) #debug printing
     ipc_healthPacket = CHHealthPacket()
     raw = ipc_healthPacket.encode(pid, payload)
     send_zmq(socket_housekeeping, raw) 
 
+start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
+counter_ground_test = 0 #used to count the number of repetitive process tasks
+counter_debug = 0 #used to count the number of repetitive process tasks
+counter_downlink = 0 #used to count the number of repetitive process tasks
+counter_heartbeat = 0 #used to count the number of repetitive process tasks
 while True:
-    #send heartbeat to housekeeping
-    ipc_heartbeatPacket = HandlerHeartbeatPacket()
     curr_time = time.time()
-    raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
-    print(ipc_heartbeatPacket) #Debug printing
-    print ('SENDING to %s' % (socket_housekeeping.get_string(zmq.LAST_ENDPOINT))) #Debug printing
-    send_zmq(socket_housekeeping, raw_ipc_heartbeatPacket)  
-
+    elapsed_time = curr_time - start_time
+    
+    # check for timeouts and do any repetitive process tasks
+    if((CH_MODE_ID == CH_MODE_GROUND_TEST) and (elapsed_time >= UPDATE_PD_GROUND_TEST*counter_ground_test)): #no timeout for ground testing
+        log_to_hk('CH_MODE_ID = CH_MODE_GROUND_TEST. Start Time: ' + str(start_time)) 
+        counter_ground_test += 1
+    
+    if(CH_MODE_ID == CH_MODE_DEBUG):
+        time_remaining = TIMEOUT_PD_DEBUG - elapsed_time
+        if(time_remaining <= 0):
+            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Timeout Reached.') 
+            #TODO: do any pre-shutdown tasks
+            break #exit main loop
+            
+        elif(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):        
+            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Time Remaining (sec): ' + str(time_remaining) + '. Start Time: ' + str(start_time))        
+            #TODO: do any repetitive process tasks
+            counter_debug += 1
+        
+    if(CH_MODE_ID == CH_MODE_DOWNLINK):
+        time_remaining = TIMEOUT_PD_DOWNLINK - elapsed_time 
+        if(time_remaining <= 0):
+            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Timeout Reached.') 
+            #TODO: do any pre-shutdown tasks
+            break #exit main loop
+        
+        elif(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):             
+            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Time Remaining (sec): ' + str(time_remaining) + '. Start Time: ' + str(start_time))        
+            #TODO: do any repetitive process tasks
+            counter_downlink += 1
+    
+    #send heartbeat to housekeeping
+    if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):        
+        ipc_heartbeatPacket = HandlerHeartbeatPacket()
+        raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
+        print(ipc_heartbeatPacket) #Debug printing
+        send_zmq(socket_housekeeping, raw_ipc_heartbeatPacket)
+        counter_heartbeat += 1
+    
     #poll for received commands
-    sockets = dict(poller.poll(CH_HEARTBEAT_PD - 1000)) #wait for 5 seconds in between heartbeats (CH_HEARTBEAT_PD = 6000)
+    sockets = dict(poller.poll(10)) #poll for 10 milliseconds
     if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
         # get commands
         print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
@@ -250,10 +300,10 @@ while True:
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
-                    print ('Exposure below minimum of 10 us entered. Using 10 us.')
+                    log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
             elif(exp_cmd > 10000000):
-                    print ('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
+                    log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
 
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
@@ -265,10 +315,10 @@ while True:
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
-                    print ('Exposure below minimum of 10 us entered. Using 10 us.')
+                    log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
             elif(exp_cmd > 10000000):
-                    print ('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
+                    log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
 
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
@@ -280,10 +330,10 @@ while True:
         elif(CMD_ID == CMD_PL_FSM_TEST):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
-                    print ('Exposure below minimum of 10 us entered. Using 10 us.')
+                    log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
             elif(exp_cmd > 10000000):
-                    print ('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
+                    log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
 
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
@@ -318,7 +368,7 @@ while True:
             echo_payload_tuple = struct.unpack('%ds'%echo_raw_size,echo_raw)
             echo_payload = echo_payload_tuple[0] #python returns a tuple by default
             raw = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload) #TBR
-            print(echo_txpacket) #Debug printing
+            print (echo_payload) #debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
             log_to_hk('ACK CMD PL_ECHO') 
@@ -327,23 +377,23 @@ while True:
             log_to_hk('ACK CMD PL_NOOP') 
 
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
+            start_time = time.time()
+            CH_MODE_ID = CH_MODE_DOWNLINK
+            log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + start_time) 
+            
             #Start Main PAT Loop:
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_MODE_ID)
             print(ipc_patControlPacket) #debug print
 
-            ###TODO: Lasercom experiment...
-
-            #End PAT Process:
-            # print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            # ipc_patControlPacket = send_pat_command(socket_PAT_control, string(pid), PAT_CMD_END_PAT)
-            # print(ipc_patControlPacket) #debug print
-            #TODO: acknowledgement telemetry 
-            log_to_hk('ACK CMD PL_DWNLINK_MODE') 
+            ###TODO: add any other lasercom experiment process start-up tasks
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
-            log_to_hk('ACK CMD PL_DEBUG_MODE') 
-            #TODO...
+            start_time = time.time()
+            CH_MODE_ID = CH_MODE_DEBUG
+            log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time) 
+            
+            ###TODO: add any other debug process start-up tasks
 
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + string(CMD_ID))  
