@@ -147,28 +147,28 @@ try:
         #print "write_data (X): 0x%X" % write_data
         #print "write_data (d): %d" % write_data
 
-        if(start_addr == 0x20):
-            if(write_data == 0x55):
-                print "Prior to Cal Laser ON - Ensure channel 35 is set to 0x55"
-                if(isCommCapable):
-                    ch35_val = spi.read_register(35)
-                    #ch35_val = fl.flReadChannel(handle, 35)
-                    if(ch35_val != 0x55):
-                        spi.write_register(35, 0x55)
-                        #fl.flWriteChannel(handle, 35, 0x55)
-                        #time.sleep(WRITE_DELAY_S)
-                        ch35_val = spi.read_register(35)
-                    print "Channel 35 Value: 0x%X" % ch35_val                
-                else:
-                    print "Error: FPGA not Comm Capable"
+        # if(start_addr == 0x20):
+        #     if(write_data == 0x55):
+        #         print "Prior to Cal Laser ON - Ensure channel 35 is set to 0x55"
+        #         if(isCommCapable):
+        #             ch35_val = spi.read_register(35)
+        #             #ch35_val = fl.flReadChannel(handle, 35)
+        #             if(ch35_val != 0x55):
+        #                 spi.write_register(35, 0x55)
+        #                 #fl.flWriteChannel(handle, 35, 0x55)
+        #                 #time.sleep(WRITE_DELAY_S)
+        #                 ch35_val = spi.read_register(35)
+        #             print "Channel 35 Value: 0x%X" % ch35_val                
+        #         else:
+        #             print "Error: FPGA not Comm Capable"
 
         print "Writing to FPGA..."
         if(isCommCapable):
-            if(start_addr == 0x08):
-                print "Prior to FSM Command - Writing 0x55 to channel 33"
-                spi.write_register(33, 0x55)
-                #fl.flWriteChannel(handle, 33, 0x55)
-                #time.sleep(WRITE_DELAY_S)
+            # if(start_addr == 0x08):
+            #     print "Prior to FSM Command - Writing 0x55 to channel 33"
+            #     spi.write_register(33, 0x55)
+            #     #fl.flWriteChannel(handle, 33, 0x55)
+            #     #time.sleep(WRITE_DELAY_S)
             print "Writing to Channel: 0x%X" % start_addr
             print "Data to Write: 0x%X" % write_data
             spi.write_register(start_addr, write_data)

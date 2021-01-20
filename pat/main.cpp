@@ -16,6 +16,9 @@
 #define CALIB_CH 0x20 //calib laser fpga channel (Notated_memory_map on Google Drive)
 #define CALIB_ON 0x55 //calib laser ON code (Notated_memory_map on Google Drive)
 #define CALIB_OFF 0x0F //calib laser OFF code (Notated_memory_map on Google Drive)
+#define HEATER_CH 0x23 //heater fpga channel (Notated_memory_map on Google Drive)
+#define HEATER_ON 0x55 //heater ON code (Notated_memory_map on Google Drive)
+#define HEATER_OFF 0x0F //heater OFF code (Notated_memory_map on Google Drive)
 #define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
@@ -44,13 +47,33 @@ public:
 };
 
 //Turn on Calibration Laser
-bool laserOn(zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
-	// Send command to FPGA:
-	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
-	// Check that message was received and FPGA was written to:
-	bool return_val = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
-	std::this_thread::sleep_for(std::chrono::milliseconds(LASER_RISE_TIME));
-	return return_val; 
+bool laserOn(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
+	bool laser_is_on;
+	if(check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, request_number)){
+		// Heater is ON -> Send laser ON command to FPGA:
+		send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
+		// Check that message was received and FPGA was written to:
+		laser_is_on = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+		std::this_thread::sleep_for(std::chrono::milliseconds(LASER_RISE_TIME));
+		return laser_is_on;
+	} else{
+		// Heater is OFF (or the read request failed)
+		log(pat_health_port, fileStream, "In main.cpp - laserOn: Heater ON check failed!");
+		// Send Heater ON command to FPGA:
+		send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, (bool) WRITE, request_number);
+		// Check that message was received and FPGA was written to:
+		if(check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) HEATER_CH, request_number)){
+			// Heater is ON -> Send laser ON command to FPGA:
+			send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, (bool) WRITE, request_number);
+			// Check that message was received and FPGA was written to:
+			laser_is_on = check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, request_number);
+			std::this_thread::sleep_for(std::chrono::milliseconds(LASER_RISE_TIME));
+			return laser_is_on;
+		} else{
+			log(pat_health_port, fileStream, "In main.cpp - laserOn: Heater ON write failed!");
+			return laser_is_on = false;
+		}
+	}
 }
 
 //Turn Off Calibration Laser
@@ -251,7 +274,7 @@ int main() //int argc, char** argv
 				case CMD_CALIB_TEST:
 					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_TEST command.");
 					//Run calibration:
-					if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
+					if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
 						if(calibration.run(calib)) //sets calib exposure
 						{
 							calibExposure = camera.config->expose_us.read(); //save calib exposure
@@ -285,7 +308,7 @@ int main() //int argc, char** argv
 
 					for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
 						//switch laser on
-						if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
+						if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 							//save image
 							logImage(string("CMD_CALIB_LASER_TEST_ON"), camera, textFileOut, pat_health_port);
 							//switch laser off
@@ -311,7 +334,7 @@ int main() //int argc, char** argv
 					camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);	
 
 					//switch laser on
-					if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
+					if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
 						//save images at various FSM settings
 						fsm.setNormalizedAngles(0,0);
 						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
@@ -444,7 +467,7 @@ int main() //int argc, char** argv
 		{
 			// Calibration phase, internal laser has to be turned on, ran just once
 			case CALIBRATION:
-				if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on
+				if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on
 					if(calibration.run(calib)) //sets calib exposure, pg-comment
 					{
 						haveCalibKnowledge = true; 
@@ -729,7 +752,7 @@ int main() //int argc, char** argv
 
 			// Process new frame of calib laser spot
 			case CL_CALIB:
-				if(laserOn(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on for calib
+				if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on for calib
 					camera.config->expose_us.write(calibExposure); //set cam to calib exposure, pg
 					camera.setWindow(calibWindow);
 					camera.requestFrame(); //queue calib frame, pg-comment

@@ -107,9 +107,10 @@ uint16_t receive_packet_pat_control(zmq::socket_t& pat_control_port, char* data_
 
 fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port, bool read_write);
 
-// TODO: receive_packet_pat_rx (commands from bus)
-
 bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint16_t channel, uint8_t request_number);
 
+bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, uint8_t request_num);
+
+// Optional: receive_packet_pat_rx (commands from bus)
 
 #endif

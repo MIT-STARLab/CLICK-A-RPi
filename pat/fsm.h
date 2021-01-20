@@ -20,7 +20,9 @@
 #define FSM_A_CH 0x08 //fsm fpga channel a: fsm configuration (Notated_memory_map on Google Drive)
 #define FSM_B_CH 0x09 //fsm fpga channel b: voltage 1 (Notated_memory_map on Google Drive)
 #define FSM_C_CH 0x0A //fsm fpga channel c: voltage 2 (Notated_memory_map on Google Drive)
-
+#define LD_BIAS_CH 0x21 //LD bias channel (Notated_memory_map on Google Drive)
+#define LD_BIAS_ON 0x55 //LD bias ON code (Notated_memory_map on Google Drive)
+#define LD_BIAS_OFF 0x0F //LD bias OFF code (Notated_memory_map on Google Drive)
 #define FSM_VBIAS_DAC 22000
 #define FSM_VMAX_DAC 12000
 #define FSM_FILTER 200
