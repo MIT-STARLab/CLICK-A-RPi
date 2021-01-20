@@ -27,4 +27,4 @@ enumerate : $(OBJ_DIR)/enumerate.o
 	$(CXX) -o $(BIN_DIR)/$@ $^ $(CXXFLAGS) -L$(mvLIB) -lmvDeviceManager
 
 clean:
-	rm -f $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(OBJ_DIR) $(BIN_DIR)
