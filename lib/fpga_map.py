@@ -9,6 +9,7 @@ Human readable value block starts at reg 200;
 
 '''
 import math
+import collections 
 
 CTL = 0
 CTL_TX_EN      = 0b00000001
@@ -23,6 +24,13 @@ FSMa = 8
 FSMb = 9
 FSMc = 10
 
+PO1 = 33
+PO2 = 33
+PO3 = 33
+PO4 = 33
+HE1 = 33
+HE2 = 33
+
 FLG = 63
 FLG_DCM_LOCKED = 0b00000001
 FLG_CRC_ERROR  = 0b00010000
@@ -36,7 +44,7 @@ ERF = 66
 EFL = 67
 EFL_EMPTY      = 0b00000010
 
-REGISTER_TYPE = {}
+REGISTER_TYPE = collections.defaultdict(lambda : 'xxxx')
 BYTE_1 = {}
 BYTE_2 = {}
 BYTE_3 = {}
@@ -44,6 +52,23 @@ BYTE_3 = {}
 # ----------------- Base registers ----------------- 
 for reg in range(  0, 128):
     REGISTER_TYPE[reg] = 'xxxB'
+    
+class Power:
+    def __init__(self, handler):
+        self.handler = handler
+        
+    def bias_on():      self.handler.write_reg(PO1, 85)
+    def bias_off():     self.handler.write_reg(PO1, 15)
+    def edfa_on():      self.handler.write_reg(PO2, 85)
+    def edfa_off():     self.handler.write_reg(PO2, 15)
+    def heaters_on():   self.handler.write_reg(PO3, 85)
+    def heaters_off():  self.handler.write_reg(PO3, 15)
+    def tec_on():       self.handler.write_reg(PO4, 85)
+    def tec_off():      self.handler.write_reg(PO4, 15)
+    def heater_1_on():  self.handler.write_reg(HE1, 85)
+    def heater_1_off(): self.handler.write_reg(HE1, 15)
+    def heater_2_on():  self.handler.write_reg(HE2, 85)
+    def heater_2_off(): self.handler.write_reg(HE2, 15)
     
 # ----------------- Temperatures --------------------
 TEMPERATURE_BLOCK = list(range(200, 206))
@@ -73,18 +98,18 @@ def decode_temperature(msb, lsb):
     
 # ----------------- Current consumption ----------------- 
 CURRENT_BLOCK = list(range(300, 304))
-
 for reg in CURRENT_BLOCK:
     REGISTER_TYPE[reg] = 'f'
 
-# ----------------- Temp Set Point ----------------- 
+# ----------------- Seed Set Point ----------------- 
 REGISTER_TYPE[400] = 'I'
 
 # ----------------- Bias Current ----------------- 
 REGISTER_TYPE[401] = 'I'
 
-# ----------------- Thresholds ----------------- 
+# ----------------- DACs ----------------- 
 DAC_ENABLE = 500
+DAC_RESET  = 501
 DAC_BIST_A = 0b00000001
 DAC_BIST_B = 0b00000010
 DAC_BIST_C = 0b00000100
@@ -97,11 +122,28 @@ DAC_OEN    = 0b00 << 8
 DAC_1K     = 0b01 << 8
 DAC_100K   = 0b10 << 8
 DAC_HIGHZ  = 0b11 << 8
-REGISTER_TYPE[BIST_DAC_ENABLE] = 'xxH'
+REGISTER_TYPE[DAC_ENABLE] = 'xxH'
+REGISTER_TYPE[DAC_RESET] = 'xxxB'
 
-DAC_BLOCK = list(range(501, 509))
-for reg in BIST_DAC_BLOCK:
+DAC_BLOCK = list(range(502, 510))
+for reg in DAC_BLOCK:
     REGISTER_TYPE[reg] = 'xxH'
+    
+class DAC:
+    def __init__(self, handler):
+        self.handler = handler
+        
+    def reset_bist():
+        self.handler.write_reg(DAC_RESET, 0b101)
+    
+    def reset_fsm():
+        self.handler.write_reg(DAC_RESET, 0b101)
+    
+    def enable_output(mask):
+        self.handler.write_reg(DAC_ENABLE, DAC_OEN | mask)
+        
+    def disable_output(mask):
+        self.handler.write_reg(DAC_ENABLE, DAC_HIGHZ | mask)
     
 # ----------------- EDFA -----------------
 EDFA_IN_STR    = 600
@@ -119,8 +161,8 @@ EDFA_MODE_APC  = 3
 REGISTER_TYPE[EDFA_MODE] = 'xxxB'
 EDFA_DIODE_ON  = 604
 REGISTER_TYPE[EDFA_DIODE_ON] = 'xxxB'
-EDFA_MISTERY_TEMP = 605
-REGISTER_TYPE[EDFA_MISTERY_TEMP] = 'f'
+EDFA_MYSTERY_TEMP = 605
+REGISTER_TYPE[EDFA_MYSTERY_TEMP] = 'f'
 EDFA_POWER_IN  = 606
 REGISTER_TYPE[EDFA_POWER_IN] = 'f'
 EDFA_POWER_OUT = 607
@@ -157,6 +199,15 @@ class EDFA:
     def turn_off(self):
         return self.send_command('edfa off\n')
         
+    def mode_aopc(self):
+        return self.send_command('mode aopc\n')
+        
+    def mode_acc(self):
+        return self.send_command('mode acc\n')
+        
+    def set_pump_current(self, current_mA):
+        return self.send_command('ldc ba %d\n' % current_mA)
+        
     def is_pin_high(self):
         return self.handler.read_reg(EDFA_EN_PIN)
         
@@ -166,8 +217,8 @@ class EDFA:
     def is_pump_on(self):
         return self.handler.read_reg(EDFA_DIODE_ON)
         
-    def get_mistery_temp(self):
-        return self.handler.read_reg(EDFA_MISTERY_TEMP)
+    def get_mystery_temp(self):
+        return self.handler.read_reg(EDFA_MYSTERY_TEMP)
 
     def get_input_power_dBm(self):
         return self.handler.read_reg(EDFA_POWER_IN)
@@ -178,10 +229,10 @@ class EDFA:
     def get_preamp_current(self):
         return self.handler.read_reg(EDFA_PRE_CURRENT)
  
-     def get_preamp_power(self):
+    def get_preamp_power(self):
         return self.handler.read_reg(EDFA_PRE_POWER)
  
-     def get_pump_current(self):
+    def get_pump_current(self):
         return self.handler.read_reg(EDFA_PUMP_CURRENT)
  
     def get_case_temp(self):

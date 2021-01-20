@@ -5,12 +5,14 @@ import os
 import struct
 import fpga_map
 import collections
+import uuid
 
 class FPGAClientInterface:
     def __init__(self,context=None):
         
-        # use PID as unique identifier for this progress
-        self.pid = os.getpid()
+        # use PID or uuid as unique identifier for this progress
+        #self.pid = os.getpid()
+        self.pid = uuid.uuid4().fields[0]
         
         # ZeroMQ context setup
         if not context: context = zmq.Context()
@@ -40,7 +42,9 @@ class FPGAClientInterface:
                     raise error   
         self.socket_answer.setsockopt(zmq.RCVTIMEO, options.MESSAGE_TIMEOUT) # Set timout
         
-        self.edfa = fpga_map.EDFA(self)
+        self.power = fpga_map.Power(self)
+        self.edfa  = fpga_map.EDFA(self)
+        self.dac   = fpga_map.DAC(self)
         
     class _Future:
         def __init__(self,handler,token,addr,wr_flag,size):
@@ -98,9 +102,11 @@ class FPGAClientInterface:
         # encode payload based on type
         if type(value) is int:
             len_pck = 4
-            payload = struct.pack('I',value)
+            frmt = fpga_map.REGISTER_TYPE[addr]
+            payload = struct.pack(frmt,value)
         elif type(value) is list:
             len_pck = len(value)
+            frmt = [fpga_map.REGISTER_TYPE[ad] for ad in xrange(addr,addr+len_pck)]
             payload = struct.pack('%dI'%len_pck,*value)
             len_pck *= 4
         elif type(value) is str:

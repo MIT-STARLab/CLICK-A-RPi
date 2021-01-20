@@ -68,8 +68,8 @@ def parse(regs,flist):
     elif flist[2] ==  'LDON': regs[mmap.EDFA_DIODE_ON] = 1
     else:                     regs[mmap.EDFA_DIODE_ON] = 2
     
-    try:    regs[mmap.EDFA_MISTERY_TEMP] = float(flist[3])
-    except: regs[mmap.EDFA_MISTERY_TEMP] = -1000.0
+    try:    regs[mmap.EDFA_MYSTERY_TEMP] = float(flist[3])
+    except: regs[mmap.EDFA_MYSTERY_TEMP] = -1000.0
     
     if flist[3] == 'IPA': regs[ mmap.EDFA_POWER_IN] = -100.0
     else:

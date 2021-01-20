@@ -34,28 +34,8 @@ def loop():
         except zmq.ZMQError as e:
             if e.errno == zmq.EAGAIN: continue
             
-        register_number = req.size//4
-        addresses = range(req.start_addr, req.start_addr+register_number)
-        write_flag = [req.rw_flag]*register_number
-        if req.rw_flag and register_number:
-            values_in = []
-            for addr,idx in zip(addresses,xrange(0,req.size,4)):
-                try: frmt = mmap.REGISTER_TYPE[addr]
-                except: frmt = 'xxxB'
-                pl = req.write_data[idx,idx+4]
-                values_in.append(struct.unpack(frmt,pl)[0])
-        else:
-            values_in = [0]*register_number
-        
-        
-        if req.start_addr < 128:
-                
-            errors,values_out = fpgabus.transfer(addresses, write_flag, values_in)
-            
-            error_flag = sum(errors)
-            req.answer(values_out,error_flag)
-            
-        elif req.start_addr == mmap.EDFA_IN_STR:
+        # EDFA in and out string have a special packet, containing a string for a single address
+        if req.start_addr == mmap.EDFA_IN_STR:
         
             edfa.reset_fifo(fpgabus)
             
@@ -69,22 +49,47 @@ def loop():
             
             error_flag = edfa.write_string(fpgabus, values_in)
             req.answer('',error_flag)
+            continue
             
         elif req.start_addr == mmap.EDFA_OUT_STR:
             
             error,edfa_out_str = edfa.read_string(fpgabus)
             req.answer(edfa_out_str,error)
+            continue
+            
+        # Decoding the incomin packet
+        register_number = req.size//4
+        addresses = range(req.start_addr, req.start_addr+register_number)
+        if req.rw_flag and register_number:
+            values_in = []
+            for addr,idx in zip(addresses,xrange(0,req.size,4)):
+                frmt = mmap.REGISTER_TYPE[addr]
+                pl = req.write_data[idx:idx+4]
+                decode = struct.unpack(frmt,pl)
+                if len(decode): values_in.append(decode[0])
+                else: values_in.append(0)
+        else:
+            values_in = [0]*register_number
+        
+        if req.start_addr < 128:
+            # Raw registers
+            write_flag = [req.rw_flag]*register_number
+            errors,values_out = fpgabus.transfer(addresses, write_flag, values_in)
+            
+            error_flag = sum(errors)
+            req.answer(values_out,error_flag)
             
         else:
             # Virtual registers
-            # TO BE IMPLEMENTED
             
+            # ----------------- EDFA -----------------
             # if any in the EDFA block, get FLINE
             if any([x in mmap.EDFA_PARSED_BLOCK for x in addresses]):
                 if time.time() - last_edfa_update > options.EDFA_VIRTUAL_REGS_GOOD_FOR:
                     fline = edfa.fline(fpgabus)
                     flist = fline.split()          
                     reg_buffer = edfa.parse(reg_buffer, flist)
+            # -----------------------------------------
             
             values_out = []
             for addr,value in zip(addresses,values_in):
@@ -92,23 +97,32 @@ def loop():
                 if addr in mmap.TEMPERATURE_BLOCK:
                     msb = mmap.BYTE_1[addr]
                     lsb = mmap.BYTE_2[addr]
-                    temp = mmap.decode_temperature(msb.lsb)
-                    values_out.append(struct.pack('f',temp))
+                    temp = mmap.decode_temperature(msb,lsb)
+                    values_out.append(temp)
                 
                 elif addr in mmap.CURRENT_BLOCK:
                     pass
                     
+                # ----------------- EDFA -----------------
                 elif addr in mmap.EDFA_PARSED_BLOCK:
                     values_out.append(reg_buffer[addr])
                     
-                elif addr ==  mmap.DAC_ENABLE:
+                    
+                # ----------------- DACs ----------------- 
+                elif addr == mmap.DAC_ENABLE:
                     dac.set_ouput_mode(fpgabus, value)
+                    
+                elif addr == mmap.DAC_RESET:
+                    is_por = (value & 0b100) >> 2
+                    if value & 0b01: dac.reset(fpgabus, 1, is_por)
+                    if value & 0b10: dac.reset(fpgabus, 2, is_por)
                
                 elif addr in mmap.DAC_BLOCK:
                     if req.rw_flag:
                         target_chan = addr - mmap.DAC_BLOCK[0]
                         dac.write_and_update(fpgabus,target_chan,value)
                     values_out.append(value)
+                # ---------------------------------------- 
                
                 else: req.answer('',error_flag=1)
                 
