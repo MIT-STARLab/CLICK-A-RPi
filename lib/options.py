@@ -39,6 +39,7 @@ CMD_PL_GET_FPGA = 0x0E
 CMD_PL_SET_HK = 0x97
 CMD_PL_ECHO = 0x3D
 CMD_PL_NOOP = 0x5B
+CMD_PL_SELF_TEST = 0x80 #Change
 CMD_PL_DWNLINK_MODE = 0xE0 #Do not change - BCT
 CMD_PL_DEBUG_MODE = 0xD0 #Do not change - BCT
 
@@ -51,6 +52,9 @@ TLM_LIST_FILE = 0x3E0
 TLM_ASSEMBLE_FILE = 0x3B0 #TBR
 TLM_GET_FPGA = 0x3C0
 TLM_ECHO = 0x3FF
+
+#Self Test IDs
+TEST_PAT_HW = 0x00
 
 #PAT IPC Command IDs [Shared Command Parameters with c-code (packetdef.h)]
 PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary

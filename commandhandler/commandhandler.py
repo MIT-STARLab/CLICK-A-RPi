@@ -37,6 +37,9 @@ UPDATE_PD_GROUND_TEST = 10 #seconds, time period for any repeated process comman
 UPDATE_PD_DEBUG = 10 #seconds, time period for any repeated process commands needed during this mode
 UPDATE_PD_DOWNLINK = 10 #seconds, time period for any repeated process commands needed during this mode
 
+#other parameters
+DEFAULT_CALIB_EXP = 25 #microseconds, default calibration laser exposure time for self-test
+
 # ZeroMQ inter process communication
 context = zmq.Context()
 
@@ -280,7 +283,7 @@ while True:
             ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_CALIB_LASER_TEST') 
-            #send image telemetry file... 
+            #send image telemetry files... 
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
@@ -367,6 +370,39 @@ while True:
 
         elif(CMD_ID == CMD_PL_NOOP):
             log_to_hk('ACK CMD PL_NOOP') 
+
+        elif(CMD_ID == CMD_PL_SELF_TEST):
+            test_id = struct.unpack('B', ipc_rxcompacket.payload)
+            test_list = [TEST_PAT_HW]
+            test_names = ['PAT HW']
+            if(test_id not in test_list):
+                log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + string(test_id)) 
+            else:
+                log_to_hk('ACK CMD PL_SELF_TEST: Test is ' + test_names[test_list == test_id])
+                #execute test
+                if(test_id == TEST_PAT_HW):
+                    #execute calib laser test
+                    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(DEFAULT_CALIB_EXP))
+                    print(ipc_patControlPacket) #debug print 
+                    time.sleep(10) #give test some time to complete
+                    #send image telemetry files... 
+
+                    #execute fsm test
+                    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(DEFAULT_CALIB_EXP))
+                    print(ipc_patControlPacket) #debug print
+                    time.sleep(10) #give test some time to complete
+                    #send image telemetry files... 
+
+                    #execute stand alone calibration test
+                    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
+                    print(ipc_patControlPacket) #debug print
+                    time.sleep(10) #give test some time to complete
+                    #send image telemetry files...  
+
+                #elif(test_id == ...):
 
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             start_time = time.time()
