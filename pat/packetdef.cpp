@@ -217,9 +217,9 @@ bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vect
 }
 
 // Check FPGA map value via read request and answer
-bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, uint8_t request_num)
+bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, uint8_t request_number)
 {
-	send_packet_fpga_map_request(fpga_map_request_port, channel, data, READ, request_num);
+	send_packet_fpga_map_request(fpga_map_request_port, channel, data, READ, request_number);
 
 	// Listen for FPGA answer:
 	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
