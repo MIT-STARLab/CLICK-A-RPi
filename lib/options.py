@@ -4,6 +4,9 @@ COMMAND_HANDLERS_COUNT = 1
 MESSAGE_TIMEOUT = 5000 # wait 5 seconds for ZeroMQ response
 CH_HEARTBEAT_PD = 6000
 
+# File management
+SYMLINK_MAX = 10
+
 #IPC Port Numbers
 TEST_RESPONSE_PORT = "5599"
 

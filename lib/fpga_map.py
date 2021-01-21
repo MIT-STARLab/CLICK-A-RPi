@@ -38,11 +38,39 @@ FLG_RX_NEW     = 0b00100000
 FLG_TX_READY   = 0b01000000
 FLG_MOD_ERROR  = 0b10000000
 
+# EDFA UART
 ETX = 11
 ERX = 65
 ERF = 66
 EFL = 67
 EFL_EMPTY      = 0b00000010
+
+# BIST capture
+SCF = 15 # BIST capture flags
+SCF_CAPTURE_DONE   = 0b001
+SCF_PLL_LOCKED     = 0b010
+SCF_PLL_RECONF_RDY = 0b100
+
+SCTa = 16 # Total, LSB
+SCTb = 17 # Total, MSB
+SCAa = 18
+SCAb = 19
+SCBa = 20
+SCBb = 21
+SCCa = 22
+SCCb = 23
+
+SCN = 24
+SCN_RUN_CAPTURE     = 0b00001
+SCN_PROG_PLL        = 0b00010
+SCN_SHUTDOWN_PLL    = 0b00100
+SCN_BYPASS_PLL      = 0b01000
+SCN_PLL_PAGE_SELECT = 0b10000
+SCP = 25
+SCD = 26
+SPL = 27
+SPH = 28
+
 
 REGISTER_TYPE = collections.defaultdict(lambda : 'xxxx')
 BYTE_1 = {}
@@ -133,11 +161,13 @@ class DAC:
     def __init__(self, handler):
         self.handler = handler
         
-    def reset_bist():
-        self.handler.write_reg(DAC_RESET, 0b101)
+    def reset_bist(is_por=1,ref_en=1):
+        is_por *= 0b0100
+        ref_en *= 0b1000
+        self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
     
     def reset_fsm():
-        self.handler.write_reg(DAC_RESET, 0b101)
+        self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
     
     def enable_output(mask):
         self.handler.write_reg(DAC_ENABLE, DAC_OEN | mask)

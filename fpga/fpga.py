@@ -113,9 +113,12 @@ def loop():
                     dac.set_ouput_mode(fpgabus, value)
                     
                 elif addr == mmap.DAC_RESET:
-                    is_por = (value & 0b100) >> 2
-                    if value & 0b01: dac.reset(fpgabus, 1, is_por)
-                    if value & 0b10: dac.reset(fpgabus, 2, is_por)
+                    is_por = (value & 0b0100) >> 2
+                    ref_en = (value & 0b1000) >> 3
+                    if value & 0b01:
+                        dac.reset(fpgabus, 1, is_por)
+                        dac.set_reference(fpgabus, 1, is_por)
+                    if value & 0b10: dac.reset(fpgabus, 2, ref_en)
                
                 elif addr in mmap.DAC_BLOCK:
                     if req.rw_flag:

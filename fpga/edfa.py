@@ -90,7 +90,9 @@ def parse(regs,flist):
     try:    regs[mmap.EDFA_PUMP_CURRENT] = int(flist[8])
     except: regs[mmap.EDFA_PUMP_CURRENT] = 0xFFFFFFFF
     
-    try:    regs[mmap.EDFA_CASE_TEMP] = float(flist[9])
-    except: regs[mmap.EDFA_CASE_TEMP] = -1000.0
+    if flist[9] == 'CTA': regs[mmap.EDFA_CASE_TEMP] = 60.0
+    else:
+        try:    regs[mmap.EDFA_CASE_TEMP] = float(flist[9])
+        except: regs[mmap.EDFA_CASE_TEMP] = -1000.0
     
     return regs
