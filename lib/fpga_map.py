@@ -154,6 +154,8 @@ REGISTER_TYPE[DAC_ENABLE] = 'xxH'
 REGISTER_TYPE[DAC_RESET] = 'xxxB'
 
 DAC_BLOCK = list(range(502, 510))
+DAC_1_A, DAC_1_B, DAC_1_C, DAC_1_D = DAC_BLOCK[0:4]
+DAC_2_A, DAC_2_B, DAC_2_C, DAC_2_D = DAC_BLOCK[0:4]
 for reg in DAC_BLOCK:
     REGISTER_TYPE[reg] = 'xxH'
     
@@ -161,18 +163,18 @@ class DAC:
     def __init__(self, handler):
         self.handler = handler
         
-    def reset_bist(is_por=1,ref_en=1):
+    def reset_bist(self,is_por=1,ref_en=1):
         is_por *= 0b0100
         ref_en *= 0b1000
         self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
     
-    def reset_fsm():
+    def reset_fsm(self):
         self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
     
-    def enable_output(mask):
+    def enable_output(self,mask):
         self.handler.write_reg(DAC_ENABLE, DAC_OEN | mask)
         
-    def disable_output(mask):
+    def disable_output(self,mask):
         self.handler.write_reg(DAC_ENABLE, DAC_HIGHZ | mask)
     
 # ----------------- EDFA -----------------

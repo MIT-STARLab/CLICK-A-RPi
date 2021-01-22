@@ -191,8 +191,8 @@ class FPGAClientInterface:
             lstr = struct.unpack('I',pck.read_data[0:4])[0]
             return pck.read_data[4:lstr+4]
         elif pck.size > 4:
-            reg_size = pck.size/4
-            addr_range = range(pck.start_addr, pck.start_addr+4)
+            reg_size = pck.size//4
+            addr_range = range(pck.start_addr, pck.start_addr+reg_size)
             raw_slices = [pck.read_data[0+i:4+i] for i in range(0, pck.size, 4)]
             return [self._decode_reg(addr,raw) for addr,raw in zip(addr_range,raw_slices)]
         else:

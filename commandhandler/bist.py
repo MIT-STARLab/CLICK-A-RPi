@@ -45,14 +45,14 @@ class Scope:
     def set_timebase(self,phase=0):
     
         if options.CHECK_ASSERTS:
-            assert self.counter_phase >= 0
+            assert phase >= 0
     
         self.vco_phase = phase & 0b111
         self.counter_phase = (phase & 0b11111000) >> 3
         
-        start_addr = mmap.SPP
+        start_addr = mmap.SCP
         data = [
-            self.vco_phase.
+            self.vco_phase,
             self.counter_phase,
             self.low_time,
             self.high_time]
@@ -71,9 +71,9 @@ class Scope:
         self.handler.dac.disable_output(mask)
         
     def set_thresholds(self, thA, thB, thC):
-        self.handler.write_reg(mmap.DAC_BIST_A, thA)
-        self.handler.write_reg(mmap.DAC_BIST_B, thB)
-        self.handler.write_reg(mmap.DAC_BIST_C, thC)
+        self.handler.write_reg(mmap.DAC_1_A, thA)
+        self.handler.write_reg(mmap.DAC_1_B, thB)
+        self.handler.write_reg(mmap.DAC_1_C, thC)
         
     def acquire_once(self, record):
     
@@ -82,23 +82,25 @@ class Scope:
         
         for thA, thB, thC in record:
         
+            self.handler.write_reg(mmap.SCN, 0)
+        
             self.set_thresholds(thA, thB, thC)
             
             self.handler.write_reg(mmap.SCN, mmap.SCN_RUN_CAPTURE)
             
             n_tries = 100
-            while self.handler.read_reg(mmap.SCF) & mmap.SCF_CAPTURE_DONE:
+            while not (self.handler.read_reg(mmap.SCF) & mmap.SCF_CAPTURE_DONE):
                 n_tries -= 1
-                if not n_tries: raise
+                if not n_tries: raise IOError
             
-            lsbT, msbT, lsbA, msbB, lsbB, msbC, lsbC = self.handler.read_reg(mmap.SCTa, 8)
+            lsbT, msbT, lsbA, msbA, lsbB, msbB, lsbC, msbC = self.handler.read_reg(mmap.SCTa, 8)
             
             probT = lsbT + msbT*256
             probA = lsbA + msbA*256
             probB = lsbB + msbB*256
             probC = lsbC + msbC*256
             
-            record.save(probT, probA, probB, probC)
+            record.save_point(probT, probA, probB, probC)
             
     def acquire_scan_phase(self,record,phases):
         
@@ -128,6 +130,8 @@ class VerticalRecord:
         
     def renew(self):
         raise NotImplementedError
+        
+    def __iter__(self): return self
             
     next = __next__
         
@@ -137,7 +141,7 @@ class VerticalRecordMonotonic(VerticalRecord):
         self.step = step
         self.th_range = th_range
         VerticalRecord.__init__(self,file_object,th_range)
-        self.thresholds_container = xrange(th_range[0],th_range[1],step)
+        self.thresholds_container = iter(xrange(th_range[0],th_range[1],step))
         
     def write_hearer(self):
         self.file_object.write('%d,%d,%d,%d\n' % (SCAN_MONOTONIC, self.th_range[0], self.th_range[1], self.step))
@@ -160,7 +164,7 @@ class VerticalRecordDivide(VerticalRecord):
         self.max_pts = max_pts
         VerticalRecord.__init__(self,file_object,th_range)
         self.thresholds_container = [th_range]
-        self.next_thresholds_container = []
+        self.next_thresholds_container = iter([])
         
     def write_hearer(self):
         self.file_object.write('%d,%d,%d,%d\n' % (SCAN_DIVIDE, self.th_range[0], self.th_range[1], self.max_pts))
@@ -256,7 +260,7 @@ class VerticalRecordAdaptative(VerticalRecord):
     
     next = __next__
             
-if __name__ == '__maint__':
+if __name__ == '__main__':
 
     import file_manager
 
@@ -269,7 +273,7 @@ if __name__ == '__maint__':
     
     assert sys.argv[2] in ('m','d','a')
     
-    end = sys.argv[3]
+    end = int(sys.argv[3])
 
     #time window size, in symbols
     SYMB = int(sys.argv[4])
@@ -279,10 +283,10 @@ if __name__ == '__maint__':
     MAX = 0xCCCC
     
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
-    with file_manager.ManagedFileOpen('/root/data/bist/%s.gz' % t_str,'w') as f, tags:
+    with file_manager.ManagedFileOpen('/root/data/bist/%s.gz' % t_str,'w') as (f, tags):
         tags['PPM']=sys.argv[1]
         tags['mode']=sys.argv[2]
-        tages['mode param']=sys.argv[3]
+        tags['mode param']=sys.argv[3]
         tags['Symbols']=sys.argv[4]
         tags['Phase']=sys.argv[5]
         
@@ -298,4 +302,4 @@ if __name__ == '__maint__':
         elif sys.argv[2] == 'a':
             rc = VerticalRecordAdaptative(f,th_range=(0,MAX),max_pts=end)
             
-        sc.acquire_once()
+        sc.acquire_once(rc)

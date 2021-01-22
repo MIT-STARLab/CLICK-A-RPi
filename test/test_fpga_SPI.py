@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 import sys
 sys.path.append('/root/fpga/')
 import spi

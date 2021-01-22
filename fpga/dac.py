@@ -27,7 +27,7 @@ def write_command(fpgabus, target_dac, command):
     if   target_dac == 1: addr = (mmap.THRa, mmap.THRb, mmap.THRc)
     elif target_dac == 2: addr = (mmap.FSMa, mmap.FSMb, mmap.FSMc)
     else: return
-    data = ( (command & 0x0F0000) >> 16,
+    data = ( (command & 0x3F0000) >> 16,
              (command & 0x00FF00) >> 8,
              (command & 0x0000FF) )
     rw_flag = [1]*3
@@ -58,6 +58,6 @@ def write_and_update(fpgabus, target_chan, value):
         assert target_chan >= 0
     if target_chan < 4: target_dac = 1
     else:               target_dac = 2
-    addr = target_dac & 0b11 << 16
+    addr = target_chan & 0b11 << 16
     write_command(fpgabus, target_dac, DAC_WRITE_UPDATE_ONE | addr | value)
     
