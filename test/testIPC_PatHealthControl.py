@@ -8,28 +8,12 @@ import time
 import sys #importing options and functions
 sys.path.append('../lib/')
 sys.path.append('../../lib/')
-from options import PAT_HEALTH_PORT, PAT_CONTROL_PORT
+from options import *
 from ipc_packets import PATControlPacket, PATHealthPacket
 from zmqTxRx import recv_zmq, send_zmq
 
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct
-
-#Shared Command Parameters with c-code (packetdef.h)
-CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
-CMD_HEADER_SIZE = 5 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
-CMD_START_PAT_OPEN_LOOP = 0x01
-CMD_START_PAT_STATIC_POINT = 0x02
-CMD_START_PAT_BUS_FEEDBACK = 0x03
-CMD_START_PAT = 0x04
-CMD_END_PAT = 0x05
-CMD_GET_IMAGE = 0x06
-CMD_CALIB_TEST = 0x07
-CMD_CALIB_LASER_TEST = 0x08
-CMD_FSM_TEST = 0x09
-CMD_BCN_ALIGN = 0x0A
-CMD_UPDATE_TX_OFFSET_X = 0x0B
-CMD_UPDATE_TX_OFFSET_Y = 0x0C
 
 cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST, CMD_BCN_ALIGN, CMD_UPDATE_TX_OFFSET_X, CMD_UPDATE_TX_OFFSET_Y]
 

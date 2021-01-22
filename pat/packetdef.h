@@ -16,18 +16,18 @@
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 #define CMD_PAYLOAD_SIZE 256
 #define CMD_HEADER_SIZE 5
+#define CMD_START_PAT 0x00
 #define CMD_START_PAT_OPEN_LOOP 0x01
 #define CMD_START_PAT_STATIC_POINT 0x02
 #define CMD_START_PAT_BUS_FEEDBACK 0x03
-#define CMD_START_PAT 0x04
-#define CMD_END_PAT 0x05
-#define CMD_GET_IMAGE 0x06
-#define CMD_CALIB_TEST 0x07
-#define CMD_CALIB_LASER_TEST 0x08
-#define CMD_FSM_TEST 0x09
-#define CMD_BCN_ALIGN 0x0A
-#define CMD_UPDATE_TX_OFFSET_X 0x0B
-#define CMD_UPDATE_TX_OFFSET_Y 0x0C
+#define CMD_END_PAT 0x04
+#define CMD_GET_IMAGE 0x05
+#define CMD_CALIB_TEST 0x06
+#define CMD_CALIB_LASER_TEST 0x07
+#define CMD_FSM_TEST 0x08
+#define CMD_BCN_ALIGN 0x09
+#define CMD_UPDATE_TX_OFFSET_X 0x0A
+#define CMD_UPDATE_TX_OFFSET_Y 0x0B
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{
@@ -107,9 +107,10 @@ uint16_t receive_packet_pat_control(zmq::socket_t& pat_control_port, char* data_
 
 fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer_port, bool read_write);
 
-// TODO: receive_packet_pat_rx (commands from bus)
-
 bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, uint16_t channel, uint8_t request_number);
 
+bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, uint8_t request_num);
+
+// Optional: receive_packet_pat_rx (commands from bus)
 
 #endif

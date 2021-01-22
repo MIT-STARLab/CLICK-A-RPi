@@ -111,11 +111,35 @@ void FSM::sendCommand(uint32_t cmd)
 void FSM::fsmWrite(uint16_t channel, uint8_t data)
 //-----------------------------------------------------------------------------
 {
-	//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
-	send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, fsm_request_number); //TBR request_number
-	if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
-		log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
-	};
-	fsm_request_number = (fsm_request_number + 1) % 0xFF; //increment request number modulo size(uint8_t)
-	std::this_thread::sleep_for(std::chrono::milliseconds(1)); //cmd delay
+	if(check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) LD_BIAS_CH, (uint8_t) LD_BIAS_ON, fsm_request_number)){
+		// LD Bias is ON -> Send FSM command to FPGA:
+		//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
+		send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, fsm_request_number);
+		if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
+			log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
+		};
+		fsm_request_number = (fsm_request_number + 1) % 0xFF; //increment request number modulo size(uint8_t)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); //cmd delay
+
+	} else{
+		// LD bias is OFF (or the read request failed)
+		log(pat_health_port, fileStream, "In fsm.cpp FSM::fsmWrite - Warning! LD bias ON check failed!");
+		// Send LD bias ON command to FPGA:
+		send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) LD_BIAS_CH, (uint8_t) LD_BIAS_ON, (bool) WRITE, fsm_request_number);
+
+		// Check that message was received and FPGA was written to:
+		if(check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) LD_BIAS_CH, fsm_request_number)){
+			// LD Bias is ON -> Send FSM command to FPGA:
+			//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
+			send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, fsm_request_number);
+			if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
+				log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
+			};
+			fsm_request_number = (fsm_request_number + 1) % 0xFF; //increment request number modulo size(uint8_t)
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); //cmd delay
+			
+		} else{
+			log(pat_health_port, fileStream, "In fsm.cpp FSM::fsmWrite - Warning! LD bias ON write failed!");
+		}
+	}	
 }
