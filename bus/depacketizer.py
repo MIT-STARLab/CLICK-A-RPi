@@ -40,6 +40,19 @@ class Depacketizer:
         self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
         self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
 
+    def read_data(self, n_bytes):
+        buf = []
+        while len(buf) < n_bytes:
+            try:
+                data = self.spi.read(n_bytes - len(buf))
+                if len(data) > 0:
+                    buf.extend(bytearray(data))
+            except Exception, err:
+                print(str(err))
+                pass
+
+        return buf
+
     def acquire_bus_pkt(self):
         # returns a full bus packet without the sync marker
 
@@ -47,7 +60,7 @@ class Depacketizer:
         # Read 1 byte from SPI device until the sync marker is found
         sync_index = 0
         while (sync_index < (len(self.ccsds_sync))):
-            b = bytearray(self.spi.read(1)) #python 2.7 default is ascii
+            b = self.read_data(1)
             if(b[0] == self.ccsds_sync[sync_index]):
                 # buf.append(b)
                 sync_index += 1
@@ -58,12 +71,12 @@ class Depacketizer:
                 sync_index = 0
         print('found sync!')
         # Read 6 CCSDS header bytes
-        buf = bytearray(self.spi.read(CCSDS_HEADER_LEN))
+        buf = self.read_data(CCSDS_HEADER_LEN)
 
         apid =  buf[APID_INDEX]
         pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
         # Read payload data bytes and crc bytes
-        pkt = bytearray(self.spi.read(pkt_len))
+        pkt = self.read_data(pkt_len)
         # Assuming crc is included in the packet length
 
         buf.extend(pkt)
@@ -198,7 +211,7 @@ class Depacketizer:
 
         sync_index = 0
         while (sync_index < (len(self.ccsds_sync))):
-            b = bytearray(self.spi.read(1)) #python 2.7 default is ascii
+            b = self.read_data(1)
             if(b[0] == self.ccsds_sync[sync_index]):
                 # buf.append(b)
                 sync_index += 1
@@ -209,16 +222,16 @@ class Depacketizer:
                 sync_index = 0
         print('found sync!')
         # Read 6 CCSDS header bytes
-        buf = bytearray(self.spi.read(CCSDS_HEADER_LEN))
+        buf = self.read_data(CCSDS_HEADER_LEN)
         pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
         # Read payload data bytes and crc bytes
-        pkt = bytearray(self.spi.read(pkt_len))
+        pkt = self.read_data(pkt_len)
         buf.extend(pkt)
 
         print(binascii.hexlify(buf))
 
         while(True):
-            b = bytearray(self.spi.read(103))
+            b = self.read_data(103)
             print(binascii.hexlify(b))
 
 
