@@ -8,16 +8,14 @@ import shutil
 import sys
 import errno
 
+import zmq
+
 sys.path.append('/root/lib/') #flight path
 sys.path.append('../lib/') #test path
 
 from ipc_packets import TxPacket, RxCommandPacket
-
-FL_ERR_EMPTY_DIR = 0x01
-FL_ERR_FILE_NAME = 0x02
-FL_ERR_SEQ_LEN = 0x03
-FL_ERR_MISSING_CHUNK = 0x04
-FL_SUCCESS = 0xFF
+from options import FL_ERR_EMPTY_DIR, FL_ERR_FILE_NAME, FL_ERR_SEQ_LEN, FL_ERR_MISSING_CHUNK, FL_SUCCESS
+from options import TX_PACKETS_PORT, TLM_DL_FILE, TLM_ASSEMBLE_FILE
 
 class FileError(Exception):
     def __init__(self, flag):
@@ -40,7 +38,7 @@ def make_dirs(path):
             pass
         else: raise
 
-def send_file_chunks(ipc_rxcompacket):
+def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 6
     transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
     file_name = file_name_payload[0:file_name_len]
@@ -64,11 +62,12 @@ def send_file_chunks(ipc_rxcompacket):
             packet = struct.pack('H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
 
             # FOR TEST:
-            print(len(packet))
-            print(binascii.hexlify(packet))
-            # txpacket = TxPacket()
-            # raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
-            # socket_tx_packets.send(raw_packet)
+            # print(len(packet))
+            # print(binascii.hexlify(packet))
+
+            txpacket = TxPacket()
+            raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
+            socket_tx_packets.send(raw_packet)
 
             seq_num += 1
 
@@ -79,11 +78,11 @@ def send_file_chunks(ipc_rxcompacket):
             packet = struct.pack('H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
 
             # FOR TEST:
-            print(len(packet))
-            print(binascii.hexlify(packet))
-            # txpacket = TxPacket()
-            # raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
-            # socket_tx_packets.send(raw_packet)
+            # print(len(packet))
+            # print(binascii.hexlify(packet))
+            txpacket = TxPacket()
+            raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
+            socket_tx_packets.send(raw_packet)
 
 def receive_file_chunk(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 8
@@ -91,12 +90,12 @@ def receive_file_chunk(ipc_rxcompacket):
 
     chunk_data = chunk_payload[0:chunk_len]
     # FOR TEST:
-    file_name = 'test_file_staging/'+str(transfer_id)+'/'+('%05d' % seq_num)+'_'+('%05d' % seq_len)+'.chunk'
-    # file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+    # file_name = 'test_file_staging/'+str(transfer_id)+'/'+('%05d' % seq_num)+'_'+('%05d' % seq_len)+'.chunk'
+    file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
     with safe_open_w(file_name) as chunk_file:
         chunk_file.write(chunk_data)
 
-def assemble_file(ipc_rxcompacket):
+def assemble_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 4
     transfer_id, file_name_len, file_name_payload = struct.unpack('!HH%ds'%req_raw_size, ipc_rxcompacket.payload)
 
@@ -106,8 +105,8 @@ def assemble_file(ipc_rxcompacket):
     pkt_data = []
     try:
         # FOR TEST:
-        chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
-        # chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'))
+        # chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
+        chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'))
 
         # Check that the directory isn't empty
         if not chunk_files:
@@ -119,8 +118,8 @@ def assemble_file(ipc_rxcompacket):
         _,seq_len = chunk_files[0].split('_')
         seq_len_all = int(seq_len[:-6])
         # FOR TEST:
-        chunk_size_all = os.stat('test_file_staging/'+str(transfer_id)+'/'+chunk_files[0]).st_size
-        # chunk_size_all = os.stat('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[0]).st_size
+        # chunk_size_all = os.stat('test_file_staging/'+str(transfer_id)+'/'+chunk_files[0]).st_size
+        chunk_size_all = os.stat('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[0]).st_size
 
         chunk_name_pattern = re.compile('\d{1,5}_\d{1,5}.chunk')
 
@@ -142,16 +141,16 @@ def assemble_file(ipc_rxcompacket):
                     raise FileError(FL_ERR_SEQ_LEN)
 
                 # FOR TEST:
-                chunk_size = os.stat('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
-                # chunk_size = os.stat('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
+                # chunk_size = os.stat('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
+                chunk_size = os.stat('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
 
                 if (seq_num != i+1):
                     print('seq_num: %d != i: %d' % (seq_num, i+1))
                     missing_chunks.append(i)
                 else:
                     # FOR TEST:
-                    with open('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
-                    # with open('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
+                    # with open('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
+                    with open('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
                         # Read the entire chunk, may be better to buffer?
                         out_file.write(curr_chunk.read())
 
@@ -166,11 +165,11 @@ def assemble_file(ipc_rxcompacket):
 
     finally:
         # FOR TEST
-        print(pkt_data)
-        print(binascii.hexlify(bytearray(pkt_data)))
-        # tx_pkt = TxPacket()
-        # raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, bytearray(pkt_data))
-        # socket_tx_packets.send(raw_packet)
+        # print(pkt_data)
+        # print(binascii.hexlify(bytearray(pkt_data)))
+        tx_pkt = TxPacket()
+        raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data)
+        socket_tx_packets.send(raw_tx_pkt)
 
 
 def format_err_response(transfer_id, file_error, missing_chunks):
@@ -182,7 +181,7 @@ def format_err_response(transfer_id, file_error, missing_chunks):
     for chunk_id in missing_chunks:
         pkt.extend(struct.pack('H', chunk_id))
 
-    return pkt
+    return str(pkt)
 
 def format_success_response(transfer_id):
     pkt = []
@@ -190,7 +189,7 @@ def format_success_response(transfer_id):
     pkt.extend(struct.pack('B', FL_SUCCESS))
     pkt.extend(struct.pack('H', 0))
 
-    return pkt
+    return str(pkt)
 
 def validate_file(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 18
@@ -209,9 +208,9 @@ def validate_file(ipc_rxcompacket):
 
     if (check_hash != file_hash):
         # TODO: handle incorrect hash error
-        print('Hash error')
+        pass
     else:
-        print('Hash valid')
+        pass
 
 def move_file(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 4
@@ -239,7 +238,11 @@ def del_file(ipc_rxcompacket):
     else:
         pass
 
-if __name__ == '__main__':
+
+def file_test():
+    context = zmq.Context()
+    socket_tx = context.socket(zmq.PUB)
+    socket_tx.connect("tcp://localhost:%s" % TX_PACKETS_PORT)
 
     '''PL_REQUEST_FILE send file test'''
     send_file_name = 'test_file.txt'
@@ -249,7 +252,7 @@ if __name__ == '__main__':
     send_file_cmd = struct.pack('!HHH%ds' % (send_file_name_len), send_file_transfer_id, send_file_chunk_size, send_file_name_len, send_file_name)
     send_file_cmd_pkt = RxCommandPacket()
     send_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=send_file_cmd)
-    send_file_chunks(send_file_cmd_pkt)
+    send_file_chunks(send_file_cmd_pkt, socket_tx)
 
     '''PL_UPLOAD_FILE receive file test'''
     receive_file_len = os.stat('test_file.txt').st_size
@@ -286,7 +289,7 @@ if __name__ == '__main__':
     assm_file_cmd = struct.pack('!HH%ds' % (assm_file_name_len), assm_file_transfer_id, assm_file_name_len, assm_file_name)
     assm_file_cmd_pkt = RxCommandPacket()
     assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=assm_file_cmd)
-    assemble_file(assm_file_cmd_pkt)
+    assemble_file(assm_file_cmd_pkt, socket_tx)
 
     '''PL_VALIDATE_FILE validate file test'''
     val_file_name = 'reassembled_file.txt'
@@ -336,3 +339,6 @@ if __name__ == '__main__':
     del_file_cmd_pkt = RxCommandPacket()
     del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=del_file_cmd)
     del_file(del_file_cmd_pkt)
+
+if __name__ == '__main__':
+    file_test()

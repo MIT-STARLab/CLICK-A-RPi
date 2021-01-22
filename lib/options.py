@@ -87,3 +87,10 @@ HK_SYS_CHECK_PD = 5 #seconds
 HK_CH_HEARTBEAT_PD = 10 #seconds
 HK_PAT_HEALTH_PD = 3 #seconds
 HK_FPGA_ANS_PD = 2 #seconds
+
+# File Handling Options Settings
+FL_ERR_EMPTY_DIR = 0x01
+FL_ERR_FILE_NAME = 0x02
+FL_ERR_SEQ_LEN = 0x03
+FL_ERR_MISSING_CHUNK = 0x04
+FL_SUCCESS = 0xFF
