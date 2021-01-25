@@ -191,8 +191,8 @@ int main() //int argc, char** argv
 	bool static_pointing_initialized = false;
 
 	std::cout << "command laser on: " << laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
-    std::cout << "check heater on: " << check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) HEATER_CH, 1) << std::endl;
-	std::cout << "check laser on: " << check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, 1) << std::endl;
+    std::cout << "check heater on: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
+	std::cout << "check laser on: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, 1) << std::endl;
 	return 0;
 
 	// Hardware init				
