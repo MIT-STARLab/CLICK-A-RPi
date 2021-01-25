@@ -215,7 +215,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_UPLOAD_FILE):
             receive_file_chunk(ipc_rxcompacket)
-            log_to_hk('ACK CMD PL_UPLOAD_FILE_TOSTAGING')
+            log_to_hk('ACK CMD PL_UPLOAD_FILE')
 
         elif(CMD_ID == CMD_PL_ASSEMBLE_FILE):
             assemble_file(ipc_rxcompacket, socket_tx_packets)

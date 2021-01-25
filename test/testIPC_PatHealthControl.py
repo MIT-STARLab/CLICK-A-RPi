@@ -6,8 +6,8 @@ import json
 import time
 
 import sys #importing options and functions
-sys.path.append('../lib/')
-sys.path.append('../../lib/')
+#sys.path.append('../lib/')
+sys.path.append('/root/lib/')
 from options import *
 from ipc_packets import PATControlPacket, PATHealthPacket
 from zmqTxRx import recv_zmq, send_zmq
@@ -15,7 +15,7 @@ from zmqTxRx import recv_zmq, send_zmq
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct
 
-cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_STATIC_POINT, CMD_START_PAT_BUS_FEEDBACK, CMD_GET_IMAGE, CMD_CALIB_TEST, CMD_CALIB_LASER_TEST, CMD_FSM_TEST, CMD_BCN_ALIGN, CMD_UPDATE_TX_OFFSET_X, CMD_UPDATE_TX_OFFSET_Y]
+cmd_list = [PAT_CMD_START_PAT, PAT_CMD_END_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y]
 
 # ~ class IpcPacket:
     # ~ def __init__(self): pass
@@ -62,26 +62,26 @@ cmd_list = [CMD_START_PAT, CMD_END_PAT, CMD_START_PAT_OPEN_LOOP, CMD_START_PAT_S
 
 def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
         # ~ #Define Command Header
-        # ~ CMD_HEADER = return_address + '\0' #PID Header
+        # ~ PAT_CMD_HEADER = return_address + '\0' #PID Header
         # ~ #Header format checks and padding
-        # ~ assert len(CMD_HEADER) <= CMD_HEADER_SIZE #Ensure CMD_HEADER is the right length
-        # ~ if(len(CMD_HEADER) < CMD_HEADER_SIZE):
-                # ~ for i in range(CMD_HEADER_SIZE - len(CMD_HEADER)):
-                        # ~ CMD_HEADER = CMD_HEADER + '\0' #append null padding
-        # ~ assert CMD_HEADER[len(CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+        # ~ assert len(PAT_CMD_HEADER) <= PAT_CMD_HEADER_SIZE #Ensure PAT_CMD_HEADER is the right length
+        # ~ if(len(PAT_CMD_HEADER) < PAT_CMD_HEADER_SIZE):
+                # ~ for i in range(PAT_CMD_HEADER_SIZE - len(PAT_CMD_HEADER)):
+                        # ~ PAT_CMD_HEADER = PAT_CMD_HEADER + '\0' #append null padding
+        # ~ assert PAT_CMD_HEADER[len(PAT_CMD_HEADER)-1] == '\0' #always terminate strings with null character ('\0') for c-code
 
         #Define Command Payload
-        CMD_PAYLOAD = payload + '\0'
-        assert len(CMD_PAYLOAD) <= CMD_PAYLOAD_SIZE #Ensure CMD_PAYLOAD is the right length
-        if(len(CMD_PAYLOAD) < CMD_PAYLOAD_SIZE):
-                for i in range(CMD_PAYLOAD_SIZE - len(CMD_PAYLOAD)):
-                        CMD_PAYLOAD = CMD_PAYLOAD + '\0'   #append null padding
-        assert CMD_PAYLOAD[len(CMD_PAYLOAD)-1] == '\0' #always terminate strings with null character ('\0') for c-code
-        CMD_PAYLOAD = str(CMD_PAYLOAD).encode('ascii') #format to ascii
+        PAT_CMD_PAYLOAD = payload + '\0'
+        assert len(PAT_CMD_PAYLOAD) <= PAT_CMD_PAYLOAD_SIZE #Ensure PAT_CMD_PAYLOAD is the right length
+        if(len(PAT_CMD_PAYLOAD) < PAT_CMD_PAYLOAD_SIZE):
+                for i in range(PAT_CMD_PAYLOAD_SIZE - len(PAT_CMD_PAYLOAD)):
+                        PAT_CMD_PAYLOAD = PAT_CMD_PAYLOAD + '\0'   #append null padding
+        assert PAT_CMD_PAYLOAD[len(PAT_CMD_PAYLOAD)-1] == '\0' #always terminate strings with null character ('\0') for c-code
+        PAT_CMD_PAYLOAD = str(PAT_CMD_PAYLOAD).encode('ascii') #format to ascii
 
         ipc_patControlPacket = PATControlPacket()
-        raw_patControlPacket = ipc_patControlPacket.encode(command,CMD_PAYLOAD) 
-        send_zmq(socket_PAT_control, raw_patControlPacket) #, CMD_HEADER)        
+        raw_patControlPacket = ipc_patControlPacket.encode(command,PAT_CMD_PAYLOAD) 
+        send_zmq(socket_PAT_control, raw_patControlPacket) #, PAT_CMD_HEADER)        
         return ipc_patControlPacket
         
 context = zmq.Context()
@@ -128,21 +128,21 @@ while True:
         if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
                 # For Flatsat Testing: Get Command from User
                 print "Available Commands are: "
-                print "CMD_START_PAT = ", CMD_START_PAT
-                print "CMD_END_PAT = ", CMD_END_PAT
-                print "CMD_START_PAT_OPEN_LOOP = ", CMD_START_PAT_OPEN_LOOP
-                print "CMD_START_PAT_STATIC_POINT = ", CMD_START_PAT_STATIC_POINT
-                print "CMD_START_PAT_BUS_FEEDBACK = ", CMD_START_PAT_BUS_FEEDBACK
-                print "CMD_GET_IMAGE = ", CMD_GET_IMAGE
-                print "CMD_CALIB_TEST = ", CMD_CALIB_TEST
-                print "CMD_CALIB_LASER_TEST = ", CMD_CALIB_LASER_TEST
-                print "CMD_FSM_TEST = ", CMD_FSM_TEST
-                print "CMD_BCN_ALIGN = ", CMD_BCN_ALIGN
-                print "CMD_UPDATE_TX_OFFSET_X = ", CMD_UPDATE_TX_OFFSET_X
-                print "CMD_UPDATE_TX_OFFSET_Y = ", CMD_UPDATE_TX_OFFSET_Y
+                print "PAT_CMD_START_PAT = ", PAT_CMD_START_PAT
+                print "PAT_CMD_END_PAT = ", PAT_CMD_END_PAT
+                print "PAT_CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
+                print "PAT_CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
+                print "PAT_CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
+                print "PAT_CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
+                print "PAT_CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
+                print "PAT_CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
+                print "PAT_CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
+                print "PAT_CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
+                print "PAT_CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
+                print "PAT_CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
-                        if(user_cmd in [CMD_GET_IMAGE, CMD_CALIB_LASER_TEST, CMD_FSM_TEST]):
+                        if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
                                 exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))
                                 if(exp_cmd < 10):
                                         print "Exposure below minimum of 10 us entered. Using 10 us."
@@ -152,11 +152,11 @@ while True:
                                         exp_cmd = 10000000
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(exp_cmd))     
-                        elif(user_cmd == CMD_UPDATE_TX_OFFSET_X):
+                        elif(user_cmd == PAT_CMD_UPDATE_TX_OFFSET_X):
                                 tx_offset_x = int(input("Update Tx Offset X: "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_x))
-                        elif(user_cmd == CMD_UPDATE_TX_OFFSET_Y):
+                        elif(user_cmd == PAT_CMD_UPDATE_TX_OFFSET_Y):
                                 tx_offset_y = int(input("Update Tx Offset Y: "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_y))
@@ -166,7 +166,7 @@ while True:
                         
                         print(ipc_patControlPacket)
                         
-                        if(user_cmd == CMD_END_PAT):
+                        if(user_cmd == PAT_CMD_END_PAT):
                                 print "Exiting..."
                                 break 
                 elif(user_cmd == 0):
