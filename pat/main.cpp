@@ -189,7 +189,10 @@ int main() //int argc, char** argv
 	int cl_beacon_num_groups, cl_calib_num_groups;
 	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
 	bool static_pointing_initialized = false;
-    
+
+	std::cout << "check return: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 0) << std::endl;
+    return 0;
+	
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
