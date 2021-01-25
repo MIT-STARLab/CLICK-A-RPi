@@ -16,7 +16,7 @@ sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('../lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
-from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, TLM_HK_CPU, TLM_HK_PAT, TLM_HK_FPGA_MAP
+from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, TLM_HK_SYS, TLM_HK_PAT, TLM_HK_FPGA_MAP
 from options import HK_FPGA_CHECK_PD, HK_SYS_CHECK_PD, HK_CH_HEARTBEAT_PD, HK_PAT_HEALTH_PD, HK_FPGA_ANS_PD
 from options import HK_FPGA_REQ_ENABLE, HK_SYS_HK_SEND_ENABLE, HK_FPGA_HK_SEND_ENABLE, HK_PAT_HK_SEND_ENABLE, HK_CH_RESTART_ENABLE, HK_PAT_RESTART_ENABLE, HK_FPGA_RESTART_ENABLE, HK_ALLPKTS_SEND_ENABLE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
@@ -307,7 +307,7 @@ class Housekeeping:
 
         elif (process_id == HK_SYS_ID):
             # print("Handling SYS pkt")
-            apid = TLM_HK_CPU
+            apid = TLM_HK_SYS
             payload = data
 
         elif (process_id == HK_CH_ID):
