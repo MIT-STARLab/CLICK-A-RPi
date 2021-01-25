@@ -190,8 +190,10 @@ int main() //int argc, char** argv
 	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
 	bool static_pointing_initialized = false;
 
-	std::cout << "check laser on: " << laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
-    return 0;
+	std::cout << "command laser on: " << laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
+    std::cout << "check heater on: " << check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) HEATER_CH, 1) << std:endl;
+	std::cout << "check laser on: " << check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) CALIB_CH, 1) << std:endl;
+	return 0;
 
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
