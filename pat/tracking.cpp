@@ -5,7 +5,7 @@
 
 // Sweep through expected power ranges and look for spot
 //-----------------------------------------------------------------------------
-bool Tracking::runAcquisition(Group& beacon)
+bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 //-----------------------------------------------------------------------------
 {
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
@@ -25,7 +25,7 @@ bool Tracking::runAcquisition(Group& beacon)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
@@ -53,7 +53,7 @@ bool Tracking::runAcquisition(Group& beacon)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
 			}
 			//update exposure:
 			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
@@ -80,7 +80,7 @@ bool Tracking::runAcquisition(Group& beacon)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
 			}
 			//update exposure:
 			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
@@ -97,7 +97,7 @@ bool Tracking::runAcquisition(Group& beacon)
 	// 	if(camera.waitForFrame())
 	// 	{
 	// 		Image frame(camera, fileStream, pat_health_port);
-	// 		if(verifyFrame(frame) && windowAndTune(frame, beacon)){
+	// 		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){
 	// 				// if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
 	// 				// 	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
 	// 				// 	"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
@@ -155,7 +155,7 @@ bool Tracking::verifyFrame(Image& frame)
 
 // Make window around brightest area, fine tune exposure/gain with no binning
 //-----------------------------------------------------------------------------
-bool Tracking::windowAndTune(Image& frame, Group& beacon)
+bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 //-----------------------------------------------------------------------------
 {
 	// Prepare a small window around brightest group for tuning
@@ -192,6 +192,12 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 						// Tuned spot is at a good location, success
 						camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
 						camera.config->binningMode.write(cbmOff);
+						// save beacon window properties
+						beaconWindow.x = fullX; 
+						beaconWindow.y = fullY;
+						beaconWindow.w = TRACK_ACQUISITION_WINDOW;
+						beaconWindow.h = TRACK_ACQUISITION_WINDOW; 
+						// exit:
 						return true;
 					}
 
