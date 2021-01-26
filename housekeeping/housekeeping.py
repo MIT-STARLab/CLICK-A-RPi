@@ -318,7 +318,7 @@ class Housekeeping:
             _, size, payload = ch_pkt.decode(data)
 
         pkt = TxPacket()
-        raw_pkt = pkt.encode(apid, bytearray(payload))
+        raw_pkt = pkt.encode(apid, str(payload))
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id):
