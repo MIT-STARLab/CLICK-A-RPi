@@ -106,8 +106,8 @@ class FPGAClientInterface:
             payload = struct.pack(frmt,value)
         elif type(value) is list:
             len_pck = len(value)
-            frmt = [fpga_map.REGISTER_TYPE[ad] for ad in xrange(addr,addr+len_pck)]
-            payload = struct.pack('%dI'%len_pck,*value)
+            frmt = ''.join([fpga_map.REGISTER_TYPE[ad] for ad in xrange(addr,addr+len_pck)])
+            payload = struct.pack(frmt,*value)
             len_pck *= 4
         elif type(value) is str:
             lstr = len(value)

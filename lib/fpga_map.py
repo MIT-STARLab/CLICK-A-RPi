@@ -24,12 +24,13 @@ FSMa = 8
 FSMb = 9
 FSMc = 10
 
+CAL = 32
 PO1 = 33
-PO2 = 33
-PO3 = 33
-PO4 = 33
-HE1 = 33
-HE2 = 33
+PO2 = 34
+PO3 = 35
+PO4 = 36
+HE1 = 37
+HE2 = 38
 
 FLG = 63
 FLG_DCM_LOCKED = 0b00000001
@@ -85,18 +86,20 @@ class Power:
     def __init__(self, handler):
         self.handler = handler
         
-    def bias_on():      self.handler.write_reg(PO1, 85)
-    def bias_off():     self.handler.write_reg(PO1, 15)
-    def edfa_on():      self.handler.write_reg(PO2, 85)
-    def edfa_off():     self.handler.write_reg(PO2, 15)
-    def heaters_on():   self.handler.write_reg(PO3, 85)
-    def heaters_off():  self.handler.write_reg(PO3, 15)
-    def tec_on():       self.handler.write_reg(PO4, 85)
-    def tec_off():      self.handler.write_reg(PO4, 15)
-    def heater_1_on():  self.handler.write_reg(HE1, 85)
-    def heater_1_off(): self.handler.write_reg(HE1, 15)
-    def heater_2_on():  self.handler.write_reg(HE2, 85)
-    def heater_2_off(): self.handler.write_reg(HE2, 15)
+    def calib_diode_on():  self.handler.write_reg(CAL, 85)
+    def calib_diode_off(): self.handler.write_reg(CAL, 15)
+    def bias_on():         self.handler.write_reg(PO1, 85)
+    def bias_off():        self.handler.write_reg(PO1, 15)
+    def edfa_on():         self.handler.write_reg(PO2, 85)
+    def edfa_off():        self.handler.write_reg(PO2, 15)
+    def heaters_on():      self.handler.write_reg(PO3, 85)
+    def heaters_off():     self.handler.write_reg(PO3, 15)
+    def tec_on():          self.handler.write_reg(PO4, 85)
+    def tec_off():         self.handler.write_reg(PO4, 15)
+    def heater_1_on():     self.handler.write_reg(HE1, 85)
+    def heater_1_off():    self.handler.write_reg(HE1, 15)
+    def heater_2_on():     self.handler.write_reg(HE2, 85)
+    def heater_2_off():    self.handler.write_reg(HE2, 15)
     
 # ----------------- Temperatures --------------------
 TEMPERATURE_BLOCK = list(range(200, 206))
@@ -164,11 +167,13 @@ class DAC:
         self.handler = handler
         
     def reset_bist(self,is_por=1,ref_en=1):
-        is_por *= 0b0100
-        ref_en *= 0b1000
+        if is_por: is_por = 0b0100
+        if ref_en: ref_en = 0b1000
         self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
     
     def reset_fsm(self):
+        if is_por: is_por = 0b0100
+        if ref_en: ref_en = 0b1000
         self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
     
     def enable_output(self,mask):
@@ -269,7 +274,6 @@ class EDFA:
  
     def get_case_temp(self):
         return self.handler.read_reg(EDFA_CASE_TEMP)
-
 
 '''
 REGISTERS = [None] * 300 # [encoding B = byte, I = unsigned int, ? = bool, [physical registers, least to most significant bits], rw flag]

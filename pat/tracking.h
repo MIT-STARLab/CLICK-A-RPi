@@ -8,13 +8,13 @@
 #include "calibration.h"
 #include "log.h"
 
-#define TRACK_GUESS_EXPOSURE 10000 //guess at beacon exposure
-#define TRACK_MIN_EXPOSURE 1000 //minimum exposure limit, pg-comment
-#define TRACK_MAX_EXPOSURE 20000 //maximum exposure limit, pg
-#define TRACK_ACQUISITION_EXP_INCREMENT 1000 //exposure increment during acquisition, pg
-#define TRACK_MAX_GAIN 10 //maximum gain limit
+#define TRACK_GUESS_EXPOSURE 2000 //guess at beacon exposure
+#define TRACK_MIN_EXPOSURE 100 //minimum exposure limit, pg-comment
+#define TRACK_MAX_EXPOSURE 10000 //maximum exposure limit, pg
+#define TRACK_ACQUISITION_EXP_INCREMENT 100 //exposure increment during acquisition, pg
+#define TRACK_MAX_GAIN 0 //maximum gain limit
 
-#define TRACK_ACQUISITION_BRIGHTNESS 300		// Minimum spot brightness to work with for acquisition
+#define TRACK_ACQUISITION_BRIGHTNESS 200		// Minimum spot brightness to work with for acquisition
 #define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared
 #define TRACK_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
@@ -28,7 +28,7 @@
 #define TRACK_TUNING_BRIGHTNESS_TOLERANCE 20	// Tolerance in brightness of spot in-between two tuning frames (jitter)
 #define TRACK_TUNING_EXP_DIVIDER 12				// Exposure tuning division factor, the higher the finer tuning, but slower
 
-#define TRACK_EXP_CONTROL_TOLERANCE 50		// Tolerance similar to above, but used in exposureControl function, pg
+#define TRACK_EXP_CONTROL_TOLERANCE 150		// Tolerance similar to above, but used in exposureControl function, pg
 #define TRACK_EXP_CONTROL_DIVIDER 10			// Exposure tuning factor similar to above, but using in exposureControl function, pg
 
 #define TRACK_WINDOW_SIZE_TOLERANCE 10			// If tracking window differs by more than this we definitely want an update
@@ -53,20 +53,20 @@ class Tracking
 	zmq::socket_t &pat_control_port;
 	std::vector<zmq::pollitem_t>& poll_pat_control; 
 	bool verifyFrame(Image& frame);
-	bool windowAndTune(Image& frame, Group& beacon);
+	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow);
 	bool autoTuneExposure(Group& beacon);
 public:
-	int beaconSmoothing;
+	//int beaconSmoothing = 0;
 	double actionX, actionY;
 	bool received_end_pat_cmd = false;
-	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), beaconSmoothing(0), actionX(0), actionY(0) {};
-	bool runAcquisition(Group& beacon);
+	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), actionX(0), actionY(0) {};
+	bool runAcquisition(Group& beacon, AOI& beaconWindow);
 	int findSpotCandidate(Image& frame, Group& oldSpot, double *difference);
 	void updateTrackingWindow(Image& frame, Group& spot, AOI& window);
 	void control(FSM& fsm, double x, double y, double spX, double spY);
 	void controlOpenLoop(FSM& fsm, double x, double y);
 	bool distanceIsSafe(Group& beacon, Group& calib, bool openloop);
-	int controlExposure(Image& frame, int exposure); //pg, exposure control function, returns updated exposure
+	int controlExposure(int valueMax, int exposure); //pg, exposure control function, returns updated exposure
 };
 
 #endif

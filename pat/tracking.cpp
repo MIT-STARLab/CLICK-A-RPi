@@ -5,7 +5,7 @@
 
 // Sweep through expected power ranges and look for spot
 //-----------------------------------------------------------------------------
-bool Tracking::runAcquisition(Group& beacon)
+bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 //-----------------------------------------------------------------------------
 {
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
@@ -25,7 +25,7 @@ bool Tracking::runAcquisition(Group& beacon)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
@@ -53,7 +53,7 @@ bool Tracking::runAcquisition(Group& beacon)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
 			}
 			//update exposure:
 			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
@@ -80,7 +80,7 @@ bool Tracking::runAcquisition(Group& beacon)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
 			}
 			//update exposure:
 			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
@@ -97,7 +97,7 @@ bool Tracking::runAcquisition(Group& beacon)
 	// 	if(camera.waitForFrame())
 	// 	{
 	// 		Image frame(camera, fileStream, pat_health_port);
-	// 		if(verifyFrame(frame) && windowAndTune(frame, beacon)){
+	// 		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){
 	// 				// if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
 	// 				// 	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
 	// 				// 	"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
@@ -155,7 +155,7 @@ bool Tracking::verifyFrame(Image& frame)
 
 // Make window around brightest area, fine tune exposure/gain with no binning
 //-----------------------------------------------------------------------------
-bool Tracking::windowAndTune(Image& frame, Group& beacon)
+bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 //-----------------------------------------------------------------------------
 {
 	// Prepare a small window around brightest group for tuning
@@ -192,6 +192,12 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon)
 						// Tuned spot is at a good location, success
 						camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
 						camera.config->binningMode.write(cbmOff);
+						// save beacon window properties
+						beaconWindow.x = fullX; 
+						beaconWindow.y = fullY;
+						beaconWindow.w = TRACK_ACQUISITION_WINDOW;
+						beaconWindow.h = TRACK_ACQUISITION_WINDOW; 
+						// exit:
 						return true;
 					}
 
@@ -222,7 +228,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		camera.requestFrame();
 		if(camera.waitForFrame())
 		{
-			Image test(camera, fileStream, pat_health_port, beaconSmoothing);
+			Image test(camera, fileStream, pat_health_port); //, beaconSmoothing
 			if(test.performPixelGrouping() > 0)
 			{
 				Group& spot = test.groups[0];
@@ -248,8 +254,8 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		if(frame.performPixelGrouping() > 0)
 		{
 			// Determine smoothing
-			beaconSmoothing = calibration.determineSmoothing(frame);
-			frame.applyFastBlur(beaconSmoothing);
+			//beaconSmoothing = calibration.determineSmoothing(frame);
+			//frame.applyFastBlur(beaconSmoothing);
 
 			if(frame.performPixelGrouping() > 0)
 			{
@@ -515,29 +521,33 @@ bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 
 //Exposure control function: checks brightness of beacon spot and changes exposure to compensate if necessary, pg
 //-----------------------------------------------------------------------------
-int Tracking::controlExposure(Image& frame, int exposure)
+int Tracking::controlExposure(int valueMax, int exposure)
 //-----------------------------------------------------------------------------
 {
-	int brightnessDifference = frame.groups[0].valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
+	int brightnessDifference = valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
 
 	if(abs(brightnessDifference) > TRACK_EXP_CONTROL_TOLERANCE) //outside acceptable brightness
 	{
 		if(brightnessDifference > 0) //too bright, decrease exposure
 		{
 			int newExposure = exposure - exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure > TRACK_MIN_EXPOSURE) exposure = newExposure; //limit at min exposure
-			else exposure = TRACK_MIN_EXPOSURE; //set to limit if necessary
+			if(newExposure > TRACK_MIN_EXPOSURE){exposure = newExposure;} //limit at min exposure
+			else{exposure = TRACK_MIN_EXPOSURE;} //set to limit if necessary
 		}
 		else //too dim, increase exposure
 		{
 			int newExposure = exposure + exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure < TRACK_MAX_EXPOSURE) exposure = newExposure; //limit at max exposure
-			else exposure = TRACK_MAX_EXPOSURE; //set to limit if necessary
+			if(newExposure < TRACK_MAX_EXPOSURE){exposure = newExposure;} //limit at max exposure
+			else{exposure = TRACK_MAX_EXPOSURE;} //set to limit if necessary
 		}
 
 		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
 		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
 	}
+	//else{
+	//	log(pat_health_port, fileStream, "In Tracking::controlExposure - Brightness difference within tolerance: ",
+	//	"(abs(brightnessDifference) = ", abs(brightnessDifference), ") <= (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
+	//}
 
 	return exposure;
 }
