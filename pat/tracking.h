@@ -8,18 +8,18 @@
 #include "calibration.h"
 #include "log.h"
 
-#define TRACK_GUESS_EXPOSURE 1000 //guess at beacon exposure
+#define TRACK_GUESS_EXPOSURE 500 //guess at beacon exposure
 #define TRACK_MIN_EXPOSURE 100 //minimum exposure limit, pg-comment
-#define TRACK_MAX_EXPOSURE 10000 //maximum exposure limit, pg
+#define TRACK_MAX_EXPOSURE 5000 //maximum exposure limit, pg
 #define TRACK_ACQUISITION_EXP_INCREMENT 100 //exposure increment during acquisition, pg
-#define TRACK_MAX_GAIN 10 //maximum gain limit
+#define TRACK_MAX_GAIN 0 //maximum gain limit
 
-#define TRACK_ACQUISITION_BRIGHTNESS 100		// Minimum spot brightness to work with for acquisition
+#define TRACK_ACQUISITION_BRIGHTNESS 200		// Minimum spot brightness to work with for acquisition
 #define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared
 #define TRACK_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
 
-#define TRACK_HAPPY_BRIGHTNESS 200				// Good brightness for auto exposure tuning
+#define TRACK_HAPPY_BRIGHTNESS 700				// Good brightness for auto exposure tuning
 #define TRACK_SATURATION_LIMIT 990				// Camera is hard-saturated at around 990 brightness
 
 #define TRACK_TUNING_MAX_ATTEMPTS 10			// Failsafe - give up tuning after 10 incorrect attempts (tuning noise?)
