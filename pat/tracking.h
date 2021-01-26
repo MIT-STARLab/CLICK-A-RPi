@@ -56,7 +56,7 @@ class Tracking
 	bool windowAndTune(Image& frame, Group& beacon);
 	bool autoTuneExposure(Group& beacon);
 public:
-	int beaconSmoothing;
+	//int beaconSmoothing = 0;
 	double actionX, actionY;
 	bool received_end_pat_cmd = false;
 	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), beaconSmoothing(0), actionX(0), actionY(0) {};

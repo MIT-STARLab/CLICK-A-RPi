@@ -222,7 +222,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		camera.requestFrame();
 		if(camera.waitForFrame())
 		{
-			Image test(camera, fileStream, pat_health_port, beaconSmoothing);
+			Image test(camera, fileStream, pat_health_port); //, beaconSmoothing
 			if(test.performPixelGrouping() > 0)
 			{
 				Group& spot = test.groups[0];
@@ -248,8 +248,8 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		if(frame.performPixelGrouping() > 0)
 		{
 			// Determine smoothing
-			beaconSmoothing = calibration.determineSmoothing(frame);
-			frame.applyFastBlur(beaconSmoothing);
+			//beaconSmoothing = calibration.determineSmoothing(frame);
+			//frame.applyFastBlur(beaconSmoothing);
 
 			if(frame.performPixelGrouping() > 0)
 			{
