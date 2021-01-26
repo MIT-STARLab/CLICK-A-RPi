@@ -157,10 +157,12 @@ while True:
         # decode the package
         ipc_rxcompacket = RxCommandPacket()
         ipc_rxcompacket.decode(message)
-        print (ipc_rxcompacket)
-        print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
         CMD_ID = ipc_rxcompacket.APID
-
+        if(CMD_ID != APID_TIME_AT_TONE):
+            #don't print the time at tone receives
+            print (ipc_rxcompacket)
+            print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
+        
         if(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
             time.sleep(1)
@@ -180,7 +182,7 @@ while True:
             file_path = file_path_payload[0:(file_path_len-1)] #Strip padding
             try:
                 if(output_to_file):
-                    os.system(file_path + ' > /root/log/' + string(file_out_num) + '.log')
+                    os.system(file_path + ' > /root/log/' + str(file_out_num) + '.log')
                     #send file...
                 else:
                     os.system(file_path)
@@ -238,7 +240,7 @@ while True:
             pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK]
             pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Bus Feedback']
             if(pat_mode_cmd not in pat_mode_list):
-                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + string(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
+                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
             else:
                 PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
                 log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
@@ -363,7 +365,7 @@ while True:
             test_list = [TEST_PAT_HW]
             test_names = ['PAT HW']
             if(test_id not in test_list):
-                log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + string(test_id))
+                log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + str(test_id))
             else:
                 log_to_hk('ACK CMD PL_SELF_TEST: Test is ' + test_names[test_list == test_id])
                 #execute test
@@ -409,6 +411,9 @@ while True:
             log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time)
 
             ###TODO: add any other debug process start-up tasks
+        
+        elif(CMD_ID == APID_TIME_AT_TONE):
+            pass
 
         else: #default
-            log_to_hk('ERROR: Unrecognized CMD_ID = ' + string(CMD_ID))
+            log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))

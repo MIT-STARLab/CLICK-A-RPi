@@ -20,8 +20,6 @@ CCSDS_HEADER_LEN = 6
 APID_INDEX = 1
 PKT_LEN_INDEX = 4
 
-TIME_APID = 0x80
-
 class Depacketizer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])
     context = zmq.Context()
@@ -185,7 +183,9 @@ class Depacketizer:
 
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
-        print(binascii.hexlify(raw_ipc_pkt))
+        if(APID != APID_TIME_AT_TONE):
+            #don't print the time at tone packets
+            print(binascii.hexlify(raw_ipc_pkt))
 
         # in the future, consider the pat packets and send those separately
         self.rx_cmd_socket.send(raw_ipc_pkt)
