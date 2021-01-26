@@ -8,10 +8,10 @@
 #include "calibration.h"
 #include "log.h"
 
-#define TRACK_GUESS_EXPOSURE 10000 //guess at beacon exposure
-#define TRACK_MIN_EXPOSURE 1000 //minimum exposure limit, pg-comment
-#define TRACK_MAX_EXPOSURE 20000 //maximum exposure limit, pg
-#define TRACK_ACQUISITION_EXP_INCREMENT 1000 //exposure increment during acquisition, pg
+#define TRACK_GUESS_EXPOSURE 1000 //guess at beacon exposure
+#define TRACK_MIN_EXPOSURE 100 //minimum exposure limit, pg-comment
+#define TRACK_MAX_EXPOSURE 10000 //maximum exposure limit, pg
+#define TRACK_ACQUISITION_EXP_INCREMENT 100 //exposure increment during acquisition, pg
 #define TRACK_MAX_GAIN 10 //maximum gain limit
 
 #define TRACK_ACQUISITION_BRIGHTNESS 100		// Minimum spot brightness to work with for acquisition
