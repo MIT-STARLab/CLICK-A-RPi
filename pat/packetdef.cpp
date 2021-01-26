@@ -56,7 +56,8 @@ void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t
 		memcpy(message.data(), packet, sizeof(packet));
 			
 		fpga_map_request_port.send(message);
-	}	  
+	}	 
+	std::this_thread::sleep_for(std::chrono::milliseconds(1)); //cmd delay 
 }
 
 void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
@@ -228,15 +229,27 @@ bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::
 			// received something on the first (only) socket
 			fpga_answer_struct read_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, READ);
 			//make sure message is for PAT process:
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << unsigned(request_number) << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << channel << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
-			//std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
+<<<<<<< HEAD
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << unsigned(request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << channel << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
+=======
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << unsigned(request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << channel << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
+>>>>>>> 738b86539fa01da240f0c4dc6d8413351dde2c05
 			if((((uint32_t) getpid()) == read_ans_struct.return_address) &&
 				(request_number == read_ans_struct.request_number) && 
 				(channel == read_ans_struct.start_address) &&

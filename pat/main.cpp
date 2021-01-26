@@ -1,8 +1,8 @@
 #include <unistd.h>
 #include <atomic>
 #include <csignal>
-#include <chrono>
-#include <thread>
+//#include <chrono>
+//#include <thread>
 #include <sstream>
 #include <stdio.h>
 
@@ -189,15 +189,6 @@ int main() //int argc, char** argv
 	int cl_beacon_num_groups, cl_calib_num_groups;
 	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
 	bool static_pointing_initialized = false;
-
-	//std::cout << "command laser on: " << laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
-    //std::cout << "check heater: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
-	//std::cout << "check laser: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, 1) << std::endl;
-	//std::this_thread::sleep_for(std::chrono::seconds(30));
-	//std::cout << "command laser off: " << laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
-    //std::cout << "check heater: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
-	//std::cout << "check laser: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, 1) << std::endl;
-	//return 0;
 
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
