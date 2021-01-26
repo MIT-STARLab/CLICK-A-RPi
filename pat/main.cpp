@@ -523,8 +523,8 @@ int main() //int argc, char** argv
 						calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
 						calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
 						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
-							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "] ", beaconGain, "dB smoothing", track.beaconSmoothing, 
-							". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "] ", calibGain, "dB smoothing", calibration.smoothing);
+							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "], gain = ", beaconGain, 
+							". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
 						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 						track.controlOpenLoop(fsm, calib.x, calib.y);
 						if(openLoop)
@@ -617,7 +617,7 @@ int main() //int argc, char** argv
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					if(camera.waitForFrame())
 					{
-						Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
+						Image frame(camera, textFileOut, pat_health_port); //track.beaconSmoothing
 
 						//save image debug telemetry
 						// std::string nameTag = std::string("CL_BEACON_DEBUG");
@@ -891,7 +891,7 @@ int main() //int argc, char** argv
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					if(camera.waitForFrame())
 					{
-						Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
+						Image frame(camera, textFileOut, pat_health_port); //, track.beaconSmoothing
 
 						//save image debug telemetry
 						// std::string nameTag = std::string("OPEN_LOOP_DEBUG");
