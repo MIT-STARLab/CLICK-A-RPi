@@ -190,15 +190,6 @@ int main() //int argc, char** argv
 	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
 	bool static_pointing_initialized = false;
 
-	std::cout << "command laser on: " << laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
-    std::cout << "check heater: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
-	std::cout << "check laser: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_ON, 1) << std::endl;
-	std::this_thread::sleep_for(std::chrono::seconds(10));
-	std::cout << "command laser off: " << laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) << std::endl;
-    std::cout << "check heater: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
-	std::cout << "check laser: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) CALIB_CH, (uint8_t) CALIB_OFF, 1) << std::endl;
-	return 0;
-
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -930,10 +921,12 @@ int main() //int argc, char** argv
 											beacon.valueSum = spot.valueSum;
 											beacon.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, beaconWindow);
+											if(!bcnAlignment){
 											// Control pointing in open-loop
-											calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-											calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
-											track.controlOpenLoop(fsm, calib.x, calib.y);
+												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
+												calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+												track.controlOpenLoop(fsm, calib.x, calib.y);
+											}
 											if(i % 100 == 0){ //TBR; standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 												// Save for CSV
 												time_point<steady_clock> now = steady_clock::now();
