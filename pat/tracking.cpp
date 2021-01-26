@@ -525,18 +525,22 @@ int Tracking::controlExposure(Image& frame, int exposure)
 		if(brightnessDifference > 0) //too bright, decrease exposure
 		{
 			int newExposure = exposure - exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure > TRACK_MIN_EXPOSURE) exposure = newExposure; //limit at min exposure
-			else exposure = TRACK_MIN_EXPOSURE; //set to limit if necessary
+			if(newExposure > TRACK_MIN_EXPOSURE){exposure = newExposure;} //limit at min exposure
+			else{exposure = TRACK_MIN_EXPOSURE;} //set to limit if necessary
 		}
 		else //too dim, increase exposure
 		{
 			int newExposure = exposure + exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure < TRACK_MAX_EXPOSURE) exposure = newExposure; //limit at max exposure
-			else exposure = TRACK_MAX_EXPOSURE; //set to limit if necessary
+			if(newExposure < TRACK_MAX_EXPOSURE){exposure = newExposure;} //limit at max exposure
+			else{exposure = TRACK_MAX_EXPOSURE;} //set to limit if necessary
 		}
 
 		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
 		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
+	}
+	else{
+		log(pat_health_port, fileStream, "In Tracking::controlExposure - Brightness difference within tolerance: ",
+		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") <= (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
 	}
 
 	return exposure;

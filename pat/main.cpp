@@ -25,7 +25,7 @@
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
 #define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
 #define MAX_ACQUISITION_ATTEMPTS 100 //number of times to attempt beacon acquisition
-#define PERIOD_BEACON_LOSS 5.0f //seconds, time to wait after beacon loss before switching back to acquisition
+#define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
@@ -669,6 +669,13 @@ int main() //int argc, char** argv
 											"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 											"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 											"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+											beaconExposure = track.controlExposure(frame, beaconExposure); //update exposure to try to fix difference
+											if(haveBeaconKnowledge) // Beacon Loss Scenario
+											{
+												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
+												haveBeaconKnowledge = false;
+												startBeaconLoss = steady_clock::now(); // Record time of Loss
+											}
 										}
 									}
 									else
@@ -952,6 +959,13 @@ int main() //int argc, char** argv
 											"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 											"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 											"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+											beaconExposure = track.controlExposure(frame, beaconExposure); //update exposure to try to fix difference
+											if(haveBeaconKnowledge) // Beacon Loss Scenario
+											{
+												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
+												haveBeaconKnowledge = false;
+												startBeaconLoss = steady_clock::now(); // Record time of Loss
+											}
 										}
 									}
 									else
