@@ -921,10 +921,12 @@ int main() //int argc, char** argv
 											beacon.valueSum = spot.valueSum;
 											beacon.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, beaconWindow);
+											if(!bcnAlignment){
 											// Control pointing in open-loop
-											calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-											calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
-											track.controlOpenLoop(fsm, calib.x, calib.y);
+												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
+												calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+												track.controlOpenLoop(fsm, calib.x, calib.y);
+											}
 											if(i % 100 == 0){ //TBR; standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
 												// Save for CSV
 												time_point<steady_clock> now = steady_clock::now();
