@@ -66,7 +66,7 @@ public:
 	void control(FSM& fsm, double x, double y, double spX, double spY);
 	void controlOpenLoop(FSM& fsm, double x, double y);
 	bool distanceIsSafe(Group& beacon, Group& calib, bool openloop);
-	int controlExposure(Image& frame, int exposure); //pg, exposure control function, returns updated exposure
+	int controlExposure(int valueMax, int exposure); //pg, exposure control function, returns updated exposure
 };
 
 #endif

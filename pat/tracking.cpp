@@ -515,10 +515,10 @@ bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 
 //Exposure control function: checks brightness of beacon spot and changes exposure to compensate if necessary, pg
 //-----------------------------------------------------------------------------
-int Tracking::controlExposure(Image& frame, int exposure)
+int Tracking::controlExposure(int valueMax, int exposure)
 //-----------------------------------------------------------------------------
 {
-	int brightnessDifference = frame.groups[0].valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
+	int brightnessDifference = valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
 
 	if(abs(brightnessDifference) > TRACK_EXP_CONTROL_TOLERANCE) //outside acceptable brightness
 	{
@@ -538,10 +538,10 @@ int Tracking::controlExposure(Image& frame, int exposure)
 		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
 		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
 	}
-	else{
-		log(pat_health_port, fileStream, "In Tracking::controlExposure - Brightness difference within tolerance: ",
-		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") <= (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
-	}
+	//else{
+	//	log(pat_health_port, fileStream, "In Tracking::controlExposure - Brightness difference within tolerance: ",
+	//	"(abs(brightnessDifference) = ", abs(brightnessDifference), ") <= (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
+	//}
 
 	return exposure;
 }

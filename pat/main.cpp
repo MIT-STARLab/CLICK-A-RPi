@@ -669,7 +669,6 @@ int main() //int argc, char** argv
 											"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 											"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 											"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
-											beaconExposure = track.controlExposure(frame, beaconExposure); //update exposure to try to fix difference
 											if(haveBeaconKnowledge) // Beacon Loss Scenario
 											{
 												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -893,6 +892,7 @@ int main() //int argc, char** argv
 			case OPEN_LOOP:
 				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for open-loop
 					// Request new frame
+					if(haveBeaconKnowledge){beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);} //auto-tune exposure
 					camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
 					camera.setWindow(beaconWindow);
 					camera.requestFrame(); //queue beacon frame, pg-comment
@@ -959,7 +959,6 @@ int main() //int argc, char** argv
 											"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 											"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 											"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
-											beaconExposure = track.controlExposure(frame, beaconExposure); //update exposure to try to fix difference
 											if(haveBeaconKnowledge) // Beacon Loss Scenario
 											{
 												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
