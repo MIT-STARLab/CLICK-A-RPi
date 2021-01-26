@@ -28,7 +28,7 @@
 #define TRACK_TUNING_BRIGHTNESS_TOLERANCE 20	// Tolerance in brightness of spot in-between two tuning frames (jitter)
 #define TRACK_TUNING_EXP_DIVIDER 12				// Exposure tuning division factor, the higher the finer tuning, but slower
 
-#define TRACK_EXP_CONTROL_TOLERANCE 50		// Tolerance similar to above, but used in exposureControl function, pg
+#define TRACK_EXP_CONTROL_TOLERANCE 150		// Tolerance similar to above, but used in exposureControl function, pg
 #define TRACK_EXP_CONTROL_DIVIDER 10			// Exposure tuning factor similar to above, but using in exposureControl function, pg
 
 #define TRACK_WINDOW_SIZE_TOLERANCE 10			// If tracking window differs by more than this we definitely want an update
