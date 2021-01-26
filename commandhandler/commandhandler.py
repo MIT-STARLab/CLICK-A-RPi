@@ -347,8 +347,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_ECHO):
             echo_raw_size = ipc_rxcompacket.size
-            echo_payload_tuple = struct.unpack('!%ds'%echo_raw_size, ipc_rxcompacket.payload)
-            echo_payload = echo_payload_tuple[0] #python returns a tuple by default
+            echo_payload = struct.unpack('!%ds'%echo_raw_size, ipc_rxcompacket.payload)[0] #decode the raw payload bytes; since there's only one return type, take the first element of the return tuple
             echo_txpacket = TxPacket()
             raw_echo_txpacket = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload)
             print (echo_payload) #debug printing

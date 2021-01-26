@@ -122,7 +122,7 @@ class Depacketizer:
             # make Ipc packet, add to outgoing buffer
             ipc_pkt = RxCommandPacket()
 
-            raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
+            raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
             self.ipc_pkts_buffer.append(raw_ipc_pkt)
             self.bus_pkts_buffer.pop(0)
 
@@ -166,7 +166,7 @@ class Depacketizer:
                 # make Ipc packet, add to outgoing buffer
                 ipc_pkt = RxCommandPacket()
 
-                raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
+                raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
 
                 self.ipc_pkts_buffer.append(raw_ipc_pkt)
                 del self.bus_pkts_buffer[:seq_cnt]
