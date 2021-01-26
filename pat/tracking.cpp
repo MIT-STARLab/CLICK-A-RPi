@@ -25,7 +25,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow){return true;}
+		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
