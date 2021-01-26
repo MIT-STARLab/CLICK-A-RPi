@@ -1,0 +1,56 @@
+#!/usr/bin/python
+import sys
+sys.path.append('/root/lib/')
+import ipc_helper
+import fpga_map as mmap
+import time
+
+fpga = ipc_helper.FPGAClientInterface()
+
+len_pass_string = 40
+def print_test(name): 
+    print(name + ' ' + '.'*(len_pass_string - len(name)) + ' ')
+    fo.write('--- Starting %s ---\n' % name)
+def pass_test():
+    print('Pass')
+    fo.write('--- Pass ---\n' % name)
+def fail_test():
+    print('Fail')
+    fo.write('--- Fail ---\n' % name)
+
+def test_basic_fpga_if(fo):
+    
+    print_test(fo,'Basic FPGA read/write')
+    try:
+        v1 = 0
+        v2 = 100
+        fo.write('Writing %s, with %s then %s\n' % (mmap.SCP,v1,v2))
+        fpga.write_reg(mmap.SCP, v1)
+        fpga.write_reg(mmap.SCP, v2)
+        vo = fpga.write_reg(mmap.SCP)
+        fo.write('Reading %s, got %s\n' % (mmap.SCP,vo))
+        assert vo == v2
+        
+        v1 = [0,0,0,0]
+        v2 = [10,20,30,40]
+        fo.write('Writing %s, with %s then %s\n' % (mmap.SCP,v1,v2))
+        fpga.write_reg(mmap.SCP, v1)
+        fpga.write_reg(mmap.SCP, v2)
+        vo = fpga.write_reg(mmap.SCP)
+        fo.write('Reading %s, got %s\n' % (mmap.SCP,vo))
+        assert vo == v2
+        
+        pass_test(fo)
+        return 1
+    except Exception as e:
+        fail_test(fo)
+        fo.write(repr(e)+'\n')
+        return 0
+        
+if __name__ == '__main__':
+    
+    t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
+    with file_manager.ManagedFileOpen('/root/data/test/general/%s.gz' % t_str,'w') as (f, tags):
+    
+        tags['Basic FPGA IOs'] = '1'
+        test_basic_fpga_if(f)
