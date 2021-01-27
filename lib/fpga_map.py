@@ -133,8 +133,8 @@ def decode_temperature(msb, lsb):
 CURRENT_BLOCK = list(range(300, 304))
 for reg in CURRENT_BLOCK:
     REGISTER_TYPE[reg] = 'f'
-    BYTE_3[reg] = 2*reg - 490    
-    BYTE_4[reg] = 2*reg - 489
+    BYTE_3[reg] = 2*reg - 488    
+    BYTE_4[reg] = 2*reg - 487
 
 #Converts adc value to amps according to CLICK-A FPGA current sensor schematic
 def decode_current(msb, lsb):
