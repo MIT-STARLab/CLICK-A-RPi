@@ -519,14 +519,17 @@ int main() //int argc, char** argv
 						beaconExposure = camera.config->expose_us.read(); //save beacon exposure, pg-comment
 						beaconGain = camera.config->gain_dB.read();
 						calibGain = calibration.gainForExposure(beaconExposure);
+						// display beacon and beaconWindow parameters, save image telemetry
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
+							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, ", valueMax = ", beacon.valueMax, ", valueSum = ", beacon.valueSum, ", pixelCount = ", beacon.pixelCount, "]", "gain = ", beaconGain);
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Frame is at [x = ", beaconWindow.x, ", y = ", beaconWindow.y, ", w = ", beaconWindow.w, ", h = ", beaconWindow.h, "]");
+						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 						// Set initial pointing in open-loop
 						calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
 						calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
-						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
-							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "], gain = ", beaconGain, 
-							". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
-						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
 						track.controlOpenLoop(fsm, calib.x, calib.y);
+						camera.ignoreNextFrames(camera.queuedCount); //clear queue
 						if(openLoop)
 						{
 							phase = OPEN_LOOP;
@@ -576,7 +579,7 @@ int main() //int argc, char** argv
 
 			// Initialize closed-loop double window tracking
 			case CL_INIT:
-				camera.ignoreNextFrames(camera.queuedCount); //clear queue
+				//camera.ignoreNextFrames(camera.queuedCount); //clear queue
 				/*
 				// Init flipping windows - first window
 				//camera.config->gain_dB.write(beaconGain);
@@ -892,7 +895,6 @@ int main() //int argc, char** argv
 			case OPEN_LOOP:
 				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for open-loop
 					// Request new frame
-					if(haveBeaconKnowledge){beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);} //auto-tune exposure
 					camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
 					camera.setWindow(beaconWindow);
 					camera.requestFrame(); //queue beacon frame, pg-comment
@@ -900,10 +902,10 @@ int main() //int argc, char** argv
 					{
 						Image frame(camera, textFileOut, pat_health_port); //, track.beaconSmoothing
 
-						//save image debug telemetry
+						// //save image debug telemetry
 						// std::string nameTag = std::string("OPEN_LOOP_DEBUG");
-						// std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-						// log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
+						// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						// log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Saving image telemetry as: ", imageFileName);
 						// frame.savePNG(imageFileName);
 
 						if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
@@ -928,6 +930,7 @@ int main() //int argc, char** argv
 											beacon.valueSum = spot.valueSum;
 											beacon.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, beaconWindow);
+											beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 											if(!bcnAlignment){
 											// Control pointing in open-loop
 												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
