@@ -77,6 +77,7 @@ REGISTER_TYPE = collections.defaultdict(lambda : 'xxxx')
 BYTE_1 = {}
 BYTE_2 = {}
 BYTE_3 = {}
+BYTE_4 = {}
 
 # ----------------- Base registers ----------------- 
 for reg in range(  0, 128):
@@ -86,20 +87,20 @@ class Power:
     def __init__(self, handler):
         self.handler = handler
         
-    def calib_diode_on():  self.handler.write_reg(CAL, 85)
-    def calib_diode_off(): self.handler.write_reg(CAL, 15)
-    def bias_on():         self.handler.write_reg(PO1, 85)
-    def bias_off():        self.handler.write_reg(PO1, 15)
-    def edfa_on():         self.handler.write_reg(PO2, 85)
-    def edfa_off():        self.handler.write_reg(PO2, 15)
-    def heaters_on():      self.handler.write_reg(PO3, 85)
-    def heaters_off():     self.handler.write_reg(PO3, 15)
-    def tec_on():          self.handler.write_reg(PO4, 85)
-    def tec_off():         self.handler.write_reg(PO4, 15)
-    def heater_1_on():     self.handler.write_reg(HE1, 85)
-    def heater_1_off():    self.handler.write_reg(HE1, 15)
-    def heater_2_on():     self.handler.write_reg(HE2, 85)
-    def heater_2_off():    self.handler.write_reg(HE2, 15)
+    def calib_diode_on(self):  self.handler.write_reg(CAL, 85)
+    def calib_diode_off(self): self.handler.write_reg(CAL, 15)
+    def bias_on(self):         self.handler.write_reg(PO1, 85)
+    def bias_off(self):        self.handler.write_reg(PO1, 15)
+    def edfa_on(self):         self.handler.write_reg(PO2, 85)
+    def edfa_off(self):        self.handler.write_reg(PO2, 15)
+    def heaters_on(self):      self.handler.write_reg(PO3, 85)
+    def heaters_off(self):     self.handler.write_reg(PO3, 15)
+    def tec_on(self):          self.handler.write_reg(PO4, 85)
+    def tec_off(self):         self.handler.write_reg(PO4, 15)
+    def heater_1_on(self):     self.handler.write_reg(HE1, 85)
+    def heater_1_off(self):    self.handler.write_reg(HE1, 15)
+    def heater_2_on(self):     self.handler.write_reg(HE2, 85)
+    def heater_2_off(self):    self.handler.write_reg(HE2, 15)
     
 # ----------------- Temperatures --------------------
 TEMPERATURE_BLOCK = list(range(200, 206))
@@ -114,23 +115,35 @@ def decode_temperature(msb, lsb):
     val = msb*256 + lsb # complete value
     Vadc = val*2.5/2**12 # volatge as a float
     
-    # Wheatstone bridge
+    # # Wheatstone bridge
     R = 920.0
     Vs = 3.3
-    Rrtd = (R*Vs - 2*R*Vadc) / (R*Vs + 2*R*Vadc) * R
-    
-    # RTD probe
+    amp_gain = 8.5
+    #Rrtd = (R*Vs - 2*R*Vadc) / (R*Vs + 2*R*Vadc) * R
+    Rrtd = (-Vs*R/((Vadc/amp_gain) -Vs/2)) - R 
+    # # RTD probe
     A =  3.81e-3
     B = -6.02e-7
     R0 = 1000.0
-    Temp = (-A + math.sqrt(A**2 - 4*B*(1-Rrtd/R0))) / (2*B)
+    temp = (-A + math.sqrt(A**2 - 4*B*(1-Rrtd/R0))) / (2*B)
     
-    return Temp
+    return temp
     
 # ----------------- Current consumption ----------------- 
 CURRENT_BLOCK = list(range(300, 304))
 for reg in CURRENT_BLOCK:
     REGISTER_TYPE[reg] = 'f'
+    BYTE_3[reg] = 2*reg - 490    
+    BYTE_4[reg] = 2*reg - 489
+
+#Converts adc value to amps according to CLICK-A FPGA current sensor schematic
+def decode_current(msb, lsb):
+
+    val = msb*256 + lsb # complete value
+    Vadc = val*3.3/2**12 # voltage as a float
+    current = Vadc/(101*.01) #amplifier output/gain/resistor = current
+
+    return current
 
 # ----------------- Seed Set Point ----------------- 
 REGISTER_TYPE[400] = 'I'
