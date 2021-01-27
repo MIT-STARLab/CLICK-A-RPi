@@ -892,20 +892,13 @@ int main() //int argc, char** argv
 			case OPEN_LOOP:
 				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for open-loop
 					// Request new frame
-					if(haveBeaconKnowledge){beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);} //auto-tune exposure
+					//if(haveBeaconKnowledge){beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);} //auto-tune exposure
 					camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
 					camera.setWindow(beaconWindow);
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					if(camera.waitForFrame())
 					{
 						Image frame(camera, textFileOut, pat_health_port); //, track.beaconSmoothing
-
-						//save image debug telemetry
-						// std::string nameTag = std::string("OPEN_LOOP_DEBUG");
-						// std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-						// log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
-						// frame.savePNG(imageFileName);
-
 						if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
 						{
 							cl_beacon_num_groups = frame.performPixelGrouping();
@@ -928,6 +921,7 @@ int main() //int argc, char** argv
 											beacon.valueSum = spot.valueSum;
 											beacon.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, beaconWindow);
+											beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 											if(!bcnAlignment){
 											// Control pointing in open-loop
 												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
@@ -1013,6 +1007,12 @@ int main() //int argc, char** argv
 								haveBeaconKnowledge = false;
 								startBeaconLoss = steady_clock::now(); // Record time of Loss
 							}
+							//save image debug telemetry
+							std::string nameTag = std::string("OPEN_LOOP_DEBUG");
+							std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+							log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Saving image telemetry as: ", imageFileName);
+							frame.savePNG(imageFileName);
+							exit(-1); 
 						}
 					}
 					else
