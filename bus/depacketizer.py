@@ -67,7 +67,7 @@ class Depacketizer:
                 sync_index = 1
             else:
                 sync_index = 0
-        print('found sync!')
+        #print('found sync!')
         # Read 6 CCSDS header bytes
         buf = self.read_data(CCSDS_HEADER_LEN)
 
