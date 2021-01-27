@@ -193,10 +193,10 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 						camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
 						camera.config->binningMode.write(cbmOff);
 						// save beacon window properties
-						beaconWindow.x = fullX; 
-						beaconWindow.y = fullY;
-						beaconWindow.w = TRACK_ACQUISITION_WINDOW;
-						beaconWindow.h = TRACK_ACQUISITION_WINDOW; 
+						beaconWindow.x = camera.config->aoiStartX.read();
+						beaconWindow.y = camera.config->aoiStartY.read();
+						beaconWindow.w = camera.config->aoiWidth.read();
+						beaconWindow.h = camera.config->aoiHeight.read();
 						// exit:
 						return true;
 					}
