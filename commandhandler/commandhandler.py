@@ -112,7 +112,7 @@ while True:
 
     # check for timeouts and do any repetitive process tasks
     if((CH_MODE_ID == CH_MODE_GROUND_TEST) and (elapsed_time >= UPDATE_PD_GROUND_TEST*counter_ground_test)): #no timeout for ground testing
-        log_to_hk('CH_MODE_ID = CH_MODE_GROUND_TEST. Start Time: ' + str(start_time))
+        #log_to_hk('CH_MODE_ID = CH_MODE_GROUND_TEST. Start Time: ' + str(start_time))
         counter_ground_test += 1
 
     if(CH_MODE_ID == CH_MODE_DEBUG):
@@ -143,7 +143,7 @@ while True:
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
         ipc_heartbeatPacket = HandlerHeartbeatPacket()
         raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
-        print(ipc_heartbeatPacket) #Debug printing
+        #print(ipc_heartbeatPacket) #Debug printing
         socket_housekeeping.send(raw_ipc_heartbeatPacket)
         counter_heartbeat += 1
 
