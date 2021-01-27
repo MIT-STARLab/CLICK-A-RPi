@@ -151,7 +151,7 @@ while True:
     sockets = dict(poller.poll(10)) #poll for 10 milliseconds
     if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
         # get commands
-        print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
+        # print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
         message = recv_zmq(socket_rx_command_packets)
 
         # decode the package
