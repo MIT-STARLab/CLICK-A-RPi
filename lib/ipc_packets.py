@@ -51,7 +51,7 @@ class TxPacket(IpcPacket):
 class RxCommandPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
-    def encode(self, APID=0x01, ts_txed_s=0, ts_txed_ms=0, payload=''):
+    def encode(self, APID=0x01, ts_txed_s=0, ts_txed_ms=0, payload=[]):
         '''Encode a packet that have been received from the bus:
         APID: BCT APID from the bus
         ts_txed_s: Bus timestamp at witch it transmited the packet to the CLICK payload, in seconds
@@ -66,8 +66,8 @@ class RxCommandPacket(IpcPacket):
         self.size = len(payload)
         self.payload = payload
 
-        if self.payload:
-            self.raw = struct.pack('HHII%ds'%self.size,APID,self.size,ts_txed_s,ts_txed_ms,payload)
+        if (self.size > 0):
+            self.raw = struct.pack('HHII%dB'%self.size,APID,self.size,ts_txed_s,ts_txed_ms,*payload)
         else:
             self.raw = struct.pack('HHII',APID,self.size,ts_txed_s,ts_txed_ms)
 
@@ -83,15 +83,16 @@ class RxCommandPacket(IpcPacket):
         payload: raw contents, bytes'''
 
         self.raw = raw
-        raw_size = len(raw)-12
-        self.APID, self.size, self.ts_txed_s, self.ts_txed_ms, self.payload = struct.unpack('HHII%ds'%raw_size,raw)
-
+        header_size = 12
+        raw_size = len(raw)-header_size
+        self.APID, self.size, self.ts_txed_s, self.ts_txed_ms = struct.unpack('HHII', raw[:header_size]) #unpack header bytes
+        self.payload = raw[header_size:] #return raw byte string to be decoded by command handler
         if options.CHECK_ASSERTS: assert self.size == raw_size
 
         return self.APID, self.ts_txed_s, self.ts_txed_ms, self.payload
 
     def __str__(self):
-        if self.payload:
+        if (self.size > 0):
             return 'IPC RX_COMMAND_PACKET, APID:0x%02X, time:%d.%d s, size:%d, payload:0x%X' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size, int(self.payload.encode('hex'), 16))
         else:
             return 'IPC RX_COMMAND_PACKET, APID:0x%02X, time:%d.%d s, size:%d' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size)

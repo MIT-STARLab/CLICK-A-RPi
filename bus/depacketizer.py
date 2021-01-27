@@ -11,7 +11,7 @@ from crccheck.crc import Crc16CcittFalse as crc16
 sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('/root/lib/') #flight path 
 from ipc_packets import RxCommandPacket, RxPATPacket
-from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT
+from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT, APID_TIME_AT_TONE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
@@ -19,8 +19,6 @@ SPI_DEV = '/dev/bct'
 CCSDS_HEADER_LEN = 6
 APID_INDEX = 1
 PKT_LEN_INDEX = 4
-
-TIME_APID = 0x80
 
 class Depacketizer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])
@@ -69,7 +67,7 @@ class Depacketizer:
                 sync_index = 1
             else:
                 sync_index = 0
-        print('found sync!')
+        #print('found sync!')
         # Read 6 CCSDS header bytes
         buf = self.read_data(CCSDS_HEADER_LEN)
 
@@ -122,7 +120,7 @@ class Depacketizer:
             # make Ipc packet, add to outgoing buffer
             ipc_pkt = RxCommandPacket()
 
-            raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
+            raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
             self.ipc_pkts_buffer.append(raw_ipc_pkt)
             self.bus_pkts_buffer.pop(0)
 
@@ -166,7 +164,7 @@ class Depacketizer:
                 # make Ipc packet, add to outgoing buffer
                 ipc_pkt = RxCommandPacket()
 
-                raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, str(data))
+                raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
 
                 self.ipc_pkts_buffer.append(raw_ipc_pkt)
                 del self.bus_pkts_buffer[:seq_cnt]
@@ -185,7 +183,9 @@ class Depacketizer:
 
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
-        print(binascii.hexlify(raw_ipc_pkt))
+        if(APID != APID_TIME_AT_TONE):
+            #don't print the time at tone packets
+            print(binascii.hexlify(raw_ipc_pkt))
 
         # in the future, consider the pat packets and send those separately
         self.rx_cmd_socket.send(raw_ipc_pkt)

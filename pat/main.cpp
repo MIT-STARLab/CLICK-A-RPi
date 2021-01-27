@@ -25,7 +25,7 @@
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
 #define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
 #define MAX_ACQUISITION_ATTEMPTS 100 //number of times to attempt beacon acquisition
-#define PERIOD_BEACON_LOSS 5.0f //seconds, time to wait after beacon loss before switching back to acquisition
+#define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
@@ -441,7 +441,7 @@ int main() //int argc, char** argv
 		{
 			if(phase == OPEN_LOOP){
 				if(haveBeaconKnowledge){
-					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
 				} else{
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where beacon is.");
 				}
@@ -511,7 +511,7 @@ int main() //int argc, char** argv
 			case ACQUISITION:
 				log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switching off Cal Laser.");
 				if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for acquistion
-					if(track.runAcquisition(beacon)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
+					if(track.runAcquisition(beacon, beaconWindow)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 					{
 						// Acquisition passed!
 						haveBeaconKnowledge = true;
@@ -519,14 +519,17 @@ int main() //int argc, char** argv
 						beaconExposure = camera.config->expose_us.read(); //save beacon exposure, pg-comment
 						beaconGain = camera.config->gain_dB.read();
 						calibGain = calibration.gainForExposure(beaconExposure);
+						// display beacon and beaconWindow parameters, save image telemetry
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
+							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, ", valueMax = ", beacon.valueMax, ", valueSum = ", beacon.valueSum, ", pixelCount = ", beacon.pixelCount, "]", "gain = ", beaconGain);
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Frame is at [x = ", beaconWindow.x, ", y = ", beaconWindow.y, ", w = ", beaconWindow.w, ", h = ", beaconWindow.h, "]");
+						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 						// Set initial pointing in open-loop
 						calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
 						calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
-						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
-							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "] ", beaconGain, "dB smoothing", track.beaconSmoothing, 
-							". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "] ", calibGain, "dB smoothing", calibration.smoothing);
-						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
 						track.controlOpenLoop(fsm, calib.x, calib.y);
+						camera.ignoreNextFrames(camera.queuedCount); //clear queue
 						if(openLoop)
 						{
 							phase = OPEN_LOOP;
@@ -576,7 +579,7 @@ int main() //int argc, char** argv
 
 			// Initialize closed-loop double window tracking
 			case CL_INIT:
-				camera.ignoreNextFrames(camera.queuedCount); //clear queue
+				//camera.ignoreNextFrames(camera.queuedCount); //clear queue
 				/*
 				// Init flipping windows - first window
 				//camera.config->gain_dB.write(beaconGain);
@@ -617,7 +620,7 @@ int main() //int argc, char** argv
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					if(camera.waitForFrame())
 					{
-						Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
+						Image frame(camera, textFileOut, pat_health_port); //track.beaconSmoothing
 
 						//save image debug telemetry
 						// std::string nameTag = std::string("CL_BEACON_DEBUG");
@@ -669,6 +672,12 @@ int main() //int argc, char** argv
 											"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 											"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 											"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+											if(haveBeaconKnowledge) // Beacon Loss Scenario
+											{
+												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
+												haveBeaconKnowledge = false;
+												startBeaconLoss = steady_clock::now(); // Record time of Loss
+											}
 										}
 									}
 									else
@@ -891,12 +900,12 @@ int main() //int argc, char** argv
 					camera.requestFrame(); //queue beacon frame, pg-comment
 					if(camera.waitForFrame())
 					{
-						Image frame(camera, textFileOut, pat_health_port, track.beaconSmoothing);
+						Image frame(camera, textFileOut, pat_health_port); //, track.beaconSmoothing
 
-						//save image debug telemetry
+						// //save image debug telemetry
 						// std::string nameTag = std::string("OPEN_LOOP_DEBUG");
-						// std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-						// log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
+						// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						// log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Saving image telemetry as: ", imageFileName);
 						// frame.savePNG(imageFileName);
 
 						if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
@@ -921,6 +930,7 @@ int main() //int argc, char** argv
 											beacon.valueSum = spot.valueSum;
 											beacon.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, beaconWindow);
+											beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 											if(!bcnAlignment){
 											// Control pointing in open-loop
 												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
@@ -952,6 +962,12 @@ int main() //int argc, char** argv
 											"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
 											"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 											"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+											if(haveBeaconKnowledge) // Beacon Loss Scenario
+											{
+												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
+												haveBeaconKnowledge = false;
+												startBeaconLoss = steady_clock::now(); // Record time of Loss
+											}
 										}
 									}
 									else

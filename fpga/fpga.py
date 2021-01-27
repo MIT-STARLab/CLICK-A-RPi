@@ -41,7 +41,7 @@ def loop():
             
             if options.CHECK_ASSERTS: assert req.size > 3
             
-            len_str = struct.unpack('I', req.write_data[0:4])[0]
+            len_str = struct.unpack('I', req.write_data[0:4])[0] 
             
             if options.CHECK_ASSERTS: assert req.size >= (len_str+4)
             
@@ -57,7 +57,7 @@ def loop():
             req.answer(edfa_out_str,error)
             continue
             
-        # Decoding the incomin packet
+        # Decoding the incoming packet
         register_number = req.size//4
         addresses = range(req.start_addr, req.start_addr+register_number)
         if req.rw_flag and register_number:
@@ -73,7 +73,7 @@ def loop():
         
         if req.start_addr < 128:
             # Raw registers
-            write_flag = [req.rw_flag]*register_number
+            write_flag = [req.rw_flag]*register_number 
             errors,values_out = fpgabus.transfer(addresses, write_flag, values_in)
             
             error_flag = sum(errors)
@@ -95,13 +95,17 @@ def loop():
             for addr,value in zip(addresses,values_in):
             
                 if addr in mmap.TEMPERATURE_BLOCK:
-                    msb = mmap.BYTE_1[addr]
-                    lsb = mmap.BYTE_2[addr]
+                    msb = fpgabus.read_reg(mmap.BYTE_1[addr])
+                    lsb = fpgabus.read_reg(mmap.BYTE_2[addr])
                     temp = mmap.decode_temperature(msb,lsb)
                     values_out.append(temp)
                 
+                #converts adc value to current in amps
                 elif addr in mmap.CURRENT_BLOCK:
-                    pass
+                    msb = fpgabus.read_reg(mmap.BYTE_3[addr])
+                    lsb = fpgabus.read_reg(mmap.BYTE_4[addr])
+                    temp = mmap.decode_current(msb,lsb)
+                    values_out.append(temp)
                     
                 # ----------------- EDFA -----------------
                 elif addr in mmap.EDFA_PARSED_BLOCK:
