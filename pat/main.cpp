@@ -525,8 +525,10 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Acquisition complete. ",
 							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, "], gain = ", beaconGain, 
 							". Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
+						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Frame is at [x = ", beaconWindow.x, ", y = ", beaconWindow.y, ", w = ", beaconWindow.w, ", h = ", beaconWindow.h, "]");
 						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 						track.controlOpenLoop(fsm, calib.x, calib.y);
+						camera.ignoreNextFrames(camera.queuedCount); //clear queue
 						if(openLoop)
 						{
 							phase = OPEN_LOOP;
@@ -576,7 +578,7 @@ int main() //int argc, char** argv
 
 			// Initialize closed-loop double window tracking
 			case CL_INIT:
-				camera.ignoreNextFrames(camera.queuedCount); //clear queue
+				//camera.ignoreNextFrames(camera.queuedCount); //clear queue
 				/*
 				// Init flipping windows - first window
 				//camera.config->gain_dB.write(beaconGain);

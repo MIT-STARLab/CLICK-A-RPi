@@ -169,7 +169,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 		camera.requestFrame();
 
 		// Try tuning the windowed frame
-		log(pat_health_port, fileStream, "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [", fullX, fullY, "]");
+		log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [x = ", fullX, ", y = ", fullY, ", w = ", TRACK_ACQUISITION_WINDOW, ", h = ", TRACK_ACQUISITION_WINDOW, "]");
 		bool success = autoTuneExposure(beacon);
 
 		// Switch back to full frame
