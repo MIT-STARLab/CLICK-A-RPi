@@ -17,7 +17,6 @@
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 #define CMD_PAYLOAD_SIZE 256
-#define CMD_HEADER_SIZE 5
 #define CMD_START_PAT 0x00
 #define CMD_START_PAT_OPEN_LOOP 0x01
 #define CMD_START_PAT_STATIC_POINT 0x02
@@ -63,14 +62,12 @@ struct pat_tx_adcs_packet_struct{
 };
 
 struct pat_control_packet_struct{
-	//char header[CMD_HEADER_SIZE];
 	uint16_t command;
 	uint16_t data_size;
 	char data_to_read[CMD_PAYLOAD_SIZE];
 };
 
 struct fpga_answer_write_packet_struct{
-	//char header[8];
 	uint32_t return_address;
 	uint8_t request_number;
 	bool combined_flag;
@@ -79,7 +76,6 @@ struct fpga_answer_write_packet_struct{
 };
 
 struct fpga_answer_read_packet_struct{
-	//char header[8];
 	uint32_t return_address;
 	uint8_t request_number;
 	bool combined_flag;
