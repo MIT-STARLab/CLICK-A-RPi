@@ -28,11 +28,11 @@ def error_to_file(func):
         try: return func(fo)
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            fail_test(fo)
             fo.write(repr(e)+'\n')
             print(repr(e))
             traceback.print_tb(exc_traceback,file=fo)
             traceback.print_tb(exc_traceback)
+            fail_test(fo)
             return 0
     return e_to_f
 
@@ -80,13 +80,13 @@ def test_fpga_if_performance(fo):
             vo = fpga.read_reg(mmap.SCP)
         except:
             success = False
-            fo.write('IO Error at itteration %d' % (i))
+            fo.write('IO Error at itteration %d\n' % (i))
             continue
         if vo != v1:
             success = False
-            fo.write('Value Error at itteration %d, got %d' % (i, vo))
+            fo.write('Value Error at itteration %d, got %d\n' % (i, vo))
     time_single = time.time() - start_single
-    fo.write('Completed in %f' % (time_single))
+    fo.write('Completed in %f sec\n' % (time_single))
     
     #block reads
     v1 = [1,2,3,4]
@@ -99,13 +99,13 @@ def test_fpga_if_performance(fo):
             vo = fpga.read_reg(mmap.SCP,len(v1))
         except:
             success = False
-            fo.write('IO Error at itteration %d' % (i))
+            fo.write('IO Error at itteration %d\n' % (i))
             continue
         if vo != v1:
             success = False
-            fo.write('Value Error at itteration %d, got %d' % (i, vo))
+            fo.write('Value Error at itteration %d, got %d\n' % (i, vo))
     time_block = time.time() - start_block
-    fo.write('Completed in %f' % (time_block))
+    fo.write('Completed in %f sec\n' % (time_block))
     
     #async reads
     v1 = 10
@@ -119,20 +119,20 @@ def test_fpga_if_performance(fo):
             vol.append([fpga.read_reg_async(mmap.SCP),i])
         except:
             success = False
-            fo.write('IO Error at itteration %d' % (i))
+            fo.write('IO Error at itteration %d\n' % (i))
             continue
     for vocb,i in vol:
         try:
             vo = vocb.wait()
         except:
             success = False
-            fo.write('IO Error at itteration %d' % (i))
+            fo.write('IO Error at itteration %d\n' % (i))
             continue
         if vo != v1:
             success = False
-            fo.write('Value Error at itteration %d, got %d' % (i, vo))
+            fo.write('Value Error at itteration %d, got %d\n' % (i, vo))
     time_async = time.time() - start_async
-    fo.write('Completed in %f' % (time_block))
+    fo.write('Completed in %f sec\n' % (time_async))
 
     if time_single > 3: success = False
     if time_block  > 3: success = False
@@ -161,41 +161,53 @@ def test_BIST(fo):
     
     print_test(fo,'BIST circuit')
     
+    fo.write('Reset BIST threshold DAC, set reference on\n')
     fpga.dac.reset_bist()
     mask = mmap.DAC_BIST_A + mmap.DAC_BIST_B + mmap.DAC_BIST_C
+    fo.write('Enable thresholdhold output\n')
     fpga.dac.enable_output(mask)
     
+    fo.write('Set all thresholds to 0\n')
     fpga.write_reg(mmap.DAC_1_A,[0,0,0])
     
+    fo.write('Reset and start bist capture\n')
     fpga.write_reg(mmap.SCN, 0)
     fpga.write_reg(mmap.SCN, mmap.SCN_RUN_CAPTURE)
-    
+    fo.write('Read BIST results\n')
     BIST_all_high = fpga.read_reg(mmap.SCTa, 8)
-
+    
+    fo.write('Set all thresholds to max (0xFFF)\n')
     fpga.write_reg(mmap.DAC_1_A,[0x0FFF,0x0FFF,0x0FFF])
     
     fpga.write_reg(mmap.SCN, 0)
     fpga.write_reg(mmap.SCN, mmap.SCN_RUN_CAPTURE)
     
+    fo.write('Read BIST results\n')
     BIST_all_low = fpga.read_reg(mmap.SCTa, 8)
     
-    success = True 
-    if BIST_all_high != [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]:
-        success = False
-    if BIST_all_low  != [0xFF,0xFF,   0,   0,   0,   0,   0,   0]:
-        success = False
+    expected_high = [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]
+    expected_low  =  [0xFF,0xFF,   0,   0,   0,   0,   0,   0]
     
+    success = True 
+    if BIST_all_high != expected_high:
+        success = False
+        fo.write('Expected %s,' % str(expected_high))
+        fo.write('Got %s\n' % str(BIST_all_high))
+    if BIST_all_low  != expected_low:
+        success = False
+        fo.write('Expected %s,' % str(expected_low))
+        fo.write('Got %s\n' % str(BIST_all_high))
     if success:
         pass_test(fo)
         return 1
     else:
         fail_test(fo)
         
-        if BIST_all_high != [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]:
-            print('Expected %s,' % str([0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]))
+        if BIST_all_high != expected_high:
+            print('Expected %s,' % str(expected_high))
             print('Got %s' % str(BIST_all_high))
-        if BIST_all_low  != [0xFF,0xFF,   0,   0,   0,   0,   0,   0]:
-            print('Expected %s,' % str([0xFF,0xFF,   0,   0,   0,   0,   0,   0]))
+        if BIST_all_low  != expected_low:
+            print('Expected %s,' % str(expected_low))
             print('Got %s' % str(BIST_all_low))
         return 0
         

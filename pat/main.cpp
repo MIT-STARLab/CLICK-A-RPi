@@ -30,8 +30,8 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X 0 //pixels, from GSE calibration
-#define TX_OFFSET_Y 0 //pixels, from GSE calibration
+#define TX_OFFSET_X 20 //pixels, from GSE calibration
+#define TX_OFFSET_Y -50 //pixels, from GSE calibration
 
 using namespace std;
 using namespace std::chrono;
@@ -579,24 +579,6 @@ int main() //int argc, char** argv
 
 			// Initialize closed-loop double window tracking
 			case CL_INIT:
-				//camera.ignoreNextFrames(camera.queuedCount); //clear queue
-				/*
-				// Init flipping windows - first window
-				//camera.config->gain_dB.write(beaconGain);
-				camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
-				camera.setWindow(beaconWindow);
-				camera.requestFrame(); //queue beacon frame, pg-comment
-				// Request second window
-				//camera.config->gain_dB.write(calibGain);
-				camera.config->expose_us.write(calibExposure); //set cam to calib exposure, pg
-				calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
-				calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
-				calibWindow.w = TRACK_ACQUISITION_WINDOW;
-				calibWindow.h = TRACK_ACQUISITION_WINDOW;
-				camera.setWindow(calibWindow);
-				camera.requestFrame(); //queue calib frame, pg-comment
-				log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - Double window tracking set up! Queued", camera.queuedCount, "requests");
-				*/
 				calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
 				calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
 				calibWindow.w = TRACK_ACQUISITION_WINDOW;
@@ -621,13 +603,11 @@ int main() //int argc, char** argv
 					if(camera.waitForFrame())
 					{
 						Image frame(camera, textFileOut, pat_health_port); //track.beaconSmoothing
-
 						//save image debug telemetry
 						// std::string nameTag = std::string("CL_BEACON_DEBUG");
-						// std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 						// log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
 						// frame.savePNG(imageFileName);
-
 						if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
 						{
 							cl_beacon_num_groups = frame.performPixelGrouping();
@@ -650,8 +630,8 @@ int main() //int argc, char** argv
 											beacon.valueSum = spot.valueSum;
 											beacon.pixelCount = spot.pixelCount;
 											track.updateTrackingWindow(frame, spot, beaconWindow);
+											beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 											// If sending beacon angle errors to the bus adcs
-											//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
 											if(sendBusFeedback){
 												check_tx_adcs = steady_clock::now(); // Record current time
 												elapsed_time_tx_adcs = check_tx_adcs - time_prev_tx_adcs; // Calculate time since heartbeat tlm
@@ -767,14 +747,12 @@ int main() //int argc, char** argv
 					camera.requestFrame(); //queue calib frame, pg-comment
 					if(camera.waitForFrame())
 					{
-						Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);
-						
+						Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);						
 						// //save image debug telemetry
 						// std::string nameTag = std::string("CL_CALIB_DEBUG");
-						// std::string imageFileName = timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+						// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 						// log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
 						// frame.savePNG(imageFileName);
-
 						if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4)
 						{
 							cl_calib_num_groups = frame.performPixelGrouping();
@@ -901,13 +879,11 @@ int main() //int argc, char** argv
 					if(camera.waitForFrame())
 					{
 						Image frame(camera, textFileOut, pat_health_port); //, track.beaconSmoothing
-
 						// //save image debug telemetry
 						// std::string nameTag = std::string("OPEN_LOOP_DEBUG");
 						// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 						// log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Saving image telemetry as: ", imageFileName);
 						// frame.savePNG(imageFileName);
-
 						if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
 						{
 							cl_beacon_num_groups = frame.performPixelGrouping();
@@ -937,23 +913,32 @@ int main() //int argc, char** argv
 												calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
 												track.controlOpenLoop(fsm, calib.x, calib.y);
 											}
-											if(i % 100 == 0){ //TBR; standard sampling frequency is about 1/(40ms) = 25Hz, reduced 10x to ~1/(400ms) = 2.5Hz
+											check_csv_write = steady_clock::now(); // Record current time
+											elapsed_time_csv_write = check_csv_write - time_prev_csv_write; // Calculate time since csv write
+											if(elapsed_time_csv_write > period_csv_write)
+											{
 												// Save for CSV
-												time_point<steady_clock> now = steady_clock::now();
-												duration<double> diff = now - beginTime;
+												now = steady_clock::now();
+												diff = now - beginTime;
 												csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
 													calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
 												//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+												time_prev_csv_write = now; // Record time of csv write		
 											}
 											// If sending beacon angle errors to the bus adcs
 											//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
-											if(sendBusFeedback && (i % 25 == 0))
-											{
-												error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
-												log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Sending Bus Feedback Error Angles: ",
-												"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
-												"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
-												send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+											if(sendBusFeedback){
+												check_tx_adcs = steady_clock::now(); // Record current time
+												elapsed_time_tx_adcs = check_tx_adcs - time_prev_tx_adcs; // Calculate time since heartbeat tlm
+												if(elapsed_time_tx_adcs > period_tx_adcs) //pg
+												{
+													error_angles bus_feedback = centroid2angles(beacon.x, beacon.y);
+													log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Sending Bus Feedback Error Angles: ",
+													"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
+													"from beacon centroid: (cx,cy) = (",beacon.x,", ",beacon.y,")");
+													send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+													time_prev_tx_adcs = steady_clock::now(); // Record time of message		
+												}
 											}
 										}
 										else
