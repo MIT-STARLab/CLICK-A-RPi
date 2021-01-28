@@ -252,8 +252,8 @@ def test_roomtemp_temperatures(fo):
         if (temp < 20 or temp > 30):
             success = False
 
-    fo.write("Temperature Read out")
-    fo.write(str(list(zip(temp_name_list,temps))))
+    fo.write("Temperature Read out\n")
+    fo.write(str(list(zip(temp_name_list,temps)))+'\n')
 
     if success:
         pass_test(fo)
