@@ -215,8 +215,9 @@ def validate_file(ipc_rxcompacket):
 def move_file(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 4
     src_file_name_len, dest_file_name_len, file_names = struct.unpack('!HH%ds'% (req_raw_size), ipc_rxcompacket.payload)
-    src_file_name, dest_file_name = struct.unpack('!%ds%ds'% (src_file_name_len, dest_file_name_len), file_names)
 
+    src_file_name = file_names[:src_file_name_len]
+    dest_file_name = file_names[src_file_name_len:src_file_name_len+dest_file_name_len]
     # TODO: handle file/directory doesn't exist error
     if os.path.exists(src_file_name):
         shutil.move(src_file_name, dest_file_name)
