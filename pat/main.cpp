@@ -30,8 +30,8 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X 0 //pixels, from GSE calibration
-#define TX_OFFSET_Y 0 //pixels, from GSE calibration
+#define TX_OFFSET_X 20 //pixels, from GSE calibration
+#define TX_OFFSET_Y -50 //pixels, from GSE calibration
 
 using namespace std;
 using namespace std::chrono;
