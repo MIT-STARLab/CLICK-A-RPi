@@ -5,5 +5,7 @@ Before=default.target
 
 [Service]
 Type=simple
-ExecStartPre=/bin/bash /root/fpga/unbind.sh
 ExecStart=/bin/python -u /root/fpga/fpga.py
+
+[Install]
+WantedBy=default.target

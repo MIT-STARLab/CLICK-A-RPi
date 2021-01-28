@@ -4,7 +4,7 @@ Before=fpga.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sleep 2
+ExecStart=/bin/sleep 1
 ExecStart=/bin/python -u /root/fpga/flash.py
 
 [Install]
