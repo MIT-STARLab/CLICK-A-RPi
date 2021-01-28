@@ -177,7 +177,7 @@ def test_BIST(fo):
     BIST_all_high = fpga.read_reg(mmap.SCTa, 8)
     
     fo.write('Set all thresholds to max (0xFFF)\n')
-    fpga.write_reg(mmap.DAC_1_A,[0x0FFF,0x0FFF,0x0FFF])
+    fpga.write_reg(mmap.DAC_1_A,[0xFFFF,0xFFFF,0xFFFF])
     
     fpga.write_reg(mmap.SCN, 0)
     fpga.write_reg(mmap.SCN, mmap.SCN_RUN_CAPTURE)
