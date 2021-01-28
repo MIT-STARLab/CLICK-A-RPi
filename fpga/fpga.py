@@ -114,7 +114,7 @@ def loop():
                     
                 # ----------------- DACs ----------------- 
                 elif addr == mmap.DAC_ENABLE:
-                    dac.set_ouput_mode(fpgabus, value)
+                    dac.set_output_mode(fpgabus, value)
                     
                 elif addr == mmap.DAC_RESET:
                     is_por = (value & 0b0100) >> 2
