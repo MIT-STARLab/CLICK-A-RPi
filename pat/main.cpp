@@ -191,13 +191,14 @@ int main() //int argc, char** argv
 	bool static_pointing_initialized = false;
 	
 	//IPC with fpga.py - TEST
-	std::cout << "check heater on (0): " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 0) << std::endl;
 	std::cout << "command heater on" << std::endl;
 	send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, (bool) WRITE, 0);
 	std::cout << "check heater command: " << check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) HEATER_CH, 0) << std::endl;
 	std::cout << "check heater on (1): " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
+	std::cout << "check heater on (2): " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 2) << std::endl;
+	std::cout << "check heater on (3): " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 3) << std::endl;
 	return 0; 
-	
+
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:

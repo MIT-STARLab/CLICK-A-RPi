@@ -161,18 +161,21 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		fpga_answer_read_packet_struct packet_struct = fpga_answer_read_packet_struct(); //initialize
 		memcpy(&packet_struct, packet, sizeof(packet));
 		
+		
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - packet size: " << sizeof(fpga_answer_read_packet_struct) << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - return_address: " << packet_struct.return_address << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - request_number: " << unsigned(packet_struct.request_number) << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - combined_flag: " << packet_struct.combined_flag << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - start_address: " << packet_struct.start_address << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_size: " << packet_struct.data_size << std::endl;
-		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - (int *)(data_to_read): " << (int *) packet_struct.data_to_read << std::endl;
-		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - unsigned(atoi(data_to_read)): " << unsigned(atoi(packet_struct.data_to_read)) << std::endl;
-		for(int i = 0; i < FPGA_READ_SIZE; i++){
-			std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_to_read[" << i << "]: " << packet_struct.data_to_read[i] << std::endl;
-			std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - unsigned(data_to_read[" << i << "]): " << unsigned(packet_struct.data_to_read[i]) << std::endl;
-		}
+		unsigned int data;
+		data = *(int *) packet_struct.data_to_read;
+		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data: " << data << std::endl;
+		// std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - unsigned(atoi(data_to_read)): " << unsigned(atoi(packet_struct.data_to_read)) << std::endl;
+		// for(int i = 0; i < FPGA_READ_SIZE; i++){
+		// 	std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_to_read[" << i << "]: " << packet_struct.data_to_read[i] << std::endl;
+		// 	std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - unsigned(data_to_read[" << i << "]): " << unsigned(packet_struct.data_to_read[i]) << std::endl;
+		// }
 	
 		fpga_answer_struct return_struct = fpga_answer_struct();
 		return_struct.return_address = packet_struct.return_address; 
@@ -180,7 +183,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		return_struct.rw_flag = packet_struct.combined_flag & 0x01;
         return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 		return_struct.start_address = packet_struct.start_address;	
-		return_struct.data_to_read = atoi(packet_struct.data_to_read); 
+		return_struct.data_to_read = data & 0xFF; 
 		
 		return return_struct;
 	}
