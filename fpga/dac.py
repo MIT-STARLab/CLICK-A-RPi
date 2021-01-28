@@ -24,6 +24,17 @@ DAC_100K  = 0b10 << 4
 DAC_HIGHZ = 0b11 << 4
 
 """
+Initialize DAC to default settings
+is_por: 1
+ref_enable: 1
+transparent_mode: 0
+"""
+def init(fpgabus, target_dac):
+    reset(fpgabus, target_dac,1)
+    set_reference(fpgabus,target_dac,1)
+    set_output_mode(fpgabus, 0)
+
+"""
 Write to one of the dac's 
 Target 1: Photodiode Board DAC
 Target 2: FSM DAC
@@ -84,6 +95,6 @@ def write_and_update(fpgabus, target_chan, value):
         assert target_chan >= 0
     if target_chan < 4: target_dac = 1
     else:               target_dac = 2
-    addr = target_chan%4 & 0b11 << 16
+    addr = (target_chan%4 & 0b11) << 16
     write_command(fpgabus, target_dac, DAC_WRITE_UPDATE_ONE | addr | value)
     
