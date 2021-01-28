@@ -16,7 +16,7 @@
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
-#define FPGA_READ_SIZE 16
+#define FPGA_READ_SIZE 4
 #define CMD_PAYLOAD_SIZE 256
 #define CMD_START_PAT 0x00
 #define CMD_START_PAT_OPEN_LOOP 0x01
