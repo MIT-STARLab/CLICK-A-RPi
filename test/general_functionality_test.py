@@ -150,13 +150,6 @@ def test_fpga_if_performance(fo):
     return success
     
 @error_to_file        
-def test_temperatures(fo):
-    
-    print_test(fo,'Temperature sensors')
-    
-    raise NotImplementedError
-    
-@error_to_file        
 def test_BIST(fo):
     
     print_test(fo,'BIST circuit')
@@ -214,6 +207,10 @@ def test_BIST(fo):
 @error_to_file        
 def test_EDFA_IF(fo):
     
+    #Turn on EDFA power switch
+    #Check current
+    #Run fline
+    #check values
     print_test(fo,'EDFA UART Interface')
     
     raise NotImplementedError
@@ -224,6 +221,47 @@ def test_mod_FIFO(fo):
     print_test(fo,'Modulator data FIFO')
     
     raise NotImplementedError
+
+@error_to_file 
+def test_camera(fo):
+
+    print_test(fo, 'Camera connect test')
+
+    raise NotImplementedError
+
+@error_to_file 
+def test_heaters(fo):
+
+    print_test(fo, "Heater Accuation test")
+
+    raise NotImplementedError
+
+"""
+This test checks the temperature sensors are within
+an operating range of 20C-30C (room_temp)
+"""
+@error_to_file        
+def test_roomtemp_temperatures(fo):
+
+    print_test(fo,'Room Temp Temperature Sensor Test')
+
+    temp_name_list = ["PD: ", "EDFA: ", "Camera: ", "TOSA: ","Lens: ", "Raceway: "]
+    temps = []
+    for temp in mmap.TEMPERATURE_BLOCK:
+        temps.append(round(fpga.read_reg(temp),2))
+        if (temp < 20 or temp > 30):
+            success = False
+
+    fo.write("Temperature Read out")
+    fo.write(str(list(zip(temp_name_list,temps))))
+
+    if success:
+        pass_test(fo)
+    else: 
+        fail_test(fo)
+        print('Expected temps between 20 & 30C')
+        print('Received temps: ' + str(list(zip(temp_name_list,temps))))
+
         
 if __name__ == '__main__':
     
@@ -234,7 +272,7 @@ if __name__ == '__main__':
         
         test_basic_fpga_if(f)
         test_fpga_if_performance(f)
-        test_temperatures(f)
+        test_roomtemp_temperatures(f)
         test_BIST(f)
-        test_EDFA_IF(f)
-        test_mod_FIFO(f)
+        #test_EDFA_IF(f)
+        #test_mod_FIFO(f)
