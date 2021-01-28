@@ -16,6 +16,7 @@
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
+#define FPGA_READ_SIZE 16
 #define CMD_PAYLOAD_SIZE 256
 #define CMD_START_PAT 0x00
 #define CMD_START_PAT_OPEN_LOOP 0x01
@@ -81,7 +82,7 @@ struct fpga_answer_read_packet_struct{
 	bool combined_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	char data_to_read[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
+	char data_to_read[FPGA_READ_SIZE]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct fpga_answer_struct{
