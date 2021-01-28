@@ -270,9 +270,52 @@ if __name__ == '__main__':
     
         tags['origin'] = 'command line'
         
+        # Flash the FPGA
+        
         test_basic_fpga_if(f)
+        # Test switches value, should be 0
+        # Check Tx FIFO is empty
+        # Check CRC ok
         test_fpga_if_performance(f)
-        test_roomtemp_temperatures(f)
+        test_roomtemp_temperatures(f) #Update to check slow change, some noise, grouped toogether
         test_BIST(f)
-        #test_EDFA_IF(f)
         #test_mod_FIFO(f)
+        
+        # check EDFA current
+        # Turn on EDFA switch
+        # check EDFA current
+        
+        # test_EDFA_IF(f)
+        
+        # check TEC current
+        # Turn TEC on
+        # check TEC current
+        
+        # check TEC readback is linear and within ~20%.
+        # set TEC to nominal
+        
+        # check Bias rail current
+        # Turn Bias on
+        # check Bias rail current
+        
+        # Set seed current to nominal, check rail increase
+        
+        # PPM scan, record EDFA input power, check range and -3dB decrease
+        # CW, find with BIST threshold
+        
+        # Turn off EDFA, TEC, Bias
+        # Check currents EDFA, TEC, Bias rail
+        
+        # Check heaters current
+        # Turn heaters
+        # Check heaters current (still 0?)
+        # Heater 1 on, check current
+        # Heater 2 on, check current
+        # Heater 1 off, check current
+        # Heater 2 off, check current. 
+        
+        
+        
+        
+        
+        
