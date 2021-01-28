@@ -133,7 +133,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 	if(read_write == WRITE){	
 		char packet[sizeof(fpga_answer_write_packet_struct)];
 		memcpy(packet, message.data(), message.size());
-		printf("In packetdef.cpp - receive_packet_fpga_map_answer - WRITE - packet: %s \n", packet)
+		printf("In packetdef.cpp - receive_packet_fpga_map_answer - WRITE - packet: %s \n", packet);
 		
 		fpga_answer_write_packet_struct packet_struct = fpga_answer_write_packet_struct(); //initialize
 		memcpy(&packet_struct, packet, sizeof(packet));
@@ -158,7 +158,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 	} else{
 		char packet[sizeof(fpga_answer_read_packet_struct)];
 		memcpy(packet, message.data(), message.size());
-		printf("In packetdef.cpp - receive_packet_fpga_map_answer - READ - packet: %s \n", packet)
+		printf("In packetdef.cpp - receive_packet_fpga_map_answer - READ - packet: %s \n", packet);
 
 		fpga_answer_read_packet_struct packet_struct = fpga_answer_read_packet_struct(); //initialize
 		memcpy(&packet_struct, packet, sizeof(packet));
@@ -169,7 +169,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - combined_flag: " << packet_struct.combined_flag << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - start_address: " << packet_struct.start_address << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_size: " << packet_struct.data_size << std::endl;
-		printf("In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_to_read: %s \n", packet_struct.data_to_read)
+		printf("In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_to_read: %s \n", packet_struct.data_to_read);
 		//std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - atoi(data_to_read): " << atoi(packet_struct.data_to_read) << std::endl;
 		//std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - unsigned(atoi(data_to_read)): " << unsigned(atoi(packet_struct.data_to_read)) << std::endl;
 		// std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_to_read[0]: " << unsigned(packet_struct.data_to_read[0]) << std::endl;
