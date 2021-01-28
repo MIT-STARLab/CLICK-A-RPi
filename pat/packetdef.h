@@ -82,7 +82,7 @@ struct fpga_answer_read_packet_struct{
 	bool combined_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	char data_to_read[FPGA_READ_SIZE]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
+	unsigned char data_to_read[FPGA_READ_SIZE]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct fpga_answer_struct{
