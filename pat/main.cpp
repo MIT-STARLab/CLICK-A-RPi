@@ -194,28 +194,28 @@ int main() //int argc, char** argv
 	//std::cout << "command heater on" << std::endl;
 	//send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, (bool) WRITE, 0);
 	//std::cout << "check heater command: " << check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) HEATER_CH, 0) << std::endl;
-	std::cout << "check heater on: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
-	return 0; 
+	//std::cout << "check heater on: " << check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) HEATER_CH, (uint8_t) HEATER_ON, 1) << std::endl;
+	//return 0; 
 
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
-	bool camera_initialized = camera.initialize();	
-	while(!camera_initialized){
-		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
-		// Listen for exit command 		
-		zmq::poll(poll_pat_control.data(), 1, 1000); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
-		if(poll_pat_control[0].revents & ZMQ_POLLIN){
-			// received something on the first (only) socket
-			command = receive_packet_pat_control(pat_control_port);
-			if(command == CMD_END_PAT){
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
-				return 0;
-			}
-		}
-		//Try to initialize again
-		camera_initialized = camera.initialize();
-	}
+	// bool camera_initialized = camera.initialize();	
+	// while(!camera_initialized){
+	// 	log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+	// 	// Listen for exit command 		
+	// 	zmq::poll(poll_pat_control.data(), 1, 1000); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+	// 	if(poll_pat_control[0].revents & ZMQ_POLLIN){
+	// 		// received something on the first (only) socket
+	// 		command = receive_packet_pat_control(pat_control_port);
+	// 		if(command == CMD_END_PAT){
+	// 			log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PAT command. Exiting...");
+	// 			return 0;
+	// 		}
+	// 	}
+	// 	//Try to initialize again
+	// 	camera_initialized = camera.initialize();
+	// }
 	log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");
 	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
