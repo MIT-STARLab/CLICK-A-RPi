@@ -343,25 +343,25 @@ int main() //int argc, char** argv
 					//switch laser on
 					if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
 						//save images at various FSM settings
-						// fsm.setNormalizedAngles(0,0);
-						// this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-						// logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
-						// std::this_thread::sleep_for(std::chrono::seconds(30));
+						fsm.setNormalizedAngles(0,0);
+						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+						logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
+						std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 						fsm.setNormalizedAngles(0.1,0);
 						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 						logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
 						std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-						// fsm.setNormalizedAngles(0,1);
-						// this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-						// logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
-						// std::this_thread::sleep_for(std::chrono::milliseconds(500));
+						fsm.setNormalizedAngles(0,1);
+						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+						logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
+						std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-						// fsm.setNormalizedAngles(1,1);
-						// this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-						// logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
-						// std::this_thread::sleep_for(std::chrono::milliseconds(500));
+						fsm.setNormalizedAngles(1,1);
+						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+						logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
+						std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 						//switch laser off
 						if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
