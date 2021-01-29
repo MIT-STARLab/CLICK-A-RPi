@@ -168,9 +168,6 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - combined_flag: " << packet_struct.combined_flag << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - start_address: " << packet_struct.start_address << std::endl;
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_size: " << packet_struct.data_size << std::endl;
-		unsigned int data;
-		data = *(int *)packet_struct.data_to_read;
-		printf("In packetdef.cpp - receive_packet_fpga_map_answer - READ - data: %d\n", data);
 		std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - unsigned(atoi(data_to_read)): " << unsigned(atoi(packet_struct.data_to_read)) << std::endl;
 		for(int i = 0; i < FPGA_READ_SIZE; i++){
 		 	std::cout << "In packetdef.cpp - receive_packet_fpga_map_answer - READ - data_to_read[" << i << "]: " << packet_struct.data_to_read[i] << std::endl;
@@ -183,7 +180,7 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		return_struct.rw_flag = packet_struct.combined_flag & 0x01;
         return_struct.error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 		return_struct.start_address = packet_struct.start_address;	
-		return_struct.data_to_read = atoi(packet_struct.data_to_read); 
+		return_struct.data_to_read = packet_struct.data_to_read[3]; 
 		
 		return return_struct;
 	}
