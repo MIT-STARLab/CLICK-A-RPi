@@ -40,7 +40,7 @@ void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t
 		packet_struct.request_number = request_num;
 		packet_struct.read_write_flag = read_write;
 		packet_struct.start_address = channel;	
-		packet_struct.data_size = 1; 
+		packet_struct.data_size = 4; //4 bytes for one register 
 		
 		std::cout << "In packetdef.cpp - send_packet_fpga_map_request - packet size: " << sizeof(fpga_request_read_packet_struct) << std::endl;
 		std::cout << "In packetdef.cpp - send_packet_fpga_map_request - return_address: " << packet_struct.return_address << std::endl;
