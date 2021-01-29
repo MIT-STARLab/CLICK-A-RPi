@@ -11,12 +11,15 @@ sys.path.append('/root/lib/')
 from options import *
 from ipc_packets import PATControlPacket, PATHealthPacket
 from zmqTxRx import recv_zmq, send_zmq
+import ipc_helper
+import fpga_map as mmap
+fpga = ipc_helper.FPGAClientInterface()
 
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct
-
 cmd_list = [PAT_CMD_START_PAT, PAT_CMD_END_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_SELF_TEST]
-
+TURN_ON_CAL_LASER = cmd_list[len(cmd_list)-1] + 1
+cmd_list.append(TURN_ON_CAL_LASER)
 # ~ class IpcPacket:
     # ~ def __init__(self): pass
     
@@ -142,6 +145,7 @@ while True:
                 print "PAT_CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
                 print "PAT_CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
                 print "PAT_CMD_SELF_TEST = ", PAT_CMD_SELF_TEST
+                print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
                         if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
@@ -162,6 +166,10 @@ while True:
                                 tx_offset_y = int(input("Update Tx Offset Y: "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_y))
+                        elif(user_cmd == TURN_ON_CAL_LASER):
+                                fpga.write_reg(mmap.DAC_SETUP,1)
+                                fpga.write_reg(mmap.DAC_1_D,6700)
+                                print('CALIBRATION LASER ON')
                         else:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
