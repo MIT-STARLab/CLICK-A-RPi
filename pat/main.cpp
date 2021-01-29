@@ -251,10 +251,17 @@ int main() //int argc, char** argv
 					break;
 					
 				case CMD_START_PAT_BUS_FEEDBACK:
-					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_BUS_FEEDBACK command. Proceeding to main PAT loop...");
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_BUS_FEEDBACK command.");
 					sendBusFeedback = true;
 					STANDBY = false;
-					break;		
+					break;	
+
+				case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
+					log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command.");
+					openLoop = true; 
+					sendBusFeedback = true;
+					STANDBY = false;
+					break;			
 					
 				case CMD_GET_IMAGE:
 					//set to commanded exposure
@@ -339,22 +346,22 @@ int main() //int argc, char** argv
 						fsm.setNormalizedAngles(0,0);
 						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 						logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
-						std::this_thread::sleep_for(std::chrono::milliseconds(500));
+						std::this_thread::sleep_for(std::chrono::seconds(30));
 
 						fsm.setNormalizedAngles(1,0);
 						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 						logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
 						std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-						fsm.setNormalizedAngles(0,1);
-						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-						logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
-						std::this_thread::sleep_for(std::chrono::milliseconds(500));
+						// fsm.setNormalizedAngles(0,1);
+						// this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+						// logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
+						// std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-						fsm.setNormalizedAngles(1,1);
-						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-						logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
-						std::this_thread::sleep_for(std::chrono::milliseconds(500));
+						// fsm.setNormalizedAngles(1,1);
+						// this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+						// logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
+						// std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 						//switch laser off
 						if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
@@ -909,8 +916,8 @@ int main() //int argc, char** argv
 											beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 											if(!bcnAlignment){
 											// Control pointing in open-loop
-												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-												calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+												calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
+												calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
 												track.controlOpenLoop(fsm, calib.x, calib.y);
 											}
 											check_csv_write = steady_clock::now(); // Record current time

@@ -240,9 +240,9 @@ while True:
             log_to_hk('ACK CMD PL_DELETE_FILE')
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
-            pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload) #maps to PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT,
-            pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK]
-            pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Bus Feedback']
+            pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload)
+            pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK]
+            pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Default w/ Bus Feedback', 'Open-Loop w/ Bus Feedback']
             if(pat_mode_cmd not in pat_mode_list):
                 log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
             else:
