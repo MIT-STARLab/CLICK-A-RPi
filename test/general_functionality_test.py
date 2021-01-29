@@ -7,11 +7,12 @@ import fpga_map as mmap
 import time
 import file_manager
 import traceback
-
+import dac
 
 
 fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga)
+edfa = mmap.EDFA(fpga)
 
 len_pass_string = 100
 def print_test(fo,name): 
@@ -170,7 +171,7 @@ def test_BIST(fo):
     fo.write('Read BIST results\n')
     BIST_all_high = fpga.read_reg(mmap.SCTa, 8)
     
-    fo.write('Set all thresholds to max (0xFFF)\n')
+    fo.write('Set all thresholds to max (0xFFFF)\n')
     fpga.write_reg(mmap.DAC_1_A,[0xFFFF,0xFFFF,0xFFFF])
     
     fpga.write_reg(mmap.SCN, 0)
@@ -332,9 +333,60 @@ def reflash_fpga(fo):
         print('FPGA was not reprogrammed')
 
     return success
+"""
+Test EDFA current before/after current switch
+Read fline response to verify operation
+"""
+@error_to_file
+def test_edfa_IF():
+
+    print_test(fo, "Testing EDFA IF & current")
+
+    off_current = fpga.read_reg(302)
+    fpga.write_reg(mmap.PO2, 85)
+    edfa.edfa_on()
+    edfa_temp = fpga.read_reg(mmap.EDFA_CASE_TEMP)
+    power_in = fpga.read_reg(mmap.EDFA_POWER_IN)
+    power_out = fpga.read_reg(mmap.EDFA_POWER_OUT)
+    on_current = fpga.read(302)
+    edfa.edfa_off()
+
+    success = True
+    if(off_current > 10**-3 and on_current < 100**-3):
+        success = False
+        print('EDFA current is more than 10mA when off or less than 100mA when on')
+
+    if(edfa_temp < 0 and edfa_temp >40):
+        success = False
+        print('EDFA Case temp is outside range 0-40C')
+
+    if(power_in != -100.0):
+        success = False
+        print("Seed power is nonzero and shouldn't be")
+
+    if(power_out != -100.0):
+        success = False
+        print("EDFA output power is nonzero and shouldn't be") 
 
 
+    if success:
+        pass_test(fo)
+    else:
+        fail_test(fo)
+        print('Expected edfa and calibration laser registers to be zero after reprogramming')
+        print('Edfa power: ' + str(edfa_power) +  ' Calibration power: ' + str(calib_power))
+        print('FPGA was not reprogrammed')
 
+    return success
+
+
+@error_to_file
+def test_calib_laser():
+    #turn on call laser
+    fpga.write_reg(mmap.DAC_SETUP,1)
+    fpga.write_reg(mmap.DAC_1_D,6700)
+
+    return 1
         
 if __name__ == '__main__':
     
@@ -343,18 +395,21 @@ if __name__ == '__main__':
     
         tags['origin'] = 'command line'
         
+
+	
         # Flash the FPGA
         # Test switches value, should be 0
-        reflash_fpga(f)
+        #reflash_fpga(f)
         
         #test_basic_fpga_if(f)
-        test_fpga_if_performance(f)
+        #test_fpga_if_performance(f)
 
         # Check Tx FIFO is empty <- How do you do this??
         # Check CRC ok <- what CRC??
 
-        check_temperature_init(f) #Update to check slow change, some noise, grouped toogether
-        test_BIST(f)
+        #check_temperature_init(f) #Update to check slow change, some noise, grouped toogether
+        #test_BIST(f)
+
         #test_mod_FIFO(f)
         
         # check EDFA current
