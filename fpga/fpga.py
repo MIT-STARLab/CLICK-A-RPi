@@ -113,6 +113,9 @@ def loop():
                     
                     
                 # ----------------- DACs ----------------- 
+                elif addr == mmap.DAC_SETUP:
+                    dac.init(fpgabus,value)
+
                 elif addr == mmap.DAC_ENABLE:
                     dac.set_output_mode(fpgabus, value)
                     

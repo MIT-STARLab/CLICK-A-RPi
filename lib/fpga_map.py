@@ -152,6 +152,7 @@ REGISTER_TYPE[400] = 'I'
 REGISTER_TYPE[401] = 'I'
 
 # ----------------- DACs ----------------- 
+DAC_SETUP  = 499
 DAC_ENABLE = 500
 DAC_RESET  = 501
 DAC_BIST_A = 0b00000001
@@ -166,8 +167,10 @@ DAC_OEN    = 0b00 << 8
 DAC_1K     = 0b01 << 8
 DAC_100K   = 0b10 << 8
 DAC_HIGHZ  = 0b11 << 8
+REGISTER_TYPE[DAC_SETUP] = 'I'
 REGISTER_TYPE[DAC_ENABLE] = 'xxH'
 REGISTER_TYPE[DAC_RESET] = 'xxxB'
+
 
 DAC_BLOCK = list(range(502, 510))
 DAC_1_A, DAC_1_B, DAC_1_C, DAC_1_D = DAC_BLOCK[0:4]

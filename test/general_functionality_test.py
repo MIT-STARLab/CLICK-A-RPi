@@ -11,6 +11,7 @@ import traceback
 
 
 fpga = ipc_helper.FPGAClientInterface()
+power = mmap.Power(fpga)
 
 len_pass_string = 100
 def print_test(fo,name): 
@@ -223,13 +224,6 @@ def test_mod_FIFO(fo):
     raise NotImplementedError
 
 @error_to_file 
-def test_camera(fo):
-
-    print_test(fo, 'Camera connect test')
-
-    raise NotImplementedError
-
-@error_to_file 
 def test_heaters(fo):
 
     print_test(fo, "Heater Accuation test")
@@ -262,6 +256,85 @@ def test_roomtemp_temperatures(fo):
         print('Expected temps between 20 & 30C')
         print('Received temps: ' + str(list(zip(temp_name_list,temps))))
 
+    return success
+
+"""
+Check temperatures during initialization
+Verifies temps within range of 0-40C and that all temperatures are within 5C of each other
+Checks to make sure there is some amoutn of noise on the signal 
+
+"""
+@error_to_file
+def check_temperature_init(fo):
+
+    print_test(fo, "Reflashing FPGA to start self test sequence")
+    temp_name_list = ["PD: ", "EDFA: ", "Camera: ", "TOSA: ","Lens: ", "Raceway: "]
+    temps = []
+    sample_num = 5
+    success = True
+    for temp in mmap.TEMPERATURE_BLOCK:
+        samples = []
+        for sample in range(sample_num):
+            samples.append(fpga.read_reg(temp))
+
+        if((max(samples) - min(samples)) == 0):
+            success = False
+        
+        temps.append(sum(samples)/sample_num)
+
+    if not success:
+        print('Expected temperature to be be varying slightly in time.')
+
+    if((max(temps) - min(temps)) > 5 or min(temps) < 0 or max(temps) > 40 ):
+        print(max(temps), min(temps))
+        success = False
+        print('Expected temperature to be no more than 5C different from each other and temps to be between 0 & 40C')
+    
+    if success:
+        pass_test(fo)
+    else:
+        fail_test(fo)
+        fo.write("Temperature Read out\n")
+        fo.write(str(list(zip(temp_name_list,temps)))+'\n')
+        print('Received temps: ' + str(list(zip(temp_name_list,temps))))
+
+    return success
+
+
+"""
+Reprogram the FPGA and check to verify the all power switches are 0
+
+"""
+@error_to_file
+def reflash_fpga(fo):
+    import os
+    print_test(fo, "Reflashing FPGA to start self test sequence")
+
+    power.edfa_off()
+    power.calib_diode_off()
+
+    os.system("systemctl start --user flash-fpga.service")
+    time.sleep(5)
+
+    power_switches = [mmap.CAL, mmap.PO1, mmap.PO2, mmap.PO3, mmap.PO4, mmap.HE1, mmap.HE2]
+
+    success = True
+    for sw in power_switches:
+        if fpga.read_reg(sw) != 0:
+            success = False
+
+    if success:
+        pass_test(fo)
+    else:
+        fail_test(fo)
+        print('Expected edfa and calibration laser registers to be zero after reprogramming')
+        print('Edfa power: ' + str(edfa_power) +  ' Calibration power: ' + str(calib_power))
+        print('FPGA was not reprogrammed')
+
+    return success
+
+
+
         
 if __name__ == '__main__':
     
@@ -271,13 +344,16 @@ if __name__ == '__main__':
         tags['origin'] = 'command line'
         
         # Flash the FPGA
-        
-        test_basic_fpga_if(f)
         # Test switches value, should be 0
-        # Check Tx FIFO is empty
-        # Check CRC ok
+        reflash_fpga(f)
+        
+        #test_basic_fpga_if(f)
         test_fpga_if_performance(f)
-        test_roomtemp_temperatures(f) #Update to check slow change, some noise, grouped toogether
+
+        # Check Tx FIFO is empty <- How do you do this??
+        # Check CRC ok <- what CRC??
+
+        check_temperature_init(f) #Update to check slow change, some noise, grouped toogether
         test_BIST(f)
         #test_mod_FIFO(f)
         
