@@ -531,11 +531,13 @@ int main() //int argc, char** argv
 							"Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, ", valueMax = ", beacon.valueMax, ", valueSum = ", beacon.valueSum, ", pixelCount = ", beacon.pixelCount, "]", "gain = ", beaconGain);
 						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Frame is at [x = ", beaconWindow.x, ", y = ", beaconWindow.y, ", w = ", beaconWindow.w, ", h = ", beaconWindow.h, "]");
 						logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
-						// Set initial pointing in open-loop
-						calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-						calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
-						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
-						track.controlOpenLoop(fsm, calib.x, calib.y);
+						if(!bcnAlignment){
+							// Set initial pointing in open-loop
+							calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
+							calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
+							track.controlOpenLoop(fsm, calib.x, calib.y);
+						}
 						camera.ignoreNextFrames(camera.queuedCount); //clear queue
 						if(openLoop)
 						{
