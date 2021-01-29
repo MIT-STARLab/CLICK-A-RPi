@@ -47,7 +47,6 @@ struct fpga_request_read_packet_struct{
 	bool read_write_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	//uint8_t data_to_write[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct pat_health_packet_struct{
