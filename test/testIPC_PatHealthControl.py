@@ -174,7 +174,7 @@ while True:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
                         
-                        print(ipc_patControlPacket)
+                        #print(ipc_patControlPacket)
                         
                         if(user_cmd == PAT_CMD_END_PAT):
                                 print "Exiting..."
