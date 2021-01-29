@@ -30,6 +30,7 @@
 #define CMD_BCN_ALIGN 0x09
 #define CMD_UPDATE_TX_OFFSET_X 0x0A
 #define CMD_UPDATE_TX_OFFSET_Y 0x0B
+#define CMD_SELF_TEST 0x0C
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{

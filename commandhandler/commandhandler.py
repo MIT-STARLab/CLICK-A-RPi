@@ -17,8 +17,12 @@ sys.path.append('../lib/')
 from options import *
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket, CHHealthPacket
 from zmqTxRx import recv_zmq, separate
-
+import ipc_helper
+import fpga_map as mmap
 from filehandling import *
+
+# define fpga interface
+fpga = ipc_helper.FPGAClientInterface()
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
@@ -298,50 +302,77 @@ while True:
             #send image telemetry files...
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
-            sf_raw_size = ipc_rxcompacket.size - 4
-            rq_number, start_addr, num_registers, write_data = struct.unpack('!BHB%dI'%sf_raw_size, ipc_rxcompacket.payload)
-            rw_flag = 1
-
-            #send fpga request
-            fpga_req_pkt = FPGAMapRequestPacket()
-            raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers, write_data)
-            socket_FPGA_map_request.send(raw_fpga_req_pkt)
-
-            #get fpga answer
-            fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
-            ipc_fpgaaswpacket = FPGAMapAnswerPacket()
-            ipc_fpgaaswpacket.decode(fpga_answer_message)
-            print (ipc_fpgaaswpacket) #debug print
-            if(ipc_fpgaaswpacket.error):
-                log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+            set_fpga_raw_size = ipc_rxcompacket.size - 4
+            rq_number, start_addr, num_registers, write_data = struct.unpack('!BHB%dI'%set_fpga_raw_size, ipc_rxcompacket.payload)
+            print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
+            if(num_registers != len(write_data)):
+                log_to_hk('ERROR CMD PL_SET_FPGA - Packet Error: expected number of registers (= ' + str(num_registers) +  ' not equal to data length (= ' + str(len(write_data)))
             else:
-                log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+                fpga.write_reg(start_addr, write_data)
+                check_write_data = fpga.read_reg(start_addr, num_registers)
+                addresses = range(start_addr, start_addr+num_registers)
+                return_message = ""
+                num_errors = 0
+                for i in range(num_registers)
+                    if check_write_data[i] != write_data[i]:
+                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
+                        num_errors += 1
+                    else:
+                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
+                if(num_errors == 0):
+                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                else:
+                    log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+            #TODO: add direct telemetry message instead of just housekeeping
 
+            ###OLD FPGA Interface
+            # #send fpga request
+            # fpga_req_pkt = FPGAMapRequestPacket()
+            # raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers, write_data)
+            # socket_FPGA_map_request.send(raw_fpga_req_pkt)
+
+            # #get fpga answer
+            # fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
+            # ipc_fpgaaswpacket = FPGAMapAnswerPacket()
+            # ipc_fpgaaswpacket.decode(fpga_answer_message)
+            # print (ipc_fpgaaswpacket) #debug print
+            # if(ipc_fpgaaswpacket.error):
+            #     log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+            # else:
+            #     log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
 
         elif(CMD_ID == CMD_PL_GET_FPGA):
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
-            rw_flag = 0
+            read_data = fpga.read_reg(start_addr, num_registers)
+            if(num_registers != len(read_data)):
+                log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
+            #send on tx port
+            fpga_read_payload = struct.pack('!BHB%ds'%len(read_data), rq_number, start_addr, len(read_data), read_data)
+            print (fpga_read_payload) #debug print
+            fpga_read_txpacket = TxPacket()
+            raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
+            socket_tx_packets.send(raw_fpga_read_txpacket) #send packet           
+            ###OLD FPGA Interface
+            # #send fpga request
+            # fpga_req_pkt = FPGAMapRequestPacket()
+            # raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers)
+            # socket_FPGA_map_request.send(raw_fpga_req_pkt)
 
-            #send fpga request
-            fpga_req_pkt = FPGAMapRequestPacket()
-            raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers)
-            socket_FPGA_map_request.send(raw_fpga_req_pkt)
-
-            #get fpga answer
-            fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
-            ipc_fpgaaswpacket = FPGAMapAnswerPacket()
-            ipc_fpgaaswpacket.decode(fpga_answer_message)
-            print (ipc_fpgaaswpacket) #debug print
-            if(ipc_fpgaaswpacket.error):
-                log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
-            else:
-                log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
-                #send on tx port
-                fpga_read_payload = struct.pack('!BHB%ds'%ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.rq_number, ipc_fpgaaswpacket.start_addr, ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.read_data)
-                print (fpga_read_payload)
-                fpga_read_txpacket = TxPacket()
-                raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
-                socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
+            # #get fpga answer
+            # fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
+            # ipc_fpgaaswpacket = FPGAMapAnswerPacket()
+            # ipc_fpgaaswpacket.decode(fpga_answer_message)
+            # print (ipc_fpgaaswpacket) #debug print
+            # if(ipc_fpgaaswpacket.error):
+            #     log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+            # else:
+            #     log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
+            #     #send on tx port
+            #     fpga_read_payload = struct.pack('!BHB%ds'%ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.rq_number, ipc_fpgaaswpacket.start_addr, ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.read_data)
+            #     print (fpga_read_payload)
+            #     fpga_read_txpacket = TxPacket()
+            #     raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
+            #     socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
 
         elif(CMD_ID == CMD_PL_SET_HK):
             log_to_hk('ACK CMD PL_SET_HK')
@@ -362,36 +393,37 @@ while True:
 
         elif(CMD_ID == CMD_PL_SELF_TEST):
             test_id = struct.unpack('B', ipc_rxcompacket.payload)
-            test_list = [TEST_PAT_HW]
-            test_names = ['PAT HW']
+            test_list = [GENERAL_SELF_TEST, LASER_SELF_TEST, PAT_SELF_TEST]
+            test_names = ['GENERAL_SELF_TEST', 'LASER_SELF_TEST', 'PAT_SELF_TEST']
             if(test_id not in test_list):
                 log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + str(test_id))
             else:
                 log_to_hk('ACK CMD PL_SELF_TEST: Test is ' + test_names[test_list == test_id])
                 #execute test
-                if(test_id == TEST_PAT_HW):
-                    #execute calib laser test
-                    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(DEFAULT_CALIB_EXP))
-                    print(ipc_patControlPacket) #debug print
-                    time.sleep(10) #give test some time to complete
-                    #send image telemetry files...
+                if(test_id == GENERAL_SELF_TEST):
+                    #Execute general self test script
+                    run_test_script = 'python /root/test/general_functionality_test.py'
+                    try:
+                        os.system(run_test_script + ' > /root/log/' + str(file_out_num) + '.log') #TBR output file
+                        #file management...
+                    except:
+                        log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
 
-                    #execute fsm test
-                    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(DEFAULT_CALIB_EXP))
-                    print(ipc_patControlPacket) #debug print
-                    time.sleep(10) #give test some time to complete
-                    #send image telemetry files...
+                elif(test_id == LASER_SELF_TEST):
+                    #Execute laser self test script
+                    run_test_script = 'python /root/test/automated_laser_checks.py'
+                    try:
+                        os.system(run_test_script + ' > /root/log/' + str(file_out_num) + '.log') #TBR output file
+                        #file management...
+                    except:
+                        log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
 
-                    #execute stand alone calibration test
+                elif(test_id == PAT_SELF_TEST):
+                    #is PAT already going to be running?... or execute ./root/bin/pat here...
+                    #execute PAT self test
                     print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
+                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                     print(ipc_patControlPacket) #debug print
-                    time.sleep(10) #give test some time to complete
-                    #send image telemetry files...
-
-                #elif(test_id == ...):
 
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             start_time = time.time()

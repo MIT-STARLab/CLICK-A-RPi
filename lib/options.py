@@ -74,7 +74,9 @@ TLM_GET_FPGA = 0x3C0
 TLM_ECHO = 0x3FF
 
 #Self Test IDs
-TEST_PAT_HW = 0x00
+GENERAL_SELF_TEST = 0x00
+LASER_SELF_TEST = 0x01
+PAT_SELF_TEST = 0x02
 
 #PAT IPC Command IDs [Shared Command Parameters with c-code (packetdef.h)]
 PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
@@ -91,6 +93,7 @@ PAT_CMD_FSM_TEST = 0x08
 PAT_CMD_BCN_ALIGN = 0x09
 PAT_CMD_UPDATE_TX_OFFSET_X = 0x0A
 PAT_CMD_UPDATE_TX_OFFSET_Y = 0x0B
+PAT_CMD_SELF_TEST = 0x0C
 
 # HK Options Settings
 HK_FPGA_REQ_ENABLE = True
