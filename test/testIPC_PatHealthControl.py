@@ -15,7 +15,7 @@ from zmqTxRx import recv_zmq, send_zmq
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct
 
-cmd_list = [PAT_CMD_START_PAT, PAT_CMD_END_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y]
+cmd_list = [PAT_CMD_START_PAT, PAT_CMD_END_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_SELF_TEST]
 
 # ~ class IpcPacket:
     # ~ def __init__(self): pass
@@ -133,6 +133,7 @@ while True:
                 print "PAT_CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
                 print "PAT_CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
                 print "PAT_CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
+                print "PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
                 print "PAT_CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
                 print "PAT_CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
                 print "PAT_CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
@@ -140,6 +141,7 @@ while True:
                 print "PAT_CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
                 print "PAT_CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
                 print "PAT_CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
+                print "PAT_CMD_SELF_TEST = ", PAT_CMD_SELF_TEST
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
                         if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):

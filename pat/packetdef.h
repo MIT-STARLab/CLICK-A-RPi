@@ -22,14 +22,16 @@
 #define CMD_START_PAT_OPEN_LOOP 0x01
 #define CMD_START_PAT_STATIC_POINT 0x02
 #define CMD_START_PAT_BUS_FEEDBACK 0x03
-#define CMD_END_PAT 0x04
-#define CMD_GET_IMAGE 0x05
-#define CMD_CALIB_TEST 0x06
-#define CMD_CALIB_LASER_TEST 0x07
-#define CMD_FSM_TEST 0x08
-#define CMD_BCN_ALIGN 0x09
-#define CMD_UPDATE_TX_OFFSET_X 0x0A
-#define CMD_UPDATE_TX_OFFSET_Y 0x0B
+#define CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK 0x04
+#define CMD_END_PAT 0x05
+#define CMD_GET_IMAGE 0x06
+#define CMD_CALIB_TEST 0x07
+#define CMD_CALIB_LASER_TEST 0x08
+#define CMD_FSM_TEST 0x09
+#define CMD_BCN_ALIGN 0x0A
+#define CMD_UPDATE_TX_OFFSET_X 0x0B
+#define CMD_UPDATE_TX_OFFSET_Y 0x0C
+#define CMD_SELF_TEST 0x0D
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{
@@ -47,7 +49,6 @@ struct fpga_request_read_packet_struct{
 	bool read_write_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	//uint8_t data_to_write[4]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct pat_health_packet_struct{
@@ -82,7 +83,7 @@ struct fpga_answer_read_packet_struct{
 	bool combined_flag;
 	uint16_t start_address;
 	uint32_t data_size;
-	unsigned char data_to_read[FPGA_READ_SIZE]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
+	char data_to_read[FPGA_READ_SIZE]; //struct alignment forces this to be 4 bytes, so need to add pre-padding since only have 1 byte of significant data
 };
 
 struct fpga_answer_struct{
