@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 import zmq
 import json
 import time
-
-import sys #importing options and functions
-#sys.path.append('../lib/')
+sys.path.append('../lib/')
 sys.path.append('/root/lib/')
 from options import *
 from ipc_packets import PATControlPacket, PATHealthPacket
@@ -14,12 +12,13 @@ from zmqTxRx import recv_zmq, send_zmq
 import ipc_helper
 import fpga_map as mmap
 fpga = ipc_helper.FPGAClientInterface()
+power = mmap.Power(fpga)
 
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct
 cmd_list = [PAT_CMD_START_PAT, PAT_CMD_END_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_SELF_TEST]
 TURN_ON_CAL_LASER = cmd_list[len(cmd_list)-1] + 1
-cmd_list.append(TURN_ON_CAL_LASER)
+TURN_OFF_CAL_LASER = TURN_ON_CAL_LASER + 1
 # ~ class IpcPacket:
     # ~ def __init__(self): pass
     
@@ -86,6 +85,17 @@ def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
         raw_patControlPacket = ipc_patControlPacket.encode(command,PAT_CMD_PAYLOAD) 
         send_zmq(socket_PAT_control, raw_patControlPacket) #, PAT_CMD_HEADER)        
         return ipc_patControlPacket
+
+def initialize_cal_laser():
+        #Make sure heaters are on
+        if(fpga.read_reg(mmap.PO3) != 85):
+                power.heaters_on()
+        #Make sure cal laser diode is on
+        if(fpga.read_reg(mmap.CAL) != 85):
+                power.calib_diode_on()       
+        #Set DAC                         
+        fpga.write_reg(mmap.DAC_SETUP,1)
+        fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
         
 context = zmq.Context()
 
@@ -103,7 +113,10 @@ time.sleep(1)
 
 print("\n")
 
-return_address = '9999' #Placeholder PID
+# use PID as unique identifier for this progress
+topic = str(os.getpid())
+pid = os.getpid()
+return_address = str(pid)
 
 # Wait for a ping from the PAT process
 #print('RECEIVING on %s with TIMEOUT %d' % (socket_PAT_health.get_string(zmq.LAST_ENDPOINT), socket_PAT_health.get(zmq.RCVTIMEO)))
@@ -117,6 +130,7 @@ time.sleep(1)
 counter = 0
 command_period_sec = 10
 poll_timeout_msec = 1000
+cal_laser_init = False
 while True:    
         socks = dict(poller.poll(poll_timeout_msec))
         if socket_PAT_health in socks and socks[socket_PAT_health] == zmq.POLLIN:
@@ -146,6 +160,7 @@ while True:
                 print "PAT_CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
                 print "PAT_CMD_SELF_TEST = ", PAT_CMD_SELF_TEST
                 print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
+                print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER
                 user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
                         if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
@@ -166,16 +181,21 @@ while True:
                                 tx_offset_y = int(input("Update Tx Offset Y: "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_y))
-                        elif(user_cmd == TURN_ON_CAL_LASER):
-                                fpga.write_reg(mmap.DAC_SETUP,1)
-                                fpga.write_reg(mmap.DAC_1_D,6700)
-                                print('CALIBRATION LASER ON')
                         else:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
                         
-                        #print(ipc_patControlPacket)
-                        
+                        if(user_cmd == TURN_ON_CAL_LASER):
+                                if(cal_laser_init):
+                                        power.calib_diode_on()
+                                else:
+                                        initialize_cal_laser()
+                                        cal_laser_init = True
+                                print('CALIBRATION LASER ON')
+                        elif(user_cmd == TURN_OFF_CAL_LASER):
+                                power.calib_diode_off()
+                                print('CALIBRATION LASER OFF')
+
                         if(user_cmd == PAT_CMD_END_PAT):
                                 print "Exiting..."
                                 break 

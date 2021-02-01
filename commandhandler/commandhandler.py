@@ -23,6 +23,7 @@ from filehandling import *
 
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
+power = mmap.Power(fpga) # power sub-interface
 
 # use PID as unique identifier for this progress
 topic = str(os.getpid())
@@ -104,6 +105,23 @@ def log_to_hk(payload):
     ipc_healthPacket = CHHealthPacket()
     raw = ipc_healthPacket.encode(pid, payload)
     socket_housekeeping.send(raw)
+
+def initialize_cal_laser():
+        #Make sure heaters are on
+        if(fpga.read_reg(mmap.PO3) != 85):
+                power.heaters_on()
+        #Make sure cal laser diode is on
+        if(fpga.read_reg(mmap.CAL) != 85):
+                power.calib_diode_on()       
+        #Set DAC                         
+        fpga.write_reg(mmap.DAC_SETUP,1)
+        fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
+cal_laser_init = False #identifies if cal laser has been initialized yet or not
+
+def start_camera():
+    os.system('start camera') #calls camera.service to turn on camera
+def stop_camera():
+    os.system('stop camera') #calls camera.service to turn off camera
 
 start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
 counter_ground_test = 0 #used to count the number of repetitive process tasks
@@ -265,6 +283,13 @@ while True:
             #send image telemetry file...
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
+            if(cal_laser_init):
+                    power.calib_diode_on()
+            else:
+                    initialize_cal_laser()
+                    cal_laser_init = True
+            log_to_hk('CALIBRATION LASER ON')
+
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
@@ -277,7 +302,7 @@ while True:
             ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
-            #send image telemetry files...
+            #Manage image telemetry files...
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
@@ -292,14 +317,14 @@ while True:
             ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_FSM_TEST')
-            #send image telemetry files...
+            #Manage image telemetry files...
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
             print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
             ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
             print(ipc_patControlPacket) #debug print
             log_to_hk('ACK CMD PL_RUN_CALIBRATION')
-            #send image telemetry files...
+            #Manage image telemetry files...
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
             set_fpga_raw_size = ipc_rxcompacket.size - 4
