@@ -32,6 +32,9 @@
 #define CMD_UPDATE_TX_OFFSET_X 0x0B
 #define CMD_UPDATE_TX_OFFSET_Y 0x0C
 #define CMD_SELF_TEST 0x0D
+#define STATUS_CAMERA_INIT 0x00
+#define STATUS_STANDBY 0x01
+#define STATUS_MAIN 0x02
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{
@@ -55,6 +58,11 @@ struct pat_health_packet_struct{
 	uint32_t return_address;
 	uint32_t data_size;
 	char data_to_write[BUFFER_SIZE];
+};
+
+struct pat_status_packet_struct{
+	uint32_t return_address;
+	uint32_t status_flag; 
 };
 
 struct pat_tx_adcs_packet_struct{
@@ -99,6 +107,8 @@ struct fpga_answer_struct{
 void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, bool read_write, uint8_t request_num);
 
 void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
+
+void send_packet_pat_status(zmq::socket_t& pat_status_port, uint32_t status);
 
 void send_packet_tx_adcs(zmq::socket_t& tx_packets_port, float body_frame_x_angular_error_radians, float body_frame_y_angular_error_radians);
 

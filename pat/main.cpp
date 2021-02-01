@@ -105,6 +105,7 @@ int main() //int argc, char** argv
 {	
 	// https://ogbe.net/blog/zmq_helloworld.html
 	// define ports for PUB/SUB (this process binds)
+	std::string PAT_STATUS_PORT = "tcp://localhost:5564"; //PUB to Status
 	std::string PAT_HEALTH_PORT = "tcp://localhost:5559"; //PUB to Housekeeping
     std::string PAT_CONTROL_PORT = "tcp://localhost:5560"; //SUB to Command Handler
     std::string FPGA_MAP_REQUEST_PORT = "tcp://localhost:5558"; //PUB to FPGA Driver
@@ -118,12 +119,16 @@ int main() //int argc, char** argv
     // Create the PUB/SUB Sockets: 
 	int linger = 0; // Configure sockets to not wait at close time
 	int rc;
+	
+	// create the PAT_STATUS_PORT PUB socket
+	zmq::socket_t pat_status_port(context, ZMQ_PUB); 
+	rc = zmq_setsockopt(pat_status_port, ZMQ_LINGER, &linger, sizeof(linger));
+    pat_status_port.connect(PAT_STATUS_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
 
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
 	rc = zmq_setsockopt(pat_health_port, ZMQ_LINGER, &linger, sizeof(linger));
     pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
-
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
@@ -189,6 +194,7 @@ int main() //int argc, char** argv
 	int cl_beacon_num_groups, cl_calib_num_groups;
 	int num_calibration_attempts = 0, num_acquisition_attempts = 0; 
 	bool static_pointing_initialized = false;
+	int period_hb_tlm_ms = (int) 1000*PERIOD_HEARTBEAT_TLM;
 
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
@@ -196,8 +202,9 @@ int main() //int argc, char** argv
 	bool camera_initialized = camera.initialize();	
 	while(!camera_initialized){
 		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
 		// Listen for exit command 		
-		zmq::poll(poll_pat_control.data(), 1, 1000); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN){
 			// received something on the first (only) socket
 			command = receive_packet_pat_control(pat_control_port);
@@ -219,9 +226,10 @@ int main() //int argc, char** argv
 	// Standby for command:
 	bool STANDBY = true;
 	while(STANDBY){
-		log(pat_health_port, textFileOut, "In main.cpp - Standing by for command..."); //health heartbeat		
+		log(pat_health_port, textFileOut, "In main.cpp - Standing by for command..."); //health heartbeat	
+		send_packet_pat_status(pat_status_port, STATUS_STANDBY);	
 		// Listen for command 		
-		zmq::poll(poll_pat_control.data(), 1, 1000); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN)
 		{
 			// received something on the first (only) socket
@@ -446,6 +454,7 @@ int main() //int argc, char** argv
 		elapsed_time_heartbeat = check_heartbeat - time_prev_heartbeat; // Calculate time since heartbeat tlm
 		if(elapsed_time_heartbeat > period_heartbeat) //pg
 		{
+			send_packet_pat_status(pat_status_port, STATUS_MAIN);
 			if(phase == OPEN_LOOP){
 				if(haveBeaconKnowledge){
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");

@@ -76,6 +76,21 @@ void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
 	pat_health_port.send(message);	
 }
 
+void send_packet_pat_status(zmq::socket_t& pat_status_port, uint32_t status)
+{
+	pat_status_packet_struct packet_struct = pat_status_packet_struct();
+	packet_struct.return_address = (uint32_t) getpid(); //get process pid
+	packet_struct.status_flag = status; 
+	
+	char packet[sizeof(pat_status_packet_struct)];
+	memcpy(packet, &packet_struct, sizeof(packet));	
+	
+	zmq::message_t message(sizeof(packet));
+	memcpy(message.data(), packet, sizeof(packet));
+	
+	pat_status_port.send(message);	
+}
+
 void send_packet_tx_adcs(zmq::socket_t& tx_packets_port, float body_frame_x_angular_error_radians, float body_frame_y_angular_error_radians)
 {
 	pat_tx_adcs_packet_struct packet_struct = pat_tx_adcs_packet_struct();

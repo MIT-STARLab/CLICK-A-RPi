@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import zmq
 import json
 import time
@@ -11,8 +12,8 @@ from ipc_packets import PATControlPacket, PATHealthPacket
 from zmqTxRx import recv_zmq, send_zmq
 import ipc_helper
 import fpga_map as mmap
-fpga = ipc_helper.FPGAClientInterface()
-power = mmap.Power(fpga)
+#fpga = ipc_helper.FPGAClientInterface()
+#power = mmap.Power(fpga)
 
 #define pat health packet (can copy this over to ipc_packets.py after tested)
 import struct

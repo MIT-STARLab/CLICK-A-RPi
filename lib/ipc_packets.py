@@ -214,6 +214,38 @@ class PATHealthPacket(IpcPacket):
         telemetry_string = payload_list[0].decode('utf-8')
 
         return telemetry_string, self.return_addr, self.size, self.payload
+        
+class PATStatusPacket(IpcPacket):
+    def __init__(self): IpcPacket.__init__(self)
+
+    def encode(self, return_addr, status_flag):
+        '''Encode a packet to be transmited to the bus:
+        return_addr: return address of sender
+        size: size of telemetry contents in bytes
+        payload: raw telemetry contents, bytes
+        returns
+        message bytes'''
+
+        self.return_addr = return_addr
+        self.status_flag = status_flag
+
+        self.raw = struct.pack('II',return_addr,status_flag)
+
+        return self.raw
+
+    def decode(self, raw):
+        '''Decode a packet to be transmited to the bus:
+        raw: message bytes to decode
+        returns
+        return_addr: return address of sender
+        size: size of telemetry contents in bytes
+        payload: raw command contents, bytes'''
+
+        self.raw = raw
+        
+        self.return_addr, self.status_flag = struct.unpack('II',raw)
+
+        return self.return_addr, self.status_flag
 
 class FPGAMapRequestPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
