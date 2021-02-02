@@ -437,7 +437,7 @@ bool Calibration::checkLaserOn(Group& calib)
 				if(frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE){
 					int numGroups = frame.performPixelGrouping();
 					if(numGroups > 0){
-						spot = frame.groups[0];
+						Group& spot = frame.groups[0];
 						if(spot.valueMax < CALIB_HAPPY_BRIGHTNESS){
 							//copy spot properties to calib
 							calib.x = frame.area.x + spot.x;
