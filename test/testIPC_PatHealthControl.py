@@ -115,7 +115,7 @@ while True:
 		message = recv_zmq(socket_PAT_status)
 		ipc_patStatusPacket = PATStatusPacket()
 		return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
-                
+
         #Send commands if no incoming telemetry (standby) or after command_period timeout (allow exiting main pat loop while running)
         if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
 		if(status_flag in status_list):
@@ -182,23 +182,26 @@ while True:
                         else:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
-                        
-                        if(user_cmd == TURN_ON_CAL_LASER):
-                                if(cal_laser_init):
-                                        power.calib_diode_on()
-                                else:
-                                        initialize_cal_laser()
-                                        cal_laser_init = True
-                                print('CALIBRATION LASER ON')
-                        elif(user_cmd == TURN_OFF_CAL_LASER):
-                                power.calib_diode_off()
-                                print('CALIBRATION LASER OFF')
 
-                        if(user_cmd == PAT_CMD_END_PROCESS):
-                                print "Exiting..."
-                                break 
+                if(user_cmd == PAT_CMD_END_PROCESS):
+                        print "Exiting..."
+                        break 
+
+                elif(user_cmd == TURN_ON_CAL_LASER):
+                        if(cal_laser_init):
+                                power.calib_diode_on()
+                        else:
+                                initialize_cal_laser()
+                                cal_laser_init = True
+                        print('CALIBRATION LASER ON')
+
+                elif(user_cmd == TURN_OFF_CAL_LASER):
+                        power.calib_diode_off()
+                        print('CALIBRATION LASER OFF')
+
                 elif(user_cmd == 0):
                         print "Skipping command entry."
+                        
                 else:
                         print "Unrecognized command number entered: ", user_cmd, ". Skipping command entry."              
                 
