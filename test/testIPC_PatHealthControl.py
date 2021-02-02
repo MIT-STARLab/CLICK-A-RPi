@@ -70,6 +70,8 @@ poller_PAT_health.register(socket_PAT_health, zmq.POLLIN)
 socket_PAT_status = context.socket(zmq.SUB)
 socket_PAT_status.bind("tcp://*:%s" % PAT_STATUS_PORT)
 socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
+poller_PAT_status = zmq.Poller()
+poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 socket_PAT_control = context.socket(zmq.PUB)
 socket_PAT_control.bind("tcp://*:%s" % PAT_CONTROL_PORT)
@@ -95,24 +97,27 @@ time.sleep(1)
 
 counter = 0
 command_period_sec = 10
-poll_timeout_msec = 1000
+poll_timeout_msec = 250
 cal_laser_init = False
 while True:    
-        socks = dict(poller_PAT_health.poll(poll_timeout_msec))
-        if socket_PAT_health in socks and socks[socket_PAT_health] == zmq.POLLIN:
+        socks_health = dict(poller_PAT_health.poll(poll_timeout_msec))
+        if socket_PAT_health in socks_health and socks_health[socket_PAT_health] == zmq.POLLIN:
                 #Read telemetry if available
                 print('RECEIVING on %s' % socket_PAT_health.get_string(zmq.LAST_ENDPOINT))
                 message = recv_zmq(socket_PAT_health)
                 ipc_patHealthPacket = PATHealthPacket()
                 telemetry_string, _, _, _ = ipc_patHealthPacket.decode(message) #decode the package
                 print(telemetry_string) 
-                     
-        #Send commands if no incoming telemetry (standby) or after command_period timeout (allow exiting main pat loop while running)
-        if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
-		print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+
+        socks_status = dict(poller_PAT_status.poll(poll_timeout_msec))
+        if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
+                print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
 		message = recv_zmq(socket_PAT_status)
 		ipc_patStatusPacket = PATStatusPacket()
 		return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
+                
+        #Send commands if no incoming telemetry (standby) or after command_period timeout (allow exiting main pat loop while running)
+        if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
 		if(status_flag in status_list):
 			if(status_flag == PAT_STATUS_CAMERA_INIT):
 				print ('PAT Process (PID: ' + str(return_addr) + ') Status: In Camera Initialization Loop')
