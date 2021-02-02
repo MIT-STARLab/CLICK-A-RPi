@@ -263,12 +263,10 @@ int main() //int argc, char** argv
 	}
 	if(camera_initialized){log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");}
 	
-	if(OPERATIONAL){
-		FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
-		Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-		Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
+	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
+	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
+	Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
@@ -374,17 +372,17 @@ int main() //int argc, char** argv
 							if(calibration.run(calib)) //sets calib exposure
 							{
 								calibExposure = camera.config->expose_us.read(); //save calib exposure
-								log(pat_health_port, textFileOut, "In main.cpp CMD_CALIB_TEST - Calibration complete. Calib Exposure = ", calibExposure, " us.");
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_CALIB_TEST - Calibration complete. Calib Exposure = ", calibExposure, " us.");
 							}
 							else
 							{
-								log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - Calibration failed!");
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_TEST - Calibration failed!");
 							}	
 							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
-								log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - laserOff FPGA command failed!");
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_TEST - laserOff FPGA command failed!");
 							}				
 						} else{
-							log(pat_health_port, textFileOut,  "In main.cpp CMD_CALIB_TEST - laserOn FPGA command failed!");
+							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_TEST - laserOn FPGA command failed!");
 						}
 						break;
 					
@@ -468,6 +466,33 @@ int main() //int argc, char** argv
 						bcnAlignment = true; //ignore laser off commands and skip open-loop fsm commands
 						openLoop = true; //transition to open-loop pointing after acquisition for alignment
 						STANDBY = false;
+						break;
+
+					case CMD_TX_ALIGN:
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_TX_ALIGN command.");
+						//Run calibration:
+						if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
+							if(calibration.run(calib)) //sets calib exposure
+							{
+								calibExposure = camera.config->expose_us.read(); //save calib exposure
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - Calibration complete. Calib Exposure = ", calibExposure, " us.");
+							}
+							else
+							{
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_TX_ALIGN - Calibration failed!");
+							}	
+							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_TX_ALIGN - laserOff FPGA command failed!");
+							}				
+						} else{
+							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_TX_ALIGN - laserOn FPGA command failed!");
+						}
+
+						// Control pointing in open-loop
+						calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) + tx_offset_x;
+						calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) + tx_offset_y;
+						track.controlOpenLoop(fsm, calib.x, calib.y);
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - TX centered.");
 						break;
 
 					case CMD_SELF_TEST:
@@ -1157,7 +1182,7 @@ int main() //int argc, char** argv
 												track.updateTrackingWindow(frame, spot, beaconWindow);
 												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 												if(!bcnAlignment){
-												// Control pointing in open-loop
+													// Control pointing in open-loop
 													calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
 													calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
 													track.controlOpenLoop(fsm, calib.x, calib.y);
@@ -1319,6 +1344,10 @@ int main() //int argc, char** argv
 		} 
 		// END of main PAT loop
 		STANDBY = true;
+		//turn off laser before ending main PAT loop
+		if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+			log(pat_health_port, textFileOut,  "In main.cpp - End of main PAT loop laserOff FPGA command failed!");
+		}	
 	} 
 	// END of primary process loop: Standby + Main
 
