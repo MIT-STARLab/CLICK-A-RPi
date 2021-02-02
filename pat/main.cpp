@@ -196,7 +196,12 @@ int main() //int argc, char** argv
 	bool static_pointing_initialized = false;
 	int period_hb_tlm_ms = (int) 1000*PERIOD_HEARTBEAT_TLM;
 	bool OPERATIONAL = true, STANDBY = true; 
-	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result;
+	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
+	
+	//set up self test error buffer
+	std::stringstream self_test_stream;
+	char self_test_error_buffer[ERROR_BUFFER_SIZE];	
+	self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
 
 	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
 	signal(SIGINT, [](int signum) { stop = true; });
@@ -218,8 +223,7 @@ int main() //int argc, char** argv
 				phase = STATIC_POINT; 
 				STANDBY = false;
 				break;
-
-			else if(command == CMD_SELF_TEST){
+			} else if(command == CMD_SELF_TEST){
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_SELF_TEST command.");	
 				camera_test_result = FAIL_SELF_TEST; 
 				if(check_fpga_comms(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port)){
@@ -229,16 +233,13 @@ int main() //int argc, char** argv
 				}
 				laser_test_result = NULL_SELF_TEST;
 				fsm_test_result = NULL_SELF_TEST;
+				calibration_test_result = NULL_SELF_TEST;
 				
-				//set up error buffer
-				char self_test_error_buffer[BUFFER_SIZE];	
-				std::stringstream self_test_stream;
-				self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
 				//stream error message to buffer
 				self_test_stream << "Camera Initialization Failed! Error:" << camera.error << std::endl;
 
 				//send self test results
-				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, self_test_error_buffer);
+				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 				
 			} else if(command == CMD_END_PROCESS){
 				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PROCESS command. Exiting...");
@@ -476,15 +477,14 @@ int main() //int argc, char** argv
 						//TODO: FSM Test
 						fsm_test_result = NULL_SELF_TEST;
 						
-						//set up error buffer
-						char self_test_error_buffer[BUFFER_SIZE];	
-						std::stringstream self_test_stream;
-						self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
+						//TODO: Calibration test
+						calibration_test_result = NULL_SELF_TEST;
+
 						//stream error message to buffer
 						self_test_stream << "Self Test Error Message..." << std::endl; //TODO
 
 						//send self test results
-						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, self_test_error_buffer);
+						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 						break;
 
 					case CMD_END_PROCESS:
@@ -517,7 +517,7 @@ int main() //int argc, char** argv
 				command = receive_packet_pat_control(pat_control_port, command_data);
 				if (command == CMD_END_PAT){
 					break;
-				else if(command == CMD_END_PROCESS){
+				} else if(command == CMD_END_PROCESS){
 					OPERATIONAL = false;
 					break; 
 				} else if(command == CMD_UPDATE_TX_OFFSET_X){

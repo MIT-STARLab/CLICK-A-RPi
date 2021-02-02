@@ -16,6 +16,7 @@
 #define TX_ADCS_APID 0x250 //(CLICK-A CPU Software Architecture on Google Drive)
 #define TX_SELF_TEST_APID 0x3D2 //(CLICK-A CPU Software Architecture on Google Drive)
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
+#define ERROR_BUFFER_SIZE 249 //Make it such that the total message length is 256
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 #define FPGA_READ_SIZE 4
@@ -38,9 +39,9 @@
 #define STATUS_CAMERA_INIT 0x00
 #define STATUS_STANDBY 0x01
 #define STATUS_MAIN 0x02
-#define PASS_SELF_TEST = 0xFF
-#define FAIL_SELF_TEST = 0x0F
-#define NULL_SELF_TEST = 0x00
+#define PASS_SELF_TEST 0xFF
+#define FAIL_SELF_TEST 0x0F
+#define NULL_SELF_TEST 0x00
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{
@@ -115,7 +116,8 @@ struct pat_self_test_packet_struct{
 	uint8_t fpga_test_result;
 	uint8_t laser_test_result;
 	uint8_t fsm_test_result;
-	char error[BUFFER_SIZE];
+	uint8_t calibration_test_result;
+	char error[ERROR_BUFFER_SIZE];
 };
 
 // Packet Sending for PUB Processes:
@@ -138,7 +140,7 @@ bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::
 
 bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port);
 
-void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, char* error);
+void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, uint8_t calibration_test_result, char* error);
 
 // Optional: receive_packet_pat_rx (commands from bus)
 

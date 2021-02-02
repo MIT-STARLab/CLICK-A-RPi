@@ -297,15 +297,16 @@ bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::poll
 	return false; //timeout
 }
 
-void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, char* error)
+void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, uint8_t calibration_test_result, char* error)
 {
 	pat_self_test_packet_struct packet_struct = pat_self_test_packet_struct();
 	packet_struct.apid = TX_SELF_TEST_APID;
-	packet_struct.camera_test_result = camera_test_result;
-	packet_struct.fpga_test_result = fpga_test_result;
-	packet_struct.laser_test_result = laser_test_result;
-	packet_struct.fsm_test_result = fsm_test_result;
-	memcpy(packet_struct.error, data, strlen(error)+1);
+	packet_struct.camera_test_result = htonl(camera_test_result);
+	packet_struct.fpga_test_result = htonl(fpga_test_result);
+	packet_struct.laser_test_result = htonl(laser_test_result);
+	packet_struct.fsm_test_result = htonl(fsm_test_result);
+	packet_struct.calibration_test_result = htonl(calibration_test_result);
+	memcpy(packet_struct.error, error, strlen(error)+1);
 
 	char packet[sizeof(pat_self_test_packet_struct)];
 	memcpy(packet, &packet_struct, sizeof(packet));	
