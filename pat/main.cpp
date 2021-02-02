@@ -488,8 +488,8 @@ int main() //int argc, char** argv
 						}
 
 						// Control pointing in open-loop
-						calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) + tx_offset_x;
-						calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) + tx_offset_y;
+						calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX + tx_offset_x;
+						calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY + tx_offset_y;
 						track.controlOpenLoop(fsm, calib.x, calib.y);
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - TX centered.");
 						break;
