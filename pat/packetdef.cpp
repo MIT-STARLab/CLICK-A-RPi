@@ -4,7 +4,7 @@
 
 // Packet Sending for PUB Processes:
 
-void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, bool read_write, uint8_t request_num)
+void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, bool read_write, uint8_t request_num, uint16_t channel, uint8_t data)
 {
 	if(read_write == WRITE){
 		fpga_request_write_packet_struct packet_struct = fpga_request_write_packet_struct();
@@ -236,8 +236,7 @@ bool check_fpga_map_write_request(zmq::socket_t& fpga_map_answer_port, std::vect
 // Check FPGA map value via read request and answer
 bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, uint16_t channel, uint8_t data, uint8_t request_number)
 {
-	send_packet_fpga_map_request(fpga_map_request_port, channel, data, READ, request_number);
-
+	send_packet_fpga_map_request(fpga_map_request_port, READ, request_number, channel);
 	// Listen for FPGA answer:
 	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
 		zmq::poll(poll_fpga_answer.data(), 1, POLL_TIME_FPGA_RESPONSE); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
@@ -265,4 +264,54 @@ bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::
 	}
 	// std::cout << "In packetdef.cpp - check_fpga_map_write_request: FPGA MAP Check Timeout!" << std::endl; 
 	return false; //timeout
+}
+
+bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port)
+{
+	send_packet_fpga_map_request(fpga_map_request_port, READ, 0, FRC_CH);
+	// Listen for FPGA answer:
+	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
+		zmq::poll(poll_fpga_answer.data(), 1, POLL_TIME_FPGA_RESPONSE); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
+			// received something on the first (only) socket
+			fpga_answer_struct read_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, READ);
+			//make sure message is for PAT process:
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << unsigned(request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << channel << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
+			// std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
+			
+			if((((uint32_t) getpid()) == read_ans_struct.return_address) &&
+				(0 == read_ans_struct.request_number) && 
+				(FRC_CH == read_ans_struct.start_address)){
+				return !read_ans_struct.error_flag;
+			} 
+		}
+	}
+	// std::cout << "In packetdef.cpp - check_fpga_map_write_request: FPGA MAP Check Timeout!" << std::endl; 
+	return false; //timeout
+}
+
+void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, char* error)
+{
+	pat_self_test_packet_struct packet_struct = pat_self_test_packet_struct();
+	packet_struct.apid = TX_SELF_TEST_APID;
+	packet_struct.camera_test_result = camera_test_result;
+	packet_struct.fpga_test_result = fpga_test_result;
+	packet_struct.laser_test_result = laser_test_result;
+	packet_struct.fsm_test_result = fsm_test_result;
+	memcpy(packet_struct.error, data, strlen(error)+1);
+
+	char packet[sizeof(pat_self_test_packet_struct)];
+	memcpy(packet, &packet_struct, sizeof(packet));	
+	
+	zmq::message_t message(sizeof(packet));
+	memcpy(message.data(), packet, sizeof(packet));
+	
+	tx_packets_port.send(message);	
 }

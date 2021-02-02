@@ -44,6 +44,11 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 			  	received_end_pat_cmd = true;
 			  	return false; 
 			}
+			else if (command == CMD_END_PROCESS){
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PROCESS");
+			  	received_end_process_cmd = true;
+			  	return false; 
+			}
 		}
 
 		//try search up:
@@ -71,6 +76,11 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 			  	received_end_pat_cmd = true;
 			  	return false; 
 			}
+			else if (command == CMD_END_PROCESS){
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PROCESS");
+			  	received_end_process_cmd = true;
+			  	return false; 
+			}
 		}
 		
 		//try search down:
@@ -88,26 +98,6 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 			searching_down = false;
 		}		
 	}
-
-	// // Sweep exposure times; running at ~16 fps at this point
-	// // This has to have top limit on calib laser saturation?!
-	// // We want to do gain flipping eventually
-	// for(exposure += TRACK_ACQUISITION_EXP_INCREMENT; exposure <= TRACK_MAX_EXPOSURE; exposure += TRACK_ACQUISITION_EXP_INCREMENT) //pg, using limit constants
-	// {
-	// 	if(camera.waitForFrame())
-	// 	{
-	// 		Image frame(camera, fileStream, pat_health_port);
-	// 		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){
-	// 				// if(beacon.pixelCount <= MIN_PIXELS_PER_GROUP){
-	// 				// 	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Warning: Acquisition failure due to hot pixel rejection. ",
-	// 				// 	"(beacon.pixelCount = ", beacon.pixelCount, ") <= (MIN_PIXELS_PER_GROUP = ", MIN_PIXELS_PER_GROUP,")");
-	// 				// }
-	// 			return true;
-	// 		}
-	// 		camera.config->expose_us.write(exposure);
-	// 		camera.requestFrame();
-	// 	}
-	// }
 
 	// Sweep gains
 	// for(gain++; gain <= 10; gain++)
