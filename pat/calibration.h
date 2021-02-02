@@ -22,6 +22,7 @@
 #define CALIB_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
 #define CALIB_HAPPY_BRIGHTNESS 300				// Good brightness for auto exposure tuning
+#define CALIB_FSM_DISPLACEMENT_TOL 100 //tolerance for number of pixels to have moved when changing FSM between max settings (should actually be arround 200)
 
 // A pair of source and destination points (Detector -> FSM)
 class Pair
@@ -41,7 +42,6 @@ class Calibration
 	// Calculation functions
 	void calculateSensitivityMatrix(std::vector<Pair>& data);
 	void calculateAffineParameters(std::vector<Pair>& data);
-	bool findExposureRange(Group& calib, std::string filePath = std::string("/root/log/pat/"));
 public:
 	// Affine transform parameters
 	double a00, a01, a10, a11, t0, t1;
@@ -56,6 +56,10 @@ public:
 	double affineTransformX(double x, double y);
 	double affineTransformY(double x, double y);
 	bool run(Group& calib, std::string filePath = std::string("/root/log/pat/"));
+	bool findExposureRange(Group& calib, std::string filePath = std::string("/root/log/pat/"));
+	bool checkLaserOn(Group& calib);
+	bool checkLaserOff();
+	bool testFSM(Group& calib);
 };
 
 #endif

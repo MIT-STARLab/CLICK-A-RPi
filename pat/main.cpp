@@ -32,6 +32,9 @@
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X 20 //pixels, from GSE calibration
 #define TX_OFFSET_Y -50 //pixels, from GSE calibration
+#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
+#define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
+#define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 
 using namespace std;
 using namespace std::chrono;
@@ -211,7 +214,7 @@ int main() //int argc, char** argv
 	//Catch camera initialization failure state in a re-initialization loop:
 	bool camera_initialized = camera.initialize();	
 	while(!camera_initialized){
-		log(pat_health_port, textFileOut, "In main.cpp - Camera Initialization Failed! Error:", camera.error);
+		log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Camera Initialization Failed! Error:", camera.error);
 		send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
 		// Listen for exit command 		
 		zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
@@ -219,30 +222,32 @@ int main() //int argc, char** argv
 			// received something on the first (only) socket
 			command = receive_packet_pat_control(pat_control_port);
 			if(command == CMD_START_PAT_STATIC_POINT){
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
+				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
 				phase = STATIC_POINT; 
 				STANDBY = false;
 				break;
 			} else if(command == CMD_SELF_TEST){
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_SELF_TEST command.");	
+				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_SELF_TEST command.");	
 				camera_test_result = FAIL_SELF_TEST; 
+				//stream error message to buffer
+				self_test_stream << "Camera Initialization Failed! Error:" << camera.error << "\n" << std::endl;
 				if(check_fpga_comms(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port)){
 					fpga_test_result = PASS_SELF_TEST;
+					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test passed.");
 				} else{
 					fpga_test_result = FAIL_SELF_TEST;
+					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test failed.");
+					self_test_stream << "FPGA Comms Fault\n" << std::endl; //stream error message to buffer
 				}
 				laser_test_result = NULL_SELF_TEST;
 				fsm_test_result = NULL_SELF_TEST;
-				calibration_test_result = NULL_SELF_TEST;
-				
-				//stream error message to buffer
-				self_test_stream << "Camera Initialization Failed! Error:" << camera.error << std::endl;
+				calibration_test_result = NULL_SELF_TEST;			
 
 				//send self test results
 				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 				
 			} else if(command == CMD_END_PROCESS){
-				log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PROCESS command. Exiting...");
+				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_END_PROCESS command. Exiting...");
 				OPERATIONAL = false;
 				break;
 			}
@@ -304,7 +309,7 @@ int main() //int argc, char** argv
 				break;
 			}
 
-			log(pat_health_port, textFileOut, "In main.cpp - Standing by for command..."); //health heartbeat	
+			log(pat_health_port, textFileOut, "In main.cpp - Standby - Standing by for command..."); //health heartbeat	
 			send_packet_pat_status(pat_status_port, STATUS_STANDBY);	
 			// Listen for command 		
 			zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
@@ -316,30 +321,30 @@ int main() //int argc, char** argv
 				switch(command)
 				{
 					case CMD_START_PAT:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT command. Proceeding to main PAT loop...");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command. Proceeding to main PAT loop...");
 						STANDBY = false;
 						break;
 						
 					case CMD_START_PAT_OPEN_LOOP:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_OPEN_LOOP command. Proceeding to main PAT loop...");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command. Proceeding to main PAT loop...");
 						openLoop = true;
 						STANDBY = false;
 						break;
 					
 					case CMD_START_PAT_STATIC_POINT:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
 						phase = STATIC_POINT;
 						STANDBY = false;
 						break;
 						
 					case CMD_START_PAT_BUS_FEEDBACK:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_BUS_FEEDBACK command.");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command.");
 						sendBusFeedback = true;
 						STANDBY = false;
 						break;	
 
 					case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command.");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command.");
 						openLoop = true; 
 						sendBusFeedback = true;
 						STANDBY = false;
@@ -350,7 +355,7 @@ int main() //int argc, char** argv
 						command_exposure = atoi(command_data); 
 						if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 						if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
 						camera.config->expose_us.write(command_exposure);
 
 						//set to sufficiently large window size (but not too large)
@@ -361,7 +366,7 @@ int main() //int argc, char** argv
 						break;		
 								
 					case CMD_CALIB_TEST:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_TEST command.");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_CALIB_TEST command.");
 						//Run calibration:
 						if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
 							if(calibration.run(calib)) //sets calib exposure
@@ -386,7 +391,7 @@ int main() //int argc, char** argv
 						command_exposure = atoi(command_data); 
 						if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 						if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_CALIB_LASER_TEST command with exposure = ", command_exposure);
 						camera.config->expose_us.write(command_exposure);		
 						
 						//set to sufficiently large window size (but not too large)
@@ -416,7 +421,7 @@ int main() //int argc, char** argv
 						command_exposure = atoi(command_data); 
 						if(command_exposure < MIN_EXPOSURE){command_exposure = MIN_EXPOSURE;}
 						if(command_exposure > MAX_EXPOSURE){command_exposure = MAX_EXPOSURE;}
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_FSM_TEST command with exposure = ", command_exposure);
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_FSM_TEST command with exposure = ", command_exposure);
 						camera.config->expose_us.write(command_exposure);		
 
 						//set to sufficiently large window size (but not too large)
@@ -430,21 +435,22 @@ int main() //int argc, char** argv
 							logImage(string("CMD_FSM_TEST_Center"), camera, textFileOut, pat_health_port); 
 							std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-							fsm.setNormalizedAngles(0.1,0);
+							fsm.setNormalizedAngles(1,0);
 							this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 							logImage(string("CMD_FSM_TEST_X"), camera, textFileOut, pat_health_port);
 							std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-							fsm.setNormalizedAngles(0,1);
-							this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-							logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port);  
-							std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
 							fsm.setNormalizedAngles(1,1);
 							this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
-							logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port); 
+							logImage(string("CMD_FSM_TEST_XY"), camera, textFileOut, pat_health_port);  
 							std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+							fsm.setNormalizedAngles(0,1);
+							this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+							logImage(string("CMD_FSM_TEST_Y"), camera, textFileOut, pat_health_port); 
+							std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+							fsm.setNormalizedAngles(0,0); //reset to center
 							//switch laser off
 							if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
 								log(pat_health_port, textFileOut,  "In main.cpp CMD_FSM_TEST - laserOff FPGA command failed!");
@@ -455,7 +461,7 @@ int main() //int argc, char** argv
 						break;
 
 					case CMD_BCN_ALIGN:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_BCN_ALIGN command. Proceeding to main PAT loop...");	
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_BCN_ALIGN command. Proceeding to main PAT loop...");	
 						phase = ACQUISITION; //skip calibration for beacon alignment with GSE
 						bcnAlignment = true; //ignore laser off commands and skip open-loop fsm commands
 						openLoop = true; //transition to open-loop pointing after acquisition for alignment
@@ -463,38 +469,177 @@ int main() //int argc, char** argv
 						break;
 
 					case CMD_SELF_TEST:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_SELF_TEST command.");	
-						camera_test_result = PASS_SELF_TEST; 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_SELF_TEST command.");
+						//Camera Test:
+						if(camera_initialized){
+							camera_test_result = PASS_SELF_TEST;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - Camera test passed.");
+						} else{
+							camera_test_result = FAIL_SELF_TEST;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - Camera test failed!");
+							self_test_stream << "Camera Fault\n" << std::endl; //stream error message to buffer
+						}
+
+						//FPGA Comms Test:
 						if(check_fpga_comms(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port)){
 							fpga_test_result = PASS_SELF_TEST;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - FPGA test passed.");
 						} else{
 							fpga_test_result = FAIL_SELF_TEST;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - FPGA test failed.");
+							self_test_stream << "FPGA Comms Fault\n" << std::endl; //stream error message to buffer
+						}						
+						
+						//Laser Test:
+						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
+							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
+							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
+								if(calibration.findExposureRange()) //sets calib exposure & window
+								{
+									calibExposure = camera.config->expose_us.read(); //save calib exposure									
+									log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning complete. Calib Exposure = ", calibExposure, " us.");
+								}
+								else
+								{
+									calibExposure = CALIB_EXPOSURE_SELF_TEST; 
+									camera.config->expose_us.write(calibExposure); //set calib exposure
+									camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
+									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning failed! Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
+								}
+								if(calibration.checkLaserOn(calib)){
+									logImage(string("CMD_SELF_TEST_LASER_ON_1"), camera, textFileOut, pat_health_port); //save image
+									if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+										if(calibration.checkLaserOff()){
+											logImage(string("CMD_SELF_TEST_LASER_OFF_1"), camera, textFileOut, pat_health_port); //save image
+											if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
+												if(calibration.checkLaserOn(calib)){
+													logImage(string("CMD_SELF_TEST_LASER_ON_2"), camera, textFileOut, pat_health_port); //save image
+													if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+														if(calibration.checkLaserOff()){
+															logImage(string("CMD_SELF_TEST_LASER_OFF_2"), camera, textFileOut, pat_health_port); //save image
+															laser_test_result = PASS_SELF_TEST; 
+															log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - Laser Test Passed.");
+														} else{
+															log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Second laserOff check failed!");
+															self_test_stream << "(Laser Test) Second laserOff check failed!\n" << std::endl; //stream error message to buffer
+															laser_test_result = FAIL_SELF_TEST;
+														}
+													} else{
+														log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Second laserOff FPGA command failed!");
+														self_test_stream << "(Laser Test) Second laserOff FPGA command failed!\n" << std::endl; //stream error message to buffer
+														laser_test_result = FAIL_SELF_TEST;
+													}
+												} else{
+													log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test)Second laserOn check failed!");
+													self_test_stream << "(Laser Test) Second laserOn check failed!\n" << std::endl; //stream error message to buffer
+													laser_test_result = FAIL_SELF_TEST;
+												}
+											} else{
+												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Second laserOn FPGA command failed!");
+												self_test_stream << "(Laser Test) Second laserOn FPGA command failed!\n" << std::endl; //stream error message to buffer
+												laser_test_result = FAIL_SELF_TEST;
+											}
+										} else{
+											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) First laserOff check failed!");
+											self_test_stream << "(Laser Test) First laserOff check failed!\n" << std::endl; //stream error message to buffer
+											laser_test_result = FAIL_SELF_TEST;
+										}
+									} else{ 
+										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) First laserOff FPGA command failed!");
+										self_test_stream << "(Laser Test) First laserOff FPGA command failed!\n" << std::endl; //stream error message to buffer
+										laser_test_result = FAIL_SELF_TEST;
+									}	
+								} else{
+									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) First laserOn check failed!");
+									self_test_stream << "(Laser Test) First laserOn check failed!\n" << std::endl; //stream error message to buffer
+									laser_test_result = FAIL_SELF_TEST;
+								}									
+							} else{
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) First laserOn FPGA command failed!");
+								self_test_stream << "(Laser Test) First laserOn FPGA command failed!\n" << std::endl; //stream error message to buffer
+								laser_test_result = FAIL_SELF_TEST;
+							}
+
+							if(laser_test_result == PASS_SELF_TEST){
+								//FSM Test:
+								if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on
+									if(calibration.testFSM(calib)){
+										fsm_test_result = PASS_SELF_TEST;
+										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - FSM test passed.");
+									} else{
+										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - FSM test failed.");
+										self_test_stream << "(FSM Test) FSM test failed.\n" << std::endl; //stream error message to buffer
+										fsm_test_result = FAIL_SELF_TEST;
+									}
+								} else{
+									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - laserOn FPGA command failed!");
+									self_test_stream << "(FSM Test) laserOn FPGA command failed!\n" << std::endl; //stream error message to buffer
+									fsm_test_result = NULL_SELF_TEST;
+								}
+							
+								if(fsm_test_result == PASS_SELF_TEST){
+									//Calibration Test:
+									if(calibration.run(calib)) //sets calib exposure
+									{
+										calibExposure = camera.config->expose_us.read(); //save calib exposure
+										log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test). Calib Exposure = ", calibExposure, " us.");
+										
+										//Check offset
+										if(abs(calibration.centerOffsetX) <= CALIB_OFFSET_TOLERANCE){
+											if(abs(calibration.centerOffsetY) <= CALIB_OFFSET_TOLERANCE){
+												if(calibration.s00/calibration.s11 - 1/sqrt(2) <= CALIB_SENSITIVITY_RATIO_TOL){
+													calibration_test_result = PASS_SELF_TEST;
+													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Calibration Test passed.");
+												} else{
+													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Sensitivity ratio check failed.");
+													self_test_stream << "(Calibration Test) Sensitivity ratio check failed.\n" << std::endl;
+													calibration_test_result = FAIL_SELF_TEST;
+												}
+											} else{
+												log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test) Y offset check failed: (calibration.centerOffsetY = ", calibration.centerOffsetY, ") > (CALIB_OFFSET_TOLERANCE = ", CALIB_OFFSET_TOLERANCE, ")"); 
+												self_test_stream << "(Calibration Test) Y offset (" << calibration.centerOffsetY << ") check failed.\n" << std::endl;
+												calibration_test_result = FAIL_SELF_TEST;
+											}
+										} else{
+											log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test) X offset check failed: (calibration.centerOffsetX = ", calibration.centerOffsetX, ") > (CALIB_OFFSET_TOLERANCE = ", CALIB_OFFSET_TOLERANCE, ")"); 
+											self_test_stream << "(Calibration Test) X offset (" << calibration.centerOffsetX << ") check failed.\n" << std::endl;
+											calibration_test_result = FAIL_SELF_TEST;
+										}
+									} else{
+										log(pat_health_port, textFileOut,  "In main.cpp CMD_SELF_TEST - (Calibration Test) Calibration failed.");
+										self_test_stream << "(Calibration Test) Calibration failed.\n" << std::endl; //stream error message to buffer
+										calibration_test_result = FAIL_SELF_TEST;
+									}	
+								} else{		
+									calibration_test_result = NULL_SELF_TEST;
+								}
+							} else{
+								fsm_test_result = NULL_SELF_TEST;
+								calibration_test_result = NULL_SELF_TEST;
+							}						
+						} else{
+							laser_test_result = NULL_SELF_TEST;
+							fsm_test_result = NULL_SELF_TEST;
+							calibration_test_result = NULL_SELF_TEST;
 						}
-						
-						//TODO: Cal Laser Test
-						laser_test_result = NULL_SELF_TEST;
-
-						//TODO: FSM Test
-						fsm_test_result = NULL_SELF_TEST;
-						
-						//TODO: Calibration test
-						calibration_test_result = NULL_SELF_TEST;
-
-						//stream error message to buffer
-						self_test_stream << "Self Test Error Message..." << std::endl; //TODO
 
 						//send self test results
 						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
+						
+						//turn off laser before exiting
+						if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+							log(pat_health_port, textFileOut,  "In main.cpp CMD_SELF_TEST - Final laserOff FPGA command failed!");
+						}	
 						break;
 
 					case CMD_END_PROCESS:
-						log(pat_health_port, textFileOut, "In main.cpp - Received CMD_END_PROCESS command. Exiting...");
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_END_PROCESS command. Exiting...");
 						STANDBY = false;
 						OPERATIONAL = false;
 						break;
 						
 					default:
-						log(pat_health_port, textFileOut, "In main.cpp - Received unknown command: ", command);
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received unknown command: ", command);
 				}	
 			}
 		}		

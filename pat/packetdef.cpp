@@ -307,6 +307,14 @@ void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_r
 	packet_struct.fsm_test_result = htonl(fsm_test_result);
 	packet_struct.calibration_test_result = htonl(calibration_test_result);
 	memcpy(packet_struct.error, error, strlen(error)+1);
+	printf("In packetdef.cpp - send_packet_self_test - APID: %d, Camera: %d, FPGA: %d, Laser: %d, FSM: %d, Calibration: %d, Error: %s", 
+		packet_struct.apid, 
+		unsigned(packet_struct.camera_test_result), 
+		unsigned(packet_struct.fpga_test_result), 
+		unsigned(packet_struct.laser_test_result), 
+		unsigned(packet_struct.fsm_test_result), 
+		unsigned(packet_struct.calibration_test_result), 
+		packet_struct.error);
 
 	char packet[sizeof(pat_self_test_packet_struct)];
 	memcpy(packet, &packet_struct, sizeof(packet));	
