@@ -56,7 +56,7 @@ public:
 	double affineTransformX(double x, double y);
 	double affineTransformY(double x, double y);
 	bool run(Group& calib, std::string filePath = std::string("/root/log/pat/"));
-	bool findExposureRange(Group& calib, std::string filePath = std::string("/root/log/pat/"));
+	bool findExposureRange(std::string filePath = std::string("/root/log/pat/"));
 	bool checkLaserOn(Group& calib);
 	bool checkLaserOff();
 	bool testFSM(Group& calib);
