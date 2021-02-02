@@ -211,11 +211,11 @@ int main() //int argc, char** argv
 
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
+	send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
 	//Catch camera initialization failure state in a re-initialization loop:
 	bool camera_initialized = camera.initialize();	
 	while(!camera_initialized){
 		log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Camera Initialization Failed! Error:", camera.error);
-		send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
 		// Listen for exit command 		
 		zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN){
@@ -263,10 +263,12 @@ int main() //int argc, char** argv
 	}
 	if(camera_initialized){log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");}
 	
-	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
-	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	if(OPERATIONAL){
+		FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
+		Calibration calibration(camera, fsm, textFileOut, pat_health_port);
+		Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
 
 	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
@@ -301,6 +303,7 @@ int main() //int argc, char** argv
 		// Allow graceful exit with Ctrl-C (not for flight)
 		if(stop){break;}
 
+		if(STANDBY){send_packet_pat_status(pat_status_port, STATUS_STANDBY);}
 		// START Standby Loop
 		while(STANDBY){
 			// Allow graceful exit with Ctrl-C (not for flight)
@@ -309,8 +312,7 @@ int main() //int argc, char** argv
 				break;
 			}
 
-			log(pat_health_port, textFileOut, "In main.cpp - Standby - Standing by for command..."); //health heartbeat	
-			send_packet_pat_status(pat_status_port, STATUS_STANDBY);	
+			log(pat_health_port, textFileOut, "In main.cpp - Standby - Standing by for command..."); //health heartbeat		
 			// Listen for command 		
 			zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 			if(poll_pat_control[0].revents & ZMQ_POLLIN)
@@ -644,7 +646,8 @@ int main() //int argc, char** argv
 			}
 		}		
 		// END of STANDBY loop
-			
+		
+		if(OPERATIONAL && !STANDBY){send_packet_pat_status(pat_status_port, STATUS_MAIN);} //update status
 		// START Main PAT Loop
 		while(OPERATIONAL && !STANDBY) 
 		{	
@@ -684,7 +687,6 @@ int main() //int argc, char** argv
 			elapsed_time_heartbeat = check_heartbeat - time_prev_heartbeat; // Calculate time since heartbeat tlm
 			if(elapsed_time_heartbeat > period_heartbeat) //pg
 			{
-				send_packet_pat_status(pat_status_port, STATUS_MAIN);
 				if(phase == OPEN_LOOP){
 					if(haveBeaconKnowledge){
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
