@@ -114,7 +114,7 @@ void FSM::fsmWrite(uint16_t channel, uint8_t data)
 	if(check_fpga_map_value(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, (uint16_t) LD_BIAS_CH, (uint8_t) LD_BIAS_ON, fsm_request_number)){
 		// LD Bias is ON -> Send FSM command to FPGA:
 		//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
-		send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, fsm_request_number);
+		send_packet_fpga_map_request(fpga_map_request_port, WRITE, fsm_request_number, channel, data);
 		if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
 			log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
 		};
@@ -122,15 +122,15 @@ void FSM::fsmWrite(uint16_t channel, uint8_t data)
 
 	} else{
 		// LD bias is OFF (or the read request failed)
-		log(pat_health_port, fileStream, "In fsm.cpp FSM::fsmWrite - Warning! LD bias ON check failed!");
+		log(pat_health_port, fileStream, "In fsm.cpp FSM::fsmWrite - LD bias ON check did not pass. Commanding LD bias ON...");
 		// Send LD bias ON command to FPGA:
-		send_packet_fpga_map_request(fpga_map_request_port, (uint16_t) LD_BIAS_CH, (uint8_t) LD_BIAS_ON, (bool) WRITE, fsm_request_number);
+		send_packet_fpga_map_request(fpga_map_request_port, (bool) WRITE, fsm_request_number, (uint16_t) LD_BIAS_CH, (uint8_t) LD_BIAS_ON);
 
 		// Check that message was received and FPGA was written to:
 		if(check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, (uint16_t) LD_BIAS_CH, fsm_request_number)){
 			// LD Bias is ON -> Send FSM command to FPGA:
 			//log(pat_health_port, fileStream, "fsmWrite - channel = ", channel, ", data = ", unsigned(data));
-			send_packet_fpga_map_request(fpga_map_request_port, channel, data, WRITE, fsm_request_number);
+			send_packet_fpga_map_request(fpga_map_request_port, WRITE, fsm_request_number, channel, data);
 			if(!check_fpga_map_write_request(fpga_map_answer_port, poll_fpga_answer, channel, fsm_request_number)){
 				log(pat_health_port, fileStream,"In fsm.cpp FSM::fsmWrite - Warning! FSM write command to channel ", channel, " failed!");
 			};

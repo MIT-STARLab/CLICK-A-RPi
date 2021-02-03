@@ -10,7 +10,7 @@
 // Also find the gains (function) associated with this range
 // Also save properties of spot for re-use in main routine
 //-----------------------------------------------------------------------------
-bool Calibration::findExposureRange(Group& calib, std::string filePath)
+bool Calibration::findExposureRange(std::string filePath)
 //-----------------------------------------------------------------------------
 {
 	int gain = 0, exposure = CALIB_MAX_EXPOSURE/10, skip = camera.queuedCount;
@@ -32,7 +32,7 @@ bool Calibration::findExposureRange(Group& calib, std::string filePath)
 
 	if(camera.waitForFrame())
 	{
-		Image init(camera, fileStream, pat_health_port, smoothing);
+		Image init(camera, fileStream, pat_health_port);
 		if(init.histBrightest <= CALIB_MIN_BRIGHTNESS){
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
 			"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
@@ -83,17 +83,16 @@ bool Calibration::findExposureRange(Group& calib, std::string filePath)
 			// Set small window on spot location and search for range
 			camera.setCenteredWindow(init.area.x + spot.x, init.area.y + spot.y, CALIB_SMALL_WINDOW);
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max", CALIB_MAX_EXPOSURE, "us at [",
-				init.area.x + spot.x, ",", init.area.y + spot.y, "] with smoothing", smoothing);
+				init.area.x + spot.x, ",", init.area.y + spot.y, "]"); //with smoothing", smoothing);
 
 			for(; exposure >= 10 && exposure/CALIB_EXP_DIVIDER >= 1; exposure -= exposure/CALIB_EXP_DIVIDER)
 			{
 				// Alter exposure
 				camera.config->expose_us.write(exposure);
 				camera.requestFrame();
-
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, fileStream, pat_health_port, smoothing);
+					Image frame(camera, fileStream, pat_health_port); //smoothing
 					if(frame.histBrightest > frame.histPeak &&
 					   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE &&
 					   frame.performPixelGrouping() > 0)
@@ -105,16 +104,17 @@ bool Calibration::findExposureRange(Group& calib, std::string filePath)
 							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
 							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
 							preferredExpo = exposure;
-							if(smoothing == 0)
-							{
-								int test = determineSmoothing(frame);
-								if(test != smoothing)
-								{
-									smoothing = test;
-									log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
-									return true;
-								}
-							}
+							return true; 
+							// if(smoothing == 0)
+							// {
+							// 	int test = determineSmoothing(frame);
+							// 	if(test != smoothing)
+							// 	{
+							// 		smoothing = test;
+							// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
+							// 		return true;
+							// 	}
+							// }
 						}
 						// Find lowest acceptable exposure where no gain is needed
 						if(gain == 0 && lowestExpoNoGain == 0 && spot.valueMax <= CALIB_MIN_BRIGHTNESS)
@@ -177,9 +177,9 @@ bool Calibration::run(Group& calib, std::string filePath)
 	this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 
 	// Find the exposure setting range
-	smoothing = 0;
-	bool success = findExposureRange(calib);
-	//if(smoothing != 0) success = findExposureRange(calib);
+	//smoothing = 0;
+	bool success = findExposureRange();
+	//if(smoothing != 0) success = findExposureRange();
 
 	if(success)
 	{
@@ -420,4 +420,146 @@ int Calibration::determineSmoothing(Image &frame)
 	if(smoothing > CALIB_MAX_SMOOTHING) smoothing = CALIB_MAX_SMOOTHING;
 
 	return smoothing;
+}
+
+// Used for self test: check that laser is actually on with good spot properties
+//-----------------------------------------------------------------------------
+bool Calibration::checkLaserOn(Group& calib)
+//-----------------------------------------------------------------------------
+{
+	camera.requestFrame();
+	if(camera.waitForFrame())
+	{
+		Image frame(camera, fileStream, pat_health_port);
+		if(frame.histBrightest > CALIB_MIN_BRIGHTNESS){
+			if(frame.histBrightest > frame.histPeak){
+				if(frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE){
+					int numGroups = frame.performPixelGrouping();
+					if(numGroups > 0){
+						Group& spot = frame.groups[0];
+						if(spot.valueMax < CALIB_HAPPY_BRIGHTNESS){
+							//copy spot properties to calib
+							calib.x = frame.area.x + spot.x;
+							calib.y = frame.area.y + spot.y;
+							calib.valueMax = spot.valueMax;
+							calib.valueSum = spot.valueSum;
+							calib.pixelCount = spot.pixelCount;
+							return true;
+						} else{
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (spot.valueMax = ", spot.valueMax, ") >= (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, ")");
+						}
+					} else{
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (numGroups = ", numGroups, ") = 0");
+					}
+				} else{
+					log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") - ",
+						"(frame.histPeak = ", frame.histPeak, ") = ", frame.histBrightest - frame.histPeak, 
+						" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE, ")");
+				}
+			} else{
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") <= (frame.histPeak = ", frame.histPeak, ")");
+			}
+		} else{
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+		}
+	} else{
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: camera.waitForFrame() failed.");
+	}
+	return false; 
+}
+
+// Used for self test: check that laser is off
+//-----------------------------------------------------------------------------
+bool Calibration::checkLaserOff()
+//-----------------------------------------------------------------------------
+{
+	camera.requestFrame();
+	if(camera.waitForFrame())
+	{
+		Image frame(camera, fileStream, pat_health_port);
+		if(frame.histBrightest <= CALIB_MIN_BRIGHTNESS){
+			return true;
+		} else{
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: (frame.histBrightest = ", frame.histBrightest, ") > (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+		}
+	} else{
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: camera.waitForFrame() failed.");
+	}
+	return false; 
+}
+
+// Used for self test: check that FSM is working (spot is moving when commanded to and has decent properties)
+//-----------------------------------------------------------------------------
+bool Calibration::testFSM(Group& calib)
+//-----------------------------------------------------------------------------
+{
+	int prev_x, prev_y, delta_x, delta_y;
+	fsm.setNormalizedAngles(0,0);
+	this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+	if(checkLaserOn(calib)){
+		prev_x = calib.x;
+		logImage(string("CMD_SELF_TEST_FSM_Center"), camera, fileStream, pat_health_port);
+
+		// (0,0) Passed. Set to (1,0):
+		fsm.setNormalizedAngles(1,0);
+		this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+		if(checkLaserOn(calib)){
+			delta_x = calib.x - prev_x;
+			if(abs(delta_x) > CALIB_FSM_DISPLACEMENT_TOL){
+				prev_y = calib.y; 
+				logImage(string("CMD_SELF_TEST_FSM_X"), camera, fileStream, pat_health_port);
+
+				// (1,0) Passed. Set to (1,1):
+				fsm.setNormalizedAngles(1,1);
+				this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+				if(checkLaserOn(calib)){
+					delta_y = calib.y - prev_y; 
+					if(abs(delta_y) > CALIB_FSM_DISPLACEMENT_TOL){
+						prev_x = calib.x; 
+						logImage(string("CMD_SELF_TEST_FSM_XY"), camera, fileStream, pat_health_port);
+
+						// (1,1) Passed. Set to (0,1):
+						fsm.setNormalizedAngles(0,1);
+						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+						if(checkLaserOn(calib)){
+							delta_x = calib.x - prev_x; 
+							if(abs(delta_x) > CALIB_FSM_DISPLACEMENT_TOL){
+								prev_y = calib.y; 
+								logImage(string("CMD_SELF_TEST_FSM_Y"), camera, fileStream, pat_health_port);
+
+								// (0,1) Passed. Set to (0,0) and return:
+								fsm.setNormalizedAngles(0,0);
+								this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
+								if(checkLaserOn(calib)){
+									delta_y = calib.y - prev_y;
+									if(abs(delta_y) > CALIB_FSM_DISPLACEMENT_TOL){
+										return true;
+									} else{
+										log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at ending (0,0) - FSM Y displacement check failed: (|delta_y| =", abs(delta_y), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+									}
+								} else{
+									log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at ending (0,0) - checkLaserOn failed");
+								}
+							} else{
+								log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (0,1) - FSM X displacement check failed: (|delta_x| =", abs(delta_x), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+							}
+						} else{
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (0,1) - checkLaserOn failed");
+						}
+					} else{
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,1) - FSM Y displacement check failed: (|delta_y| =", abs(delta_y), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+					}
+				} else{
+					log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,1) - checkLaserOn failed");
+				}
+			} else{
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,0) - FSM X displacement check failed: (|delta_x| =", abs(delta_x), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+			}
+		} else{
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,0) - checkLaserOn failed");
+		}
+	} else{
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at starting (0,0) - checkLaserOn failed");
+	}
+	return false;					
 }
