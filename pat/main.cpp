@@ -231,7 +231,7 @@ int main() //int argc, char** argv
 				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_SELF_TEST command.");	
 				camera_test_result = FAIL_SELF_TEST; 
 				//stream error message to buffer
-				self_test_stream << "Camera Initialization Failed! Error:" << camera.error << "\n";
+				self_test_stream << "Camera Initialization Failed! Error:" << camera.error;
 				if(check_fpga_comms(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port)){
 					fpga_test_result = PASS_SELF_TEST;
 					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test passed.");
@@ -249,8 +249,26 @@ int main() //int argc, char** argv
 				
 			} else if(command == CMD_END_PROCESS){
 				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_END_PROCESS command. Exiting...");
-				OPERATIONAL = false;
-				break;
+				//OPERATIONAL = false;
+				//log(pat_health_port, textFileOut,  "In main.cpp - Saving text file and ending process.");
+				textFileOut.close(); //close telemetry text file
+				std::cout << "TXT File Saved." << std::endl;
+				pat_status_port.close();
+				std::cout << "Status port closed" << std::endl;
+				pat_health_port.close();
+				std::cout << "Health port closed" << std::endl;
+				pat_control_port.close();
+				std::cout << "Control port closed" << std::endl;
+				fpga_map_request_port.close();
+				std::cout << "FPGA Request port closed" << std::endl;
+				fpga_map_answer_port.close();
+				std::cout << "FPGA Answer port closed" << std::endl;
+				tx_packets_port.close();
+				std::cout << "All Ports Closed." << std::endl;
+				context.close();
+				std::cout << "Context Closed." << std::endl;
+				return 0;
+				//break;
 			}
 		}
 		//Try to initialize again
@@ -1311,7 +1329,7 @@ int main() //int argc, char** argv
 	// END of primary process loop: Standby + Main
 	
 	//turn off laser before ending PAT process
-	log(pat_health_port, textFileOut,  "In main.cpp - Shutting of calib laser and resetting FSM to (0,0).");
+	log(pat_health_port, textFileOut,  "In main.cpp - Shutting off calib laser and resetting FSM to (0,0).");
 	if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
 		log(pat_health_port, textFileOut,  "In main.cpp - End of PAT process laserOff FPGA command failed!");
 	}
@@ -1343,6 +1361,5 @@ int main() //int argc, char** argv
 	//std::cout << "Ports Closed." << std::endl;
     context.close();
 	//std::cout << "Context Closed." << std::endl;
-
     return 0;
 }
