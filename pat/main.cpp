@@ -200,6 +200,7 @@ int main() //int argc, char** argv
 	int period_hb_tlm_ms = (int) 1000*PERIOD_HEARTBEAT_TLM;
 	bool OPERATIONAL = true, STANDBY = true; 
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
+	int command_offset_x, command_offset_y; 
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
