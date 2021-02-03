@@ -102,7 +102,8 @@ class Packetizer:
             bus_tx_pkt = []
             bus_tx_pkt.extend(sync)
             bus_tx_pkt.extend(pkt)
-
+            
+            print('bus_tx_pkt: ', bus_tx_pkt) #for debug
             self.bus_pkts_buffer.append(bus_tx_pkt)
 
             del pkt_data[:BUS_DATA_LEN]
