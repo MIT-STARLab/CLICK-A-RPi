@@ -50,25 +50,11 @@ pat_status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_MAIN]
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-socket_test_response_packets = context.socket(zmq.PUB) #send messages on this port
-socket_test_response_packets.connect("tcp://localhost:%s" % TEST_RESPONSE_PORT) #connect to specific address (localhost)
-
 socket_pat_control = context.socket(zmq.PUB) #send messages on this port
 socket_pat_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
-
-# socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
-# socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
-
-# print ("Subscribing to FPGA_MAP_ANSWER topic {}".format(topic))
-# print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
-# socket_FPGA_map_answer = context.socket(zmq.SUB)
-# #socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
-# socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, struct.pack('I',pid))
-# socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, MESSAGE_TIMEOUT) # 5 second timeout on receive
-# socket_FPGA_map_answer.connect ("tcp://localhost:%s" % FPGA_MAP_ANSWER_PORT)
 
 socket_tx_packets = context.socket(zmq.PUB)
 socket_tx_packets.connect("tcp://localhost:%s" % TX_PACKETS_PORT)
@@ -88,6 +74,20 @@ socket_PAT_status.bind("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
 socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_status = zmq.Poller()
 poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
+
+# socket_test_response_packets = context.socket(zmq.PUB) #send messages on this port
+# socket_test_response_packets.connect("tcp://localhost:%s" % TEST_RESPONSE_PORT) #connect to specific address (localhost)
+
+# socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
+# socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
+
+# print ("Subscribing to FPGA_MAP_ANSWER topic {}".format(topic))
+# print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
+# socket_FPGA_map_answer = context.socket(zmq.SUB)
+# #socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
+# socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, struct.pack('I',pid))
+# socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, MESSAGE_TIMEOUT) # 5 second timeout on receive
+# socket_FPGA_map_answer.connect ("tcp://localhost:%s" % FPGA_MAP_ANSWER_PORT)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)

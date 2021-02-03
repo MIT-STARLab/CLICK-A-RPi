@@ -297,28 +297,27 @@ class Housekeeping:
         # TODO: Update packet handling
 
         if (process_id == HK_PAT_ID):
-            # print("Handling PAT pkt")
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
             payload, _, _, _ = pat_pkt.decode(data)
-            print ('PAT Health Received: ', payload)
+            print('Handling PAT pkt w/ payload: ', payload)
 
         elif (process_id == HK_FPGA_ID):
-            # print("Handling FPGA pkt")
             apid = TLM_HK_FPGA_MAP
             payload = data
+            print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == HK_SYS_ID):
-            # print("Handling SYS pkt")
             apid = TLM_HK_SYS
             payload = data
+            print('Handling SYS pkt w/ payload: ', payload)
 
         elif (process_id == HK_CH_ID):
-            # print("Handling CH pkt")
             # TODO: Update command counters
             apid = TLM_HK_CH
             ch_pkt = CHHealthPacket()
             _, size, payload = ch_pkt.decode(data)
+            print('Handling CH pkt w/ payload: ', payload)
 
         pkt = TxPacket()
         raw_pkt = pkt.encode(apid, str(payload))
@@ -405,7 +404,6 @@ class Housekeeping:
             while self.packet_buf:
                 current_pkt = self.packet_buf.pop(0)
                 if (self.all_pkts_send_enable):
-                    print ('Sending Tx Packet')
                     self.tx_socket.send(current_pkt)
 
             # print("HK is running")
