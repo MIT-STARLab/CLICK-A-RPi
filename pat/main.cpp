@@ -772,7 +772,7 @@ int main() //int argc, char** argv
 								// Set initial pointing in open-loop
 								calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
 								calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
-								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain, ", smoothing: ", calibration.smoothing); //",  smoothing: ", track.beaconSmoothing
+								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain); //, ", smoothing: ", calibration.smoothing ",  smoothing: ", track.beaconSmoothing
 								track.controlOpenLoop(fsm, calib.x, calib.y);
 							}
 							camera.ignoreNextFrames(camera.queuedCount); //clear queue
@@ -999,7 +999,7 @@ int main() //int argc, char** argv
 						camera.requestFrame(); //queue calib frame, pg-comment
 						if(camera.waitForFrame())
 						{
-							Image frame(camera, textFileOut, pat_health_port, calibration.smoothing);						
+							Image frame(camera, textFileOut, pat_health_port); //calibration.smoothing						
 							// //save image debug telemetry
 							// std::string nameTag = std::string("CL_CALIB_DEBUG");
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
