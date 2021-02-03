@@ -83,7 +83,7 @@ bool Calibration::findExposureRange(std::string filePath)
 			// Set small window on spot location and search for range
 			camera.setCenteredWindow(init.area.x + spot.x, init.area.y + spot.y, CALIB_SMALL_WINDOW);
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max", CALIB_MAX_EXPOSURE, "us at [",
-				init.area.x + spot.x, ",", init.area.y + spot.y, "] with smoothing", smoothing);
+				init.area.x + spot.x, ",", init.area.y + spot.y, "]"); //with smoothing", smoothing);
 
 			for(; exposure >= 10 && exposure/CALIB_EXP_DIVIDER >= 1; exposure -= exposure/CALIB_EXP_DIVIDER)
 			{
@@ -92,7 +92,7 @@ bool Calibration::findExposureRange(std::string filePath)
 				camera.requestFrame();
 				if(camera.waitForFrame())
 				{
-					Image frame(camera, fileStream, pat_health_port, smoothing);
+					Image frame(camera, fileStream, pat_health_port); //smoothing
 					if(frame.histBrightest > frame.histPeak &&
 					   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE &&
 					   frame.performPixelGrouping() > 0)
@@ -177,7 +177,7 @@ bool Calibration::run(Group& calib, std::string filePath)
 	this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 
 	// Find the exposure setting range
-	smoothing = 0;
+	//smoothing = 0;
 	bool success = findExposureRange();
 	//if(smoothing != 0) success = findExposureRange();
 
