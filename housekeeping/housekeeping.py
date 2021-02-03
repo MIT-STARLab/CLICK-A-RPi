@@ -6,12 +6,10 @@ import os
 import threading
 import struct
 import subprocess
-
 import zmq
 import psutil
-
 import binascii
-
+import struct
 sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('../lib/')
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
@@ -26,7 +24,6 @@ HK_CH_ID = 0xA1
 HK_FPGA_ID = 0xA2
 HK_PKT_ID = 0xA3
 HK_DEPKT_ID = 0xA4
-
 HK_SYS_ID = 0xA5
 
 class ResetTimer:
@@ -291,7 +288,11 @@ class Housekeeping:
                 pkt.extend(struct.pack('B', (p.cpu_percent() % 256)))
                 pkt.extend(struct.pack('B', (p.memory_percent('rss') % 256)))
 
-        return pkt
+        #compile list of packed byte strings (pkt) into single packed byte string
+        message = ''
+        for i in range(pkt):
+            message += pkt[i]
+        return message
 
     def handle_hk_pkt(self, data, process_id):
         # TODO: Update packet handling
@@ -300,16 +301,17 @@ class Housekeeping:
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
             payload, _, _, _ = pat_pkt.decode(data)
+            #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             print('Handling PAT pkt w/ payload: ', payload)
 
         elif (process_id == HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
-            payload = data
+            payload = struct.pack('B', data) #TBR if the data is already a packed byte string or not. FPGA packet definition beyond 1 byte HK counter is TBD
             print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == HK_SYS_ID):
             apid = TLM_HK_SYS
-            payload = data
+            payload = data #data is already a packed byte string
             print('Handling SYS pkt w/ payload: ', payload)
 
         elif (process_id == HK_CH_ID):
@@ -317,10 +319,11 @@ class Housekeeping:
             apid = TLM_HK_CH
             ch_pkt = CHHealthPacket()
             _, size, payload = ch_pkt.decode(data)
+            #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             print('Handling CH pkt w/ payload: ', payload)
 
         pkt = TxPacket()
-        raw_pkt = pkt.encode(apid, str(payload))
+        raw_pkt = pkt.encode(apid, payload) #payload needs to be a single packed byte string e.g. '\x00\x01'
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id):
