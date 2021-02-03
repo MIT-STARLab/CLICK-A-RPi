@@ -272,6 +272,7 @@ int main() //int argc, char** argv
 	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
 	map<double, CSVdata> csvData;
+	bool haveCsvData = false; //don't save csv if there's no data
 
 	//Beacon Loss Timing
 	time_point<steady_clock> startBeaconLoss;
@@ -1024,7 +1025,8 @@ int main() //int argc, char** argv
 													csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
 														calib.x, calib.y, setPointX, setPointY, calibExposure)));
 													//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
-													time_prev_csv_write = now; // Record time of csv write		
+													time_prev_csv_write = now; // Record time of csv write	
+													if(!haveCsvData){haveCsvData = true;}	
 												}
 											}
 											else
@@ -1157,7 +1159,8 @@ int main() //int argc, char** argv
 													csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
 														calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
 													//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
-													time_prev_csv_write = now; // Record time of csv write		
+													time_prev_csv_write = now; // Record time of csv write
+													if(!haveCsvData){haveCsvData = true;}			
 												}
 												// If sending beacon angle errors to the bus adcs
 												//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
@@ -1303,28 +1306,32 @@ int main() //int argc, char** argv
 			}
 		} 
 		// END of main PAT loop
-		STANDBY = true;
-		//turn off laser before ending main PAT loop
-		if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
-			log(pat_health_port, textFileOut,  "In main.cpp - End of main PAT loop laserOff FPGA command failed!");
-		}	
+		STANDBY = true;	
 	} 
 	// END of primary process loop: Standby + Main
-
-	fsm.setNormalizedAngles(0, 0); //reset to zero before FSM object destruction
-	log(pat_health_port, textFileOut,  "In main.cpp - Saving telemetry files and exiting process.");
-
-	ofstream out(dataFileName);
-	for(const auto& x : csvData)
-	{
-		out << x.first << "," << x.second.bcnX << "," << x.second.bcnY << "," << x.second.bcnExp << ","
-		<< x.second.calX << "," << x.second.calY << "," << x.second.calSetX << "," << x.second.calSetY << "," << x.second.calExp << endl;
-		//x.first = time since beginTime
-		//	CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+	
+	//turn off laser before ending PAT process
+	log(pat_health_port, textFileOut,  "In main.cpp - Shutting of calib laser and resetting FSM to (0,0).");
+	if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
+		log(pat_health_port, textFileOut,  "In main.cpp - End of PAT process laserOff FPGA command failed!");
 	}
-	out.close(); //close data file
-	//std::cout << "CSV File Saved." << std::endl;	
+	fsm.setNormalizedAngles(0, 0); //reset to zero before FSM object destruction
 
+	if(haveCsvData){
+		log(pat_health_port, textFileOut,  "In main.cpp - Saving csv file.");
+		ofstream out(dataFileName);
+		for(const auto& x : csvData)
+		{
+			out << x.first << "," << x.second.bcnX << "," << x.second.bcnY << "," << x.second.bcnExp << ","
+			<< x.second.calX << "," << x.second.calY << "," << x.second.calSetX << "," << x.second.calSetY << "," << x.second.calExp << endl;
+			//x.first = time since beginTime
+			//	CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+		}
+		out.close(); //close data file
+		//std::cout << "CSV File Saved." << std::endl;
+	}
+	
+	log(pat_health_port, textFileOut,  "In main.cpp - Saving text file and ending process.");
 	textFileOut.close(); //close telemetry text file
     //std::cout << "TXT File Saved." << std::endl;
 	pat_status_port.close();
