@@ -20,7 +20,7 @@ power = mmap.Power(fpga)
 status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_MAIN]
 
 #PAT Command List
-cmd_list = [PAT_CMD_START_PAT, PAT_CMD_END_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS]
+cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS]
 TURN_ON_CAL_LASER = cmd_list[len(cmd_list)-1] + 1
 TURN_OFF_CAL_LASER = TURN_ON_CAL_LASER + 1
 
@@ -124,38 +124,40 @@ while True:
                                 print "Available Commands are: "
                                 print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
                                 print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER                              
-                                print "PAT_CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
-                                print "PAT_CMD_SELF_TEST = ", PAT_CMD_SELF_TEST
-                                print "PAT_CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS
+                                print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
+                                print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST
+                                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS
 
 			elif(status_flag == PAT_STATUS_STANDBY):
 				print ('PAT Process (PID: ' + str(return_addr) + ') Status: In Standby Loop')
                                 print "Available Commands are: "
                                 print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
                                 print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
-                                print "PAT_CMD_START_PAT = ", PAT_CMD_START_PAT
-                                print "PAT_CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
-                                print "PAT_CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
-                                print "PAT_CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
-                                print "PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
-                                print "PAT_CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
-                                print "PAT_CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
-                                print "PAT_CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
-                                print "PAT_CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
-                                print "PAT_CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
-                                print "PAT_CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
-                                print "PAT_CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
-                                print "PAT_CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS
+                                print "CMD_START_PAT = ", PAT_CMD_START_PAT
+                                print "CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
+                                print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
+                                print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
+                                print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
+                                print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
+                                print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
+                                print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
+                                print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
+                                print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
+                                print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
+                                print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
+                                print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
+                                print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
+                                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS
 
 			elif(status_flag == PAT_STATUS_MAIN):
 				print ('PAT Process (PID: ' + str(return_addr) + ') Status: In Main Loop')
                                 print "Available Commands are: "
                                 print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
                                 print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER    
-                                print "PAT_CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
-                                print "PAT_CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
-                                print "PAT_CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
-                                print "PAT_CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS                           
+                                print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
+                                print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
+                                print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
+                                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS                           
 		else:
 			print ('Unrecognized PAT Status Flag: ' + status_flag)
 
@@ -172,13 +174,21 @@ while True:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(exp_cmd))     
                         elif(user_cmd == PAT_CMD_UPDATE_TX_OFFSET_X):
-                                tx_offset_x = int(input("Update Tx Offset X: "))
+                                tx_offset_x = int(input("Enter new Tx Offset in X (pixels): "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_x))
                         elif(user_cmd == PAT_CMD_UPDATE_TX_OFFSET_Y):
-                                tx_offset_y = int(input("Update Tx Offset Y: "))
+                                tx_offset_y = int(input("Enter new Tx Offset in Y (pixels): "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(tx_offset_y))
+                        elif(user_cmd == PAT_CMD_UPDATE_FSM_X):
+                                fsm_update_x = int(input("Enter FSM X displacement (pixels): "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(fsm_update_x))
+                        elif(user_cmd == PAT_CMD_UPDATE_FSM_Y):
+                                fsm_update_y = int(input("Enter FSM Y displacement (pixels): "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(fsm_update_y))
                         else:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
@@ -201,7 +211,7 @@ while True:
 
                 elif(user_cmd == 0):
                         print "Skipping command entry."
-                        
+
                 else:
                         print "Unrecognized command number entered: ", user_cmd, ". Skipping command entry."              
                 

@@ -21,25 +21,30 @@
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 #define FPGA_READ_SIZE 4
 #define CMD_PAYLOAD_SIZE 256
+//command list:
 #define CMD_START_PAT 0x00
 #define CMD_START_PAT_OPEN_LOOP 0x01
 #define CMD_START_PAT_STATIC_POINT 0x02
 #define CMD_START_PAT_BUS_FEEDBACK 0x03
 #define CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK 0x04
-#define CMD_END_PAT 0x05
-#define CMD_GET_IMAGE 0x06
-#define CMD_CALIB_TEST 0x07
-#define CMD_CALIB_LASER_TEST 0x08
-#define CMD_FSM_TEST 0x09
-#define CMD_BCN_ALIGN 0x0A
-#define CMD_TX_ALIGN 0x0B
-#define CMD_UPDATE_TX_OFFSET_X 0x0C
-#define CMD_UPDATE_TX_OFFSET_Y 0x0D
-#define CMD_SELF_TEST 0x0E
-#define CMD_END_PROCESS 0x0F
+#define CMD_UPDATE_TX_OFFSET_X 0x05
+#define CMD_UPDATE_TX_OFFSET_Y 0x06
+#define CMD_END_PAT 0x07
+#define CMD_GET_IMAGE 0x08
+#define CMD_CALIB_TEST 0x09
+#define CMD_CALIB_LASER_TEST 0x0A
+#define CMD_FSM_TEST 0x0B
+#define CMD_BCN_ALIGN 0x0C
+#define CMD_TX_ALIGN 0x0D
+#define CMD_UPDATE_FSM_X 0x0E
+#define CMD_UPDATE_FSM_Y 0x0F
+#define CMD_SELF_TEST 0x10
+#define CMD_END_PROCESS 0x11
+//status flags:
 #define STATUS_CAMERA_INIT 0x00
 #define STATUS_STANDBY 0x01
 #define STATUS_MAIN 0x02
+//self test flags:
 #define PASS_SELF_TEST 0xFF
 #define FAIL_SELF_TEST 0x0F
 #define NULL_SELF_TEST 0x00
