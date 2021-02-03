@@ -15,7 +15,7 @@ import hashlib
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 from options import *
-from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket, CHHealthPacket
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HandlerHeartbeatPacket, CHHealthPacket, PATStatusPacket
 from zmqTxRx import recv_zmq, separate
 import ipc_helper
 import fpga_map as mmap
@@ -44,23 +44,23 @@ UPDATE_PD_GROUND_TEST = 10 #seconds, time period for any repeated process comman
 UPDATE_PD_DEBUG = 10 #seconds, time period for any repeated process commands needed during this mode
 UPDATE_PD_DOWNLINK = 10 #seconds, time period for any repeated process commands needed during this mode
 
-#other parameters
-DEFAULT_CALIB_EXP = 25 #microseconds, default calibration laser exposure time for self-test
+#PAT Status Flag List
+pat_status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_MAIN]
 
 # ZeroMQ inter process communication
 context = zmq.Context()
-
-# socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
-# socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
 
 socket_test_response_packets = context.socket(zmq.PUB) #send messages on this port
 socket_test_response_packets.connect("tcp://localhost:%s" % TEST_RESPONSE_PORT) #connect to specific address (localhost)
 
 socket_pat_control = context.socket(zmq.PUB) #send messages on this port
-socket_pat_control.connect("tcp://localhost:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
+socket_pat_control.bind("tcp://*:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.connect("tcp://localhost:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
+
+# socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
+# socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
 
 # print ("Subscribing to FPGA_MAP_ANSWER topic {}".format(topic))
 # print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
@@ -71,16 +71,23 @@ socket_housekeeping.connect("tcp://localhost:%s" % CH_HEARTBEAT_PORT) #connect t
 # socket_FPGA_map_answer.connect ("tcp://localhost:%s" % FPGA_MAP_ANSWER_PORT)
 
 socket_tx_packets = context.socket(zmq.PUB)
-socket_tx_packets.connect ("tcp://localhost:%s" % TX_PACKETS_PORT)
+socket_tx_packets.connect("tcp://localhost:%s" % TX_PACKETS_PORT)
 
-print ("Pulling RX_CMD_PACKETS")
+print ("Pulling Rx Cmd Packets")
 print ("on port {}".format(RX_CMD_PACKETS_PORT))
 socket_rx_command_packets = context.socket(zmq.SUB)
 socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
-socket_rx_command_packets.connect ("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+poller_rx_command_packets = zmq.Poller() #poll rx commands
+poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 
-poller = zmq.Poller() #poll rx commands
-poller.register(socket_rx_command_packets, zmq.POLLIN)
+print ("Pulling PAT Status Packets")
+print ("on port {}".format(PAT_STATUS_PORT))
+socket_PAT_status = context.socket(zmq.SUB)
+socket_PAT_status.bind("tcp://*:%s" % PAT_STATUS_PORT)
+socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
+poller_PAT_status = zmq.Poller()
+poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
@@ -118,16 +125,93 @@ def initialize_cal_laser():
         fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
 cal_laser_init = False #identifies if cal laser has been initialized yet or not
 
+def cal_laser_on():
+    if(cal_laser_init):
+            power.calib_diode_on()
+    else:
+            initialize_cal_laser()
+            cal_laser_init = True
+    log_to_hk('CALIBRATION LASER ON')
+
+def cal_laser_off():
+    power.calib_diode_off()
+    log_to_hk('CALIBRATION LASER OFF')
+
 def start_camera():
     os.system('start camera') #calls camera.service to turn on camera
+    log_to_hk('CAMERA ON')
+
 def stop_camera():
     os.system('stop camera') #calls camera.service to turn off camera
+    log_to_hk('CAMERA OFF')
 
+def get_pat_status():
+    #get pat status
+    socks_status = dict(poller_PAT_status.poll(250)) #poll for 250 ms
+    if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
+        print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+        message = recv_zmq(socket_PAT_status)
+        ipc_patStatusPacket = PATStatusPacket()
+        return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
+        received_status = True
+    else:
+        return_addr = -1
+        status_flag = -1
+        received_status = False
+    
+    return received_status, status_flag, return_addr
+
+def stop_pat():
+    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS)
+    print(ipc_patControlPacket) #debug print
+    cal_laser_off()
+    stop_camera()
+
+def start_pat(allow_camera_init = False):
+    start_camera() #start camera
+    os.system('pat') #run the /root/bin/pat executable
+    for i in range(10): #try to get the status of pat
+        received_status, status_flag, return_addr = get_pat_status()
+        if(received_status):
+            if(status_flag in pat_status_list):
+                if(status_flag == PAT_STATUS_CAMERA_INIT):
+                    log_to_hk('=PAT Process Started (PID: ' + str(return_addr) + '). Status: In Camera Initialization Loop') #start camera command failed
+                    if(allow_camera_init):
+                        return True 
+                    else:
+                        stop_pat()
+                        return False
+                elif(status_flag == PAT_STATUS_STANDBY):
+                    log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: In Standby Loop')
+                    return True 
+                elif(status_flag == PAT_STATUS_MAIN):
+                    log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: In Main Loop - skipped standby loop anomalously') #this should not happen
+                    stop_pat()
+                    return False 
+            else:
+                log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: Unrecognized')
+                stop_pat()
+                return False     
+    log_to_hk('PAT Process Unresponsive.')
+    stop_pat()
+    return False
+
+#initialization
 start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
 counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
+
+# #start PAT process
+# if(start_pat()):
+#     pat_process_running = True
+# else:
+#     pat_process_running = False
+pat_process_running = False #test housekeeping output to COSMOS before trying PAT tests
+
+#start command handling
 while True:
     curr_time = time.time()
     elapsed_time = curr_time - start_time
@@ -141,7 +225,8 @@ while True:
         time_remaining = TIMEOUT_PD_DEBUG - elapsed_time
         if(time_remaining <= 0):
             log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Timeout Reached.')
-            #TODO: do any pre-shutdown tasks
+            #Do pre-shutdown tasks
+            stop_pat()
             break #exit main loop
 
         elif(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):
@@ -153,7 +238,8 @@ while True:
         time_remaining = TIMEOUT_PD_DOWNLINK - elapsed_time
         if(time_remaining <= 0):
             log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Timeout Reached.')
-            #TODO: do any pre-shutdown tasks
+            #Do pre-shutdown tasks
+            stop_pat()
             break #exit main loop
 
         elif(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):
@@ -170,7 +256,7 @@ while True:
         counter_heartbeat += 1
 
     #poll for received commands
-    sockets = dict(poller.poll(10)) #poll for 10 milliseconds
+    sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds
     if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
         # get commands
         # print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
@@ -180,12 +266,17 @@ while True:
         ipc_rxcompacket = RxCommandPacket()
         ipc_rxcompacket.decode(message)
         CMD_ID = ipc_rxcompacket.APID
+
         if(CMD_ID != APID_TIME_AT_TONE):
             #don't print the time at tone receives
             print (ipc_rxcompacket)
-            print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
+            print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))      
         
-        if(CMD_ID == CMD_PL_REBOOT):
+        if(CMD_ID == APID_TIME_AT_TONE):
+            #TODO: parse the time at tone packet for clock sync
+            pass
+
+        elif(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
             time.sleep(1)
             os.system("sudo shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
@@ -261,11 +352,17 @@ while True:
             pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload)
             pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK]
             pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Default w/ Bus Feedback', 'Open-Loop w/ Bus Feedback']
-            if(pat_mode_cmd not in pat_mode_list):
-                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
+            if(pat_process_running):
+                if(pat_mode_cmd in pat_mode_list):
+                    PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
+                    log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
+                elif(pat_mode_cmd == PAT_CMD_END_PROCESS):
+                    stop_pat()
+                    log_to_hk('ACK CMD PL_SET_PAT_MODE with PAT_CMD_END_PROCESS')
+                else:
+                    log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
             else:
-                PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
-                log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
+                log_to_hk('ERROR CMD PL_SET_PAT_MODE: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
@@ -274,22 +371,17 @@ while True:
                     exp_cmd = 10
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = 10000000
-
-            print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
-            print(ipc_patControlPacket) #debug print
-            log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
-            #send image telemetry file...
+                    exp_cmd = 10000000            
+            if(pat_process_running):
+                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
+                print(ipc_patControlPacket) #debug print
+                log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
+                #manage image telemetry file...
+            else:
+                log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
-            if(cal_laser_init):
-                    power.calib_diode_on()
-            else:
-                    initialize_cal_laser()
-                    cal_laser_init = True
-            log_to_hk('CALIBRATION LASER ON')
-
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
@@ -297,12 +389,14 @@ while True:
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
-
-            print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
-            print(ipc_patControlPacket) #debug print
-            log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
-            #Manage image telemetry files...
+            if(pat_process_running):
+                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
+                print(ipc_patControlPacket) #debug print
+                log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
+                #Manage image telemetry files...
+            else:
+                log_to_hk('ERROR CMD PL_CALIB_LASER_TEST: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
             exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
@@ -312,19 +406,24 @@ while True:
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
-
-            print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
-            print(ipc_patControlPacket) #debug print
-            log_to_hk('ACK CMD PL_FSM_TEST')
-            #Manage image telemetry files...
+            if(pat_process_running):
+                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
+                print(ipc_patControlPacket) #debug print
+                log_to_hk('ACK CMD PL_FSM_TEST')
+                #Manage image telemetry files...
+            else:
+                log_to_hk('ERROR CMD PL_FSM_TEST: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
-            print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
-            print(ipc_patControlPacket) #debug print
-            log_to_hk('ACK CMD PL_RUN_CALIBRATION')
-            #Manage image telemetry files...
+            if(pat_process_running):
+                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
+                print(ipc_patControlPacket) #debug print
+                log_to_hk('ACK CMD PL_RUN_CALIBRATION')
+                #Manage image telemetry files...
+            else:
+                log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
             set_fpga_raw_size = ipc_rxcompacket.size - 4
@@ -376,7 +475,8 @@ while True:
             print (fpga_read_payload) #debug print
             fpga_read_txpacket = TxPacket()
             raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
-            socket_tx_packets.send(raw_fpga_read_txpacket) #send packet           
+            socket_tx_packets.send(raw_fpga_read_txpacket) #send packet   
+
             ###OLD FPGA Interface
             # #send fpga request
             # fpga_req_pkt = FPGAMapRequestPacket()
@@ -444,21 +544,33 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
 
                 elif(test_id == PAT_SELF_TEST):
-                    #is PAT already going to be running?... or execute ./root/bin/pat here...
-                    #execute PAT self test
-                    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-                    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                    print(ipc_patControlPacket) #debug print
-
+                    if(pat_process_running):
+                        #execute PAT self test
+                        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                        ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                        print(ipc_patControlPacket) #debug print
+                    elif(start_pat(allow_camera_init = True)):
+                        #Check if camera failure is to blame and run self test in camera initialization loop
+                        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                        ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                        print(ipc_patControlPacket) #debug print
+                        time.sleep(5) #TBR
+                        stop_pat()
+                    else:
+                        log_to_hk('PAT process initialization not working.')
+                    
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             start_time = time.time()
             CH_MODE_ID = CH_MODE_DOWNLINK
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + start_time)
-
-            #Start Main PAT Loop:
-            print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-            ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID)
-            print(ipc_patControlPacket) #debug print
+            
+            if(pat_process_running):
+                #Start Main PAT Loop:
+                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID)
+                print(ipc_patControlPacket) #debug print
+            else:
+                log_to_hk('ERROR CMD PL_DWNLINK_MODE: PAT process is not running.')
 
             ###TODO: add any other lasercom experiment process start-up tasks
 
@@ -467,10 +579,10 @@ while True:
             CH_MODE_ID = CH_MODE_DEBUG
             log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time)
 
+            if(!pat_process_running):
+                log_to_hk('ERROR CMD PL_DEBUG_MODE: PAT process is not running.')
+
             ###TODO: add any other debug process start-up tasks
-        
-        elif(CMD_ID == APID_TIME_AT_TONE):
-            pass
 
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
