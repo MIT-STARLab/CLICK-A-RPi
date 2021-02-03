@@ -16,7 +16,7 @@ def reset_fifo(fpgabus):
     '''
 
 def read_string(fpgabus):
-    read_max = 256
+    read_max = 1200
     empty = fpgabus.read_reg(mmap.EFL) & mmap.EFL_EMPTY
     chars = []
     error = 0
@@ -44,17 +44,16 @@ def fline(fpgabus):
     tx_str = 'fline\r'
     reset_fifo(fpgabus)
     write_string(fpgabus,tx_str)
-    time.sleep(options.EDFA_READ_WRITE_DELAY)
+    time.sleep(options.EDFA_READ_WRITE_DELAY) 
     reply = read_string(fpgabus)[1]
     reply = reply.split('\n')
-    if len(reply) > 1:
+    if len(reply) > 1: 
         reply = reply[1]
         return reply
     else:
         return ''
         
 def parse(regs,flist):
-    
     if   flist[0] == 'EL': regs[mmap.EDFA_EN_PIN] = 0
     elif flist[0] == 'HL': regs[mmap.EDFA_EN_PIN] = 1
     else:                  regs[mmap.EDFA_EN_PIN] = 2

@@ -17,6 +17,14 @@ CTL_SPI2_EN    = 0b00000100
 CTL_STALL      = 0b00001000
 CTL_ERX_FIFO   = 0b00010000
 
+LTSa = 1
+LTSb = 2
+LBCa = 3
+LBCb = 4
+
+LTRa = 96
+LTRb = 97
+
 THRa = 5
 THRb = 6
 THRc = 7
@@ -24,13 +32,15 @@ FSMa = 8
 FSMb = 9
 FSMc = 10
 
-CAL = 32
-PO1 = 33
-PO2 = 34
-PO3 = 35
-PO4 = 36
-HE1 = 37
-HE2 = 38
+DATA = 13
+
+CAL = 32 #Cal laser
+PO1 = 33 #LD Bias
+PO2 = 34 #EDFA
+PO3 = 35 #Heaters
+PO4 = 36 #TEC
+HE1 = 37 #Heater 1
+HE2 = 38 #Heater 2
 
 FLG = 63
 FLG_DCM_LOCKED = 0b00000001
@@ -103,8 +113,10 @@ class Power:
     def heater_2_off(self):    self.handler.write_reg(HE2, 15)
     
 # ----------------- Temperatures --------------------
-TEMPERATURE_BLOCK = list(range(200, 206))
 
+
+TEMPERATURE_BLOCK = list(range(200, 206))
+PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
 for reg in TEMPERATURE_BLOCK:
     REGISTER_TYPE[reg] = 'f'
     BYTE_1[reg] = 2*reg - 302    
@@ -130,7 +142,10 @@ def decode_temperature(msb, lsb):
     return temp
     
 # ----------------- Current consumption ----------------- 
+
+
 CURRENT_BLOCK = list(range(300, 304))
+TEC_CURRENT, HEATER_CURRENT, EDFA_CURRENT, LD_CURRENT = CURRENT_BLOCK[0:4]
 for reg in CURRENT_BLOCK:
     REGISTER_TYPE[reg] = 'f'
     BYTE_3[reg] = 2*reg - 488    
@@ -138,7 +153,6 @@ for reg in CURRENT_BLOCK:
 
 #Converts adc value to amps according to CLICK-A FPGA current sensor schematic
 def decode_current(msb, lsb):
-
     val = msb*256 + lsb # complete value
     Vadc = val*3.3/2**12 # voltage as a float
     current = Vadc/(101*.01) #amplifier output/gain/resistor = current

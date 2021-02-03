@@ -26,8 +26,10 @@ DAC_HIGHZ = 0b11 << 4
 """
 Initialize DAC to default settings
 is_por: 1
-ref_enable: 1
-transparent_mode: 0
+Ref_enable: 1
+Transparent_mode: 0
+Target 1: Photodiode Board DAC
+Target 2: FSM DAC
 """
 def init(fpgabus, target_dac):
     reset(fpgabus, target_dac,1)
