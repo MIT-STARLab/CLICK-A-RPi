@@ -405,6 +405,7 @@ class Housekeeping:
             while self.packet_buf:
                 current_pkt = self.packet_buf.pop(0)
                 if (self.all_pkts_send_enable):
+                    print ('Sending Tx Packet')
                     self.tx_socket.send(current_pkt)
 
             # print("HK is running")
