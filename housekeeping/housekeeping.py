@@ -290,7 +290,7 @@ class Housekeeping:
 
         #compile list of packed byte strings (pkt) into single packed byte string
         message = ''
-        for i in range(pkt):
+        for i in range(len(pkt)):
             message += pkt[i]
         return message
 
