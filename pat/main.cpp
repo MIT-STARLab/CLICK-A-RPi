@@ -231,14 +231,14 @@ int main() //int argc, char** argv
 				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_SELF_TEST command.");	
 				camera_test_result = FAIL_SELF_TEST; 
 				//stream error message to buffer
-				self_test_stream << "Camera Initialization Failed! Error:" << camera.error << "\n" << std::endl;
+				self_test_stream << "Camera Initialization Failed! Error:" << camera.error << "\n";
 				if(check_fpga_comms(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port)){
 					fpga_test_result = PASS_SELF_TEST;
 					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test passed.");
 				} else{
 					fpga_test_result = FAIL_SELF_TEST;
 					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test failed.");
-					self_test_stream << "FPGA Comms Fault\n" << std::endl; //stream error message to buffer
+					self_test_stream << "FPGA Comms Fault\n"; //stream error message to buffer
 				}
 				laser_test_result = NULL_SELF_TEST;
 				fsm_test_result = NULL_SELF_TEST;
@@ -500,7 +500,7 @@ int main() //int argc, char** argv
 						} else{
 							camera_test_result = FAIL_SELF_TEST;
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - Camera test failed!");
-							self_test_stream << "Camera Fault\n" << std::endl; //stream error message to buffer
+							self_test_stream << "Camera Fault\n"; //stream error message to buffer
 						}
 
 						//FPGA Comms Test:
@@ -510,24 +510,15 @@ int main() //int argc, char** argv
 						} else{
 							fpga_test_result = FAIL_SELF_TEST;
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - FPGA test failed.");
-							self_test_stream << "FPGA Comms Fault\n" << std::endl; //stream error message to buffer
+							self_test_stream << "FPGA Comms Fault\n"; //stream error message to buffer
 						}						
 						
 						//Laser Test:
 						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
 							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
-							// if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
-							// 	if(calibration.findExposureRange()) //sets calib exposure & window
-							// 	{
-							// 		calibExposure = calibration.preferredExpo; //camera.config->expose_us.read(); //save calib exposure		
-							// 		log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning complete. Calib Exposure = ", calibExposure, " us.");
-							// 	}
-							// 	else
-							// 	{
 							calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
 							camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
-							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning failed! Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
-							//}
+							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
 							camera.config->expose_us.write(calibExposure); //set calib exposure
 							int laser_tests_passed = 0;
 							for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
@@ -542,28 +533,23 @@ int main() //int argc, char** argv
 												laser_tests_passed++;
 											} else{
 												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check failed!");
-												self_test_stream << "(Laser Test) laserOff check failed!\n" << std::endl;
+												self_test_stream << "(Laser Test) laserOff check failed!\n";
 											}
 										} else{
 											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff FPGA command failed!");
-											self_test_stream << "(Laser Test) laserOff FPGA command failed!\n" << std::endl;
+											self_test_stream << "(Laser Test) laserOff FPGA command failed!\n";
 										}
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check failed!");
-										self_test_stream << "(Laser Test) laserOn check failed!\n" << std::endl;
+										self_test_stream << "(Laser Test) laserOn check failed!\n";
 									}
 								} else{
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
-									self_test_stream << "(Laser Test) laserOn FPGA command failed!\n" << std::endl;
+									self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
 								}	
 							}
 							if(laser_tests_passed == 2){laser_test_result = PASS_SELF_TEST;}
 							else{laser_test_result = FAIL_SELF_TEST;}								
-							// } else{
-							// 	log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) First laserOn FPGA command failed!");
-							// 	self_test_stream << "(Laser Test) First laserOn FPGA command failed!\n" << std::endl; //stream error message to buffer
-							// 	laser_test_result = FAIL_SELF_TEST;
-							// }
 
 							if(laser_test_result == PASS_SELF_TEST){
 								//FSM Test:
@@ -573,12 +559,12 @@ int main() //int argc, char** argv
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - FSM test passed.");
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - FSM test failed.");
-										self_test_stream << "(FSM Test) FSM test failed.\n" << std::endl; //stream error message to buffer
+										self_test_stream << "(FSM Test) FSM test failed.\n"; //stream error message to buffer
 										fsm_test_result = FAIL_SELF_TEST;
 									}
 								} else{
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - laserOn FPGA command failed!");
-									self_test_stream << "(FSM Test) laserOn FPGA command failed!\n" << std::endl; //stream error message to buffer
+									self_test_stream << "(FSM Test) laserOn FPGA command failed!\n"; //stream error message to buffer
 									fsm_test_result = NULL_SELF_TEST;
 								}
 							
@@ -595,24 +581,25 @@ int main() //int argc, char** argv
 												if(calibration.s00/calibration.s11 - 1/sqrt(2) <= CALIB_SENSITIVITY_RATIO_TOL){
 													calibration_test_result = PASS_SELF_TEST;
 													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Calibration Test passed.");
+													self_test_stream << "None";
 												} else{
 													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Sensitivity ratio check failed.");
-													self_test_stream << "(Calibration Test) Sensitivity ratio check failed.\n" << std::endl;
+													self_test_stream << "(Calibration Test) Sensitivity ratio check failed.\n";
 													calibration_test_result = FAIL_SELF_TEST;
 												}
 											} else{
 												log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test) Y offset check failed: (calibration.centerOffsetY = ", calibration.centerOffsetY, ") > (CALIB_OFFSET_TOLERANCE = ", CALIB_OFFSET_TOLERANCE, ")"); 
-												self_test_stream << "(Calibration Test) Y offset (" << calibration.centerOffsetY << ") check failed.\n" << std::endl;
+												self_test_stream << "(Calibration Test) Y offset (" << calibration.centerOffsetY << ") check failed.\n";
 												calibration_test_result = FAIL_SELF_TEST;
 											}
 										} else{
 											log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test) X offset check failed: (calibration.centerOffsetX = ", calibration.centerOffsetX, ") > (CALIB_OFFSET_TOLERANCE = ", CALIB_OFFSET_TOLERANCE, ")"); 
-											self_test_stream << "(Calibration Test) X offset (" << calibration.centerOffsetX << ") check failed.\n" << std::endl;
+											self_test_stream << "(Calibration Test) X offset (" << calibration.centerOffsetX << ") check failed.\n";
 											calibration_test_result = FAIL_SELF_TEST;
 										}
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp CMD_SELF_TEST - (Calibration Test) Calibration failed.");
-										self_test_stream << "(Calibration Test) Calibration failed.\n" << std::endl; //stream error message to buffer
+										self_test_stream << "(Calibration Test) Calibration failed.\n"; //stream error message to buffer
 										calibration_test_result = FAIL_SELF_TEST;
 									}	
 								} else{		
@@ -630,11 +617,6 @@ int main() //int argc, char** argv
 
 						//send self test results
 						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
-						
-						//turn off laser before exiting
-						if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
-							log(pat_health_port, textFileOut,  "In main.cpp CMD_SELF_TEST - Final laserOff FPGA command failed!");
-						}	
 						break;
 
 					case CMD_END_PROCESS:
