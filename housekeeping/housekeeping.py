@@ -144,13 +144,15 @@ class Housekeeping:
         self.hk_control_socket = self.context.socket(zmq.SUB)
         self.ch_heartbeat_socket = self.context.socket(zmq.SUB)
 
-        self.pat_health_socket.connect("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT)
+        self.pat_health_socket.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
+        
         self.fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
         self.fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
         self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
         self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
 
+        self.pat_health_socket.setsockopt(zmq.SUBSCRIBE, b'')
         self.fpga_ans_socket.setsockopt(zmq.SUBSCRIBE, str(self.pid).encode('ascii'))
 
         self.poller = zmq.Poller()
@@ -298,7 +300,8 @@ class Housekeeping:
             # print("Handling PAT pkt")
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
-            _, _, _, payload = pat_pkt.decode(data)
+            payload, _, _, _ = pat_pkt.decode(data)
+            print ('PAT Health Received: ', payload)
 
         elif (process_id == HK_FPGA_ID):
             # print("Handling FPGA pkt")

@@ -54,10 +54,10 @@ socket_test_response_packets = context.socket(zmq.PUB) #send messages on this po
 socket_test_response_packets.connect("tcp://localhost:%s" % TEST_RESPONSE_PORT) #connect to specific address (localhost)
 
 socket_pat_control = context.socket(zmq.PUB) #send messages on this port
-socket_pat_control.bind("tcp://*:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
+socket_pat_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
-socket_housekeeping.connect("tcp://localhost:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
+socket_housekeeping.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
 
 # socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
 # socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
@@ -84,7 +84,7 @@ poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 print ("Pulling PAT Status Packets")
 print ("on port {}".format(PAT_STATUS_PORT))
 socket_PAT_status = context.socket(zmq.SUB)
-socket_PAT_status.bind("tcp://*:%s" % PAT_STATUS_PORT)
+socket_PAT_status.bind("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
 socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_status = zmq.Poller()
 poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
