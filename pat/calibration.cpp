@@ -426,28 +426,17 @@ int Calibration::determineSmoothing(Image &frame)
 bool Calibration::checkLaserOn(Group& calib)
 //-----------------------------------------------------------------------------
 {
-	log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - camera.requestFrame()...");
 	camera.requestFrame();
-	log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - camera.waitForFrame()...");
 	if(camera.waitForFrame())
 	{
-		log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Image frame...");
 		Image frame(camera, fileStream, pat_health_port);
-		log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check 1...");
 		if(frame.histBrightest > CALIB_MIN_BRIGHTNESS){
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check 2...");
 			if(frame.histBrightest > frame.histPeak){
-				log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check 3...");
 				if(frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE){
-					log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - frame.performPixelGrouping()...");
 					int numGroups = frame.performPixelGrouping();
-					log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check 4...");
 					if(numGroups > 0){
-						log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - frame.groups[0]...");
 						Group& spot = frame.groups[0];
-						log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check 5...");
 						if(spot.valueMax < CALIB_HAPPY_BRIGHTNESS){
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Copy properties...");
 							//copy spot properties to calib
 							calib.x = frame.area.x + spot.x;
 							calib.y = frame.area.y + spot.y;
@@ -488,17 +477,7 @@ bool Calibration::checkLaserOff()
 	{
 		Image frame(camera, fileStream, pat_health_port);
 		if(frame.histBrightest <= CALIB_MIN_BRIGHTNESS){
-			if(frame.histBrightest <= frame.histPeak){
-				if(frame.histBrightest - frame.histPeak <= CALIB_GOOD_PEAKTOMAX_DISTANCE){
-					return true;
-				} else{
-					log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: (frame.histBrightest = ", frame.histBrightest, ") - ",
-						"(frame.histPeak = ", frame.histPeak, ") = ", frame.histBrightest - frame.histPeak, 
-						" > (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE, ")");
-				}
-			} else{
-				log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: (frame.histBrightest = ", frame.histBrightest, ") > (frame.histPeak = ", frame.histPeak, ")");
-			}
+			return true;
 		} else{
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: (frame.histBrightest = ", frame.histBrightest, ") > (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
 		}
