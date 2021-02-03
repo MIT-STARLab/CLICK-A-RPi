@@ -248,9 +248,7 @@ int main() //int argc, char** argv
 				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 				
 			} else if(command == CMD_END_PROCESS){
-				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_END_PROCESS command. Exiting...");
-				//OPERATIONAL = false;
-				//log(pat_health_port, textFileOut,  "In main.cpp - Saving text file and ending process.");
+				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_END_PROCESS command. Saving text file and ending process.");
 				textFileOut.close(); //close telemetry text file
 				pat_status_port.close();
 				pat_health_port.close();
@@ -259,10 +257,7 @@ int main() //int argc, char** argv
 				fpga_map_answer_port.close();
 				tx_packets_port.close();
 				context.close();
-				std::cout << "Context Closed." << std::endl;
-				//return 0;
 				exit(0); 
-				//break;
 			}
 		}
 		//Try to initialize again
