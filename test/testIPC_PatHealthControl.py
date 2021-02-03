@@ -62,19 +62,19 @@ def initialize_cal_laser():
 context = zmq.Context()
 
 socket_PAT_health = context.socket(zmq.SUB)
-socket_PAT_health.bind("tcp://*:%s" % PAT_HEALTH_PORT)
+socket_PAT_health.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT)
 socket_PAT_health.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_health = zmq.Poller()
 poller_PAT_health.register(socket_PAT_health, zmq.POLLIN)
 
 socket_PAT_status = context.socket(zmq.SUB)
-socket_PAT_status.bind("tcp://*:%s" % PAT_STATUS_PORT)
+socket_PAT_status.bind("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
 socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_status = zmq.Poller()
 poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 socket_PAT_control = context.socket(zmq.PUB)
-socket_PAT_control.bind("tcp://*:%s" % PAT_CONTROL_PORT)
+socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)

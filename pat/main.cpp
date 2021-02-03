@@ -108,9 +108,9 @@ int main() //int argc, char** argv
 {	
 	// https://ogbe.net/blog/zmq_helloworld.html
 	// define ports for PUB/SUB (this process binds)
-	std::string PAT_STATUS_PORT = "tcp://localhost:5564"; //PUB to Status
-	std::string PAT_HEALTH_PORT = "tcp://localhost:5559"; //PUB to Housekeeping
-    std::string PAT_CONTROL_PORT = "tcp://localhost:5560"; //SUB to Command Handler
+	std::string PAT_STATUS_PORT = "tcp://127.0.0.1:5564"; //PUB to Status
+	std::string PAT_HEALTH_PORT = "tcp://127.0.0.1:5559"; //PUB to Housekeeping
+    std::string PAT_CONTROL_PORT = "tcp://127.0.0.1:5560"; //SUB to Command Handler
     std::string FPGA_MAP_REQUEST_PORT = "tcp://localhost:5558"; //PUB to FPGA Driver
     std::string FPGA_MAP_ANSWER_PORT = "tcp://localhost:5557"; //SUB to FPGA Driver
     std::string TX_PACKETS_PORT = "tcp://localhost:5561"; //PUB to Packetizer & Bus Interface
