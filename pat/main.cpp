@@ -404,12 +404,12 @@ int main() //int argc, char** argv
 						for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
 							//switch laser on
 							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
-								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOn fpga command passed.");
+								//log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOn fpga command passed.");
 								if(calibration.checkLaserOn(calib)){
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOn check passed.");
 									logImage(string("CMD_CALIB_LASER_TEST_ON"), camera, textFileOut, pat_health_port); //save image
 									if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
-										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOff fpga command passed.");
+										//log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOff fpga command passed.");
 										if(calibration.checkLaserOff()){
 											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOff check passed.");
 											logImage(string("CMD_CALIB_LASER_TEST_OFF"), camera, textFileOut, pat_health_port);
@@ -527,17 +527,16 @@ int main() //int argc, char** argv
 								else
 								{
 									calibExposure = CALIB_EXPOSURE_SELF_TEST; 
-									camera.config->expose_us.write(calibExposure); //set calib exposure
 									camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning failed! Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
 								}
+								camera.config->expose_us.write(calibExposure); //set calib exposure
 								int laser_tests_passed = 0;
 								for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
 									if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 										if(calibration.checkLaserOn(calib)){
 											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check passed.");
 											logImage(string("CMD_SELF_TEST_LASER_ON"), camera, textFileOut, pat_health_port); //save image
-											haveCalibKnowledge = true;
 											if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 												if(calibration.checkLaserOff()){
 													log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check passed.");

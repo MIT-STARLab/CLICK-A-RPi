@@ -104,16 +104,17 @@ bool Calibration::findExposureRange(std::string filePath)
 							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
 							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
 							preferredExpo = exposure;
-							if(smoothing == 0)
-							{
-								int test = determineSmoothing(frame);
-								if(test != smoothing)
-								{
-									smoothing = test;
-									log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
-									return true;
-								}
-							}
+							return true; 
+							// if(smoothing == 0)
+							// {
+							// 	int test = determineSmoothing(frame);
+							// 	if(test != smoothing)
+							// 	{
+							// 		smoothing = test;
+							// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
+							// 		return true;
+							// 	}
+							// }
 						}
 						// Find lowest acceptable exposure where no gain is needed
 						if(gain == 0 && lowestExpoNoGain == 0 && spot.valueMax <= CALIB_MIN_BRIGHTNESS)
