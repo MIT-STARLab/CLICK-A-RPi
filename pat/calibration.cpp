@@ -426,9 +426,7 @@ int Calibration::determineSmoothing(Image &frame)
 bool Calibration::checkLaserOn(Group& calib)
 //-----------------------------------------------------------------------------
 {
-	int skip = camera.queuedCount;
 	camera.requestFrame();
-	camera.ignoreNextFrames(skip); // Skip pre-queued old frames
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port, smoothing);
@@ -474,9 +472,7 @@ bool Calibration::checkLaserOn(Group& calib)
 bool Calibration::checkLaserOff()
 //-----------------------------------------------------------------------------
 {
-	int skip = camera.queuedCount;
 	camera.requestFrame();
-	camera.ignoreNextFrames(skip); // Skip pre-queued old frames
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port, smoothing);
