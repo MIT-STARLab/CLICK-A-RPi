@@ -234,6 +234,7 @@ bool Calibration::windowAndTune(Image& frame)
 		frame.area.x + spot.x, ",", frame.area.y + spot.y, "]"); //with smoothing", smoothing);
 
 	// Grab a frame to determine the next step
+	camera.requestFrame();
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
@@ -311,7 +312,11 @@ bool Calibration::windowAndTune(Image& frame)
 				// Very high parameters reached
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, ") with maximum parameters: CALIB_MAX_EXPOSURE = ", CALIB_MAX_EXPOSURE, ", gain = 0");
 			}
+		} else{
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Pixel grouping failed!");
 		}
+	} else{
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - wait for frame failed!");
 	}
 	log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Exposure tuning failed!");
 	return false;
@@ -592,7 +597,7 @@ bool Calibration::checkLaserOn(Group& calib)
 					int numGroups = frame.performPixelGrouping();
 					if(numGroups > 0){
 						Group& spot = frame.groups[0];
-						if(spot.valueMax < CALIB_HAPPY_BRIGHTNESS){
+						if(spot.valueMax >= CALIB_MIN_BRIGHTNESS){
 							//copy spot properties to calib
 							calib.x = frame.area.x + spot.x;
 							calib.y = frame.area.y + spot.y;
@@ -601,7 +606,7 @@ bool Calibration::checkLaserOn(Group& calib)
 							calib.pixelCount = spot.pixelCount;
 							return true;
 						} else{
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (spot.valueMax = ", spot.valueMax, ") >= (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, ")");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (spot.valueMax = ", spot.valueMax, ") < (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
 						}
 					} else{
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (numGroups = ", numGroups, ") = 0");
