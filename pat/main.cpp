@@ -252,22 +252,16 @@ int main() //int argc, char** argv
 				//OPERATIONAL = false;
 				//log(pat_health_port, textFileOut,  "In main.cpp - Saving text file and ending process.");
 				textFileOut.close(); //close telemetry text file
-				std::cout << "TXT File Saved." << std::endl;
 				pat_status_port.close();
-				std::cout << "Status port closed" << std::endl;
 				pat_health_port.close();
-				std::cout << "Health port closed" << std::endl;
 				pat_control_port.close();
-				std::cout << "Control port closed" << std::endl;
 				fpga_map_request_port.close();
-				std::cout << "FPGA Request port closed" << std::endl;
 				fpga_map_answer_port.close();
-				std::cout << "FPGA Answer port closed" << std::endl;
 				tx_packets_port.close();
-				std::cout << "All Ports Closed." << std::endl;
 				context.close();
 				std::cout << "Context Closed." << std::endl;
-				return 0;
+				//return 0;
+				exit(0); 
 				//break;
 			}
 		}
