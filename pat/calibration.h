@@ -16,13 +16,17 @@
 
 #define CALIB_MIN_BRIGHTNESS 100	// Minimum brightness of calib laser spot to work with
 #define CALIB_MAX_EXPOSURE 500 	// Max exposure in us to check for range tuning
+#define CALIB_MIN_EXPOSURE 15 //minimum exposure in us to check for range tuning
+#define CALIB_EXP_INCREMENT 50 //coarse exposure search increment
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow
 #define CALIB_EXP_DIVIDER 15		// Exposure tuning division factor, the higher the finer tuning, but slower; for range search
 #define CALIB_MAX_SMOOTHING 3		// Maximum blurring of frames allowed
 #define CALIB_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
 #define CALIB_HAPPY_BRIGHTNESS 300				// Good brightness for auto exposure tuning
+#define CALIB_TUNING_TOLERANCE 50				// Brightness tolerance for auto exposure tuning
 #define CALIB_FSM_DISPLACEMENT_TOL 100 //tolerance for number of pixels to have moved when changing FSM between max settings (should actually be arround 200)
+
 
 // A pair of source and destination points (Detector -> FSM)
 class Pair
@@ -42,12 +46,14 @@ class Calibration
 	// Calculation functions
 	void calculateSensitivityMatrix(std::vector<Pair>& data);
 	void calculateAffineParameters(std::vector<Pair>& data);
+	bool verifyFrame(Image& frame);
+	bool windowAndTune(Image& frame);
 public:
 	// Affine transform parameters
 	double a00, a01, a10, a11, t0, t1;
 	// Sensitivity matrix
 	double s00, s01, s10, s11;
-	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, smoothing, centerOffsetX, centerOffsetY;
+	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, centerOffsetX, centerOffsetY; //smoothing
 	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(camera), fsm(fsm), fileStream(fileStreamIn), pat_health_port(pat_health_port_in){};
 	int gainForExposure(int exposure);
 	int determineSmoothing(Image& frame);

@@ -13,152 +13,307 @@
 bool Calibration::findExposureRange(std::string filePath)
 //-----------------------------------------------------------------------------
 {
-	int gain = 0, exposure = CALIB_MAX_EXPOSURE/10, skip = camera.queuedCount;
-	preferredExpo = CALIB_MAX_EXPOSURE + 1;
-	lowestExpoNoGain = 0;
+	int skip = camera.queuedCount;
+	int exposure = CALIB_MIN_EXPOSURE; 
+	int gain = 0;
+	//preferredExpo = CALIB_MAX_EXPOSURE + 1;
+	//lowestExpoNoGain = 0;
 
-	// Configure camera for max exposure and big window around center
+	// Configure camera for big window around center
 	camera.config->gain_dB.write(gain);
 	camera.config->binningMode.write(cbmOff);
-	camera.config->expose_us.write(exposure);
 	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
-	
-    //logImage(string("CALIBRATION_debug"), camera, fileStream, pat_health_port);
     
-    camera.requestFrame();
-
-	// Skip pre-queued old frames
-	camera.ignoreNextFrames(skip);
-
+	//Try with minimum exposure
+	camera.config->expose_us.write(exposure);
+    camera.requestFrame();	
+	camera.ignoreNextFrames(skip); // Skip pre-queued old frames
 	if(camera.waitForFrame())
 	{
 		Image init(camera, fileStream, pat_health_port);
-		if(init.histBrightest <= CALIB_MIN_BRIGHTNESS){
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
-			"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
-			//save image debug telemetry
-			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
-			init.savePNG(imageFileName);
-			return false;
-		}
+		if(verifyFrame(init) && windowAndTune(init)){return true;}
+	}
 
-		if(init.histBrightest <= init.histPeak){
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
-			"(init.histBrightest = ", init.histBrightest, ") <= (init.histPeak = ", init.histPeak, ")");
-			//save image debug telemetry
-			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
-			init.savePNG(imageFileName);
-			return false;
-		}
-
-		if(init.histBrightest - init.histPeak <= CALIB_GOOD_PEAKTOMAX_DISTANCE){
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
-			"(init.histBrightest = ", init.histBrightest, ") - ",
-			"(init.histPeak = ", init.histPeak, ") = ", init.histBrightest - init.histPeak, 
-			" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE, ")");
-			//save image debug telemetry
-			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
-			init.savePNG(imageFileName);
-			return false;
-		}
-
-		/*
-		init.histBrightest > CALIB_MIN_BRIGHTNESS &&
-		init.histBrightest > init.histPeak &&
-		init.histBrightest - init.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE &&
-		init.performPixelGrouping() > 0
-		*/
-		int num_groups = init.performPixelGrouping();
-		if(num_groups > 0)
+	//Start incrementing upwards
+	for(; exposure <= CALIB_MAX_EXPOSURE; exposure += CALIB_EXP_INCREMENT){
+		camera.config->expose_us.write(exposure);
+		camera.requestFrame();	
+		if(camera.waitForFrame())
 		{
-			// Check initial image values
-			Group& spot = init.groups[0];
+			Image frame(camera, fileStream, pat_health_port);
+			if(verifyFrame(frame) && windowAndTune(frame)){return true;}
+		}
+	}
+	return false; 
 
-			// Set small window on spot location and search for range
-			camera.setCenteredWindow(init.area.x + spot.x, init.area.y + spot.y, CALIB_SMALL_WINDOW);
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max", CALIB_MAX_EXPOSURE, "us at [",
-				init.area.x + spot.x, ",", init.area.y + spot.y, "]"); //with smoothing", smoothing);
+	// //Verify initial frame
+    // camera.requestFrame();	
+	// camera.ignoreNextFrames(skip); // Skip pre-queued old frames
+	// if(camera.waitForFrame())
+	// {
+	// 	Image init(camera, fileStream, pat_health_port);
+	// 	if(init.histBrightest <= CALIB_MIN_BRIGHTNESS){
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+	// 		"(init.histBrightest = ", init.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+	// 		//save image debug telemetry
+	// 		std::string nameTag = std::string("DEBUG_findExposureRange");
+	// 		std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
+	// 		init.savePNG(imageFileName);
+	// 		return false;
+	// 	}
 
-			for(; exposure >= 10 && exposure/CALIB_EXP_DIVIDER >= 1; exposure -= exposure/CALIB_EXP_DIVIDER)
-			{
-				// Alter exposure
-				camera.config->expose_us.write(exposure);
-				camera.requestFrame();
-				if(camera.waitForFrame())
-				{
-					Image frame(camera, fileStream, pat_health_port); //smoothing
-					if(frame.histBrightest > frame.histPeak &&
-					   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE &&
-					   frame.performPixelGrouping() > 0)
-					{
-						spot = frame.groups[0];
-						// Find preferred exposure time (good brightness with no gain)
-						if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < CALIB_HAPPY_BRIGHTNESS)
-						{
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
-							preferredExpo = exposure;
-							return true; 
-							// if(smoothing == 0)
-							// {
-							// 	int test = determineSmoothing(frame);
-							// 	if(test != smoothing)
-							// 	{
-							// 		smoothing = test;
-							// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
-							// 		return true;
-							// 	}
-							// }
-						}
-						// Find lowest acceptable exposure where no gain is needed
-						if(gain == 0 && lowestExpoNoGain == 0 && spot.valueMax <= CALIB_MIN_BRIGHTNESS)
-						{
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found lowest no-gain exposure:", exposure, "us");
-							lowestExpoNoGain = exposure;
-						}
-						// Check for lowest acceptable exposure with gain
-						if(spot.valueMax <= CALIB_MIN_BRIGHTNESS)
-						{
-							if(gain < CALIB_MAX_GAIN)
-							{
-								gain++;
-								camera.config->gain_dB.write(gain);
-							}
-							else break;
-						}
-					}
-					else
-					{
-						log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Lost spot during search! Peak is at", frame.histPeak, "brightest is", frame.histBrightest);
-					}
-				}
-				else return false;
-			}
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Finished range search, lowest exposure", exposure, "us needs", gain, "dB");
-			lowestExpo = exposure;
-			gainMax = gain;
-			if(gain == 0 && preferredExpo > CALIB_MAX_EXPOSURE) preferredExpo = exposure;
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
+	// 	if(init.histBrightest <= init.histPeak){
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+	// 		"(init.histBrightest = ", init.histBrightest, ") <= (init.histPeak = ", init.histPeak, ")");
+	// 		//save image debug telemetry
+	// 		std::string nameTag = std::string("DEBUG_findExposureRange");
+	// 		std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
+	// 		init.savePNG(imageFileName);
+	// 		return false;
+	// 	}
+
+	// 	if(init.histBrightest - init.histPeak <= CALIB_GOOD_PEAKTOMAX_DISTANCE){
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: ", 
+	// 		"(init.histBrightest = ", init.histBrightest, ") - ",
+	// 		"(init.histPeak = ", init.histPeak, ") = ", init.histBrightest - init.histPeak, 
+	// 		" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE, ")");
+	// 		//save image debug telemetry
+	// 		std::string nameTag = std::string("DEBUG_findExposureRange");
+	// 		std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Saving image telemetry as: ", imageFileName);
+	// 		init.savePNG(imageFileName);
+	// 		return false;
+	// 	}
+
+	// 	int num_groups = init.performPixelGrouping();
+	// 	if(num_groups > 0)
+	// 	{
+	// 		// Check initial image values
+	// 		Group& spot = init.groups[0];
+
+	// 		// Set small window on spot location and search for range
+	// 		camera.setCenteredWindow(init.area.x + spot.x, init.area.y + spot.y, CALIB_SMALL_WINDOW);
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Looking for calib expo range, starting with max", CALIB_MAX_EXPOSURE, "us at [",
+	// 			init.area.x + spot.x, ",", init.area.y + spot.y, "]"); //with smoothing", smoothing);
+
+	// 		for(; exposure >= 10 && exposure/CALIB_EXP_DIVIDER >= 1; exposure -= exposure/CALIB_EXP_DIVIDER)
+	// 		{
+	// 			// Alter exposure
+	// 			camera.config->expose_us.write(exposure);
+	// 			camera.requestFrame();
+	// 			if(camera.waitForFrame())
+	// 			{
+	// 				Image frame(camera, fileStream, pat_health_port); //smoothing
+	// 				if(frame.histBrightest > frame.histPeak &&
+	// 				   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE &&
+	// 				   frame.performPixelGrouping() > 0)
+	// 				{
+	// 					spot = frame.groups[0];
+	// 					// Find preferred exposure time (good brightness with no gain)
+	// 					if(preferredExpo > CALIB_MAX_EXPOSURE && spot.valueMax < CALIB_HAPPY_BRIGHTNESS)
+	// 					{
+	// 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found preferred exposure: ", exposure, "us,", gain, "dB");
+	// 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
+	// 						preferredExpo = exposure;
+	// 						return true; 
+	// 						// if(smoothing == 0)
+	// 						// {
+	// 						// 	int test = determineSmoothing(frame);
+	// 						// 	if(test != smoothing)
+	// 						// 	{
+	// 						// 		smoothing = test;
+	// 						// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found smoothing: ", smoothing); 
+	// 						// 		return true;
+	// 						// 	}
+	// 						// }
+	// 					}
+	// 					// Find lowest acceptable exposure where no gain is needed
+	// 					if(gain == 0 && lowestExpoNoGain == 0 && spot.valueMax <= CALIB_MIN_BRIGHTNESS)
+	// 					{
+	// 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Found lowest no-gain exposure:", exposure, "us");
+	// 						lowestExpoNoGain = exposure;
+	// 					}
+	// 					// Check for lowest acceptable exposure with gain
+	// 					if(spot.valueMax <= CALIB_MIN_BRIGHTNESS)
+	// 					{
+	// 						if(gain < CALIB_MAX_GAIN)
+	// 						{
+	// 							gain++;
+	// 							camera.config->gain_dB.write(gain);
+	// 						}
+	// 						else break;
+	// 					}
+	// 				}
+	// 				else
+	// 				{
+	// 					log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Lost spot during search! Peak is at", frame.histPeak, "brightest is", frame.histBrightest);
+	// 				}
+	// 			}
+	// 			else return false;
+	// 		}
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Finished range search, lowest exposure", exposure, "us needs", gain, "dB");
+	// 		lowestExpo = exposure;
+	// 		gainMax = gain;
+	// 		if(gain == 0 && preferredExpo > CALIB_MAX_EXPOSURE) preferredExpo = exposure;
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Spot Properties: spot.valueMax = ", spot.valueMax, ", spot.valueSum = ", spot.valueSum, "spot.pixelCount = ", spot.pixelCount);
+	// 		return true;
+	// 	}
+	// 	else{
+	// 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: (num_groups = ", num_groups,") <= 0");
+	// 		//save image debug telemetry
+	// 		std::string nameTag = std::string("DEBUG_findExposureRange");
+	// 		std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
+	// 		log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
+	// 		init.savePNG(imageFileName);
+	// 	}
+	// }
+	// else{
+	// 	log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - camera.waitForFrame() Failed");
+	// }
+	// return false;
+}
+
+// Verify calibration spot in frame prior to exposure tuning
+//-----------------------------------------------------------------------------
+bool Calibration::verifyFrame(Image& frame)
+//-----------------------------------------------------------------------------
+{
+	if(frame.histBrightest > CALIB_MIN_BRIGHTNESS &&
+	   frame.histBrightest > frame.histPeak &&
+	   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE)
+	{
+		// All checks passed and we have some good groups!
+		if(frame.performPixelGrouping() > 0)
+		{
+			preferredExpo = camera.config->expose_us.read();
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::verifyFrame - Frame verified at exp = ", preferredExpo, ". Tuning camera parameters.");
 			return true;
 		}
-		else{
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - Error: (num_groups = ", num_groups,") <= 0");
-			//save image debug telemetry
-			std::string nameTag = std::string("DEBUG_findExposureRange");
-			std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-			log(pat_health_port, fileStream, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
-			init.savePNG(imageFileName);
-		}
+		else log(pat_health_port, fileStream, "In calibration.cpp Calibration::verifyFrame - Frame has good properties but grouping did not succeed");
 	}
 	else{
-		log(pat_health_port, fileStream, "In calibration.cpp Calibration::findExposureRange - camera.waitForFrame() Failed");
+		log(pat_health_port, fileStream, "In calibration.cpp Calibration::verifyFrame - Frame property check failed! ",
+			"frame.histBrightest = ", frame.histBrightest, " should be >= CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS,
+			", \n and frame.histBrightest = ", frame.histBrightest, " should be > frame.histPeak = ", frame.histPeak,
+			", \n and (frame.histBrightest - frame.histPeak) = ", frame.histBrightest - frame.histPeak, " should be > CALIB_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE);
 	}
+	return false;
+}
+
+// Tune exposure for tracking frame
+//-----------------------------------------------------------------------------
+bool Calibration::windowAndTune(Image& frame)
+//-----------------------------------------------------------------------------
+{
+	// Helper testing inline function
+	auto test = [&](bool desaturating) -> bool
+	{
+		camera.requestFrame();
+		if(camera.waitForFrame())
+		{
+			Image test(camera, fileStream, pat_health_port);
+			if(test.performPixelGrouping() > 0)
+			{
+				Group& spot = test.groups[0];
+				if(desaturating && (spot.valueMax <= CALIB_HAPPY_BRIGHTNESS)) return true;
+				if(!desaturating && (spot.valueMax >= CALIB_HAPPY_BRIGHTNESS)) return true;
+			}
+		}
+		return false;
+	};
+
+	// Check initial image values
+	Group& spot = frame.groups[0];
+
+	// Set small window on spot location and search for range
+	camera.config->expose_us.write(preferredExpo);
+	camera.setCenteredWindow(frame.area.x + spot.x, frame.area.y + spot.y, CALIB_SMALL_WINDOW);
+	log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Tuning calib exposure, starting with expo = ", preferredExpo, "us at [",
+		frame.area.x + spot.x, ",", frame.area.y + spot.y, "]"); //with smoothing", smoothing);
+
+	// Grab a frame to determine the next step
+	if(camera.waitForFrame())
+	{
+		Image frame(camera, fileStream, pat_health_port);
+		if(frame.performPixelGrouping() > 0)
+		{
+			Group& spot = frame.groups[0];
+			// Check if tuning is necessary
+			if(abs((int)spot.valueMax - CALIB_HAPPY_BRIGHTNESS) < CALIB_TUNING_TOLERANCE){
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Tuning unneccessary. Exiting...");
+				return true;
+			}
+			// Start Tuning
+			bool desaturating;
+			if(spot.valueMax > CALIB_HAPPY_BRIGHTNESS)
+			{
+				desaturating = true;
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - ",
+				"(spot.valueMax = ", spot.valueMax, ") > (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS,"). Reducing exposure..."); 
+				// Start decreasing exposure
+				int exposure = preferredExpo;
+				for(exposure -= exposure/CALIB_EXP_DIVIDER; (exposure >= CALIB_MIN_EXPOSURE) && (exposure/CALIB_EXP_DIVIDER >= 1); exposure -= exposure/CALIB_EXP_DIVIDER)
+				{
+					camera.config->expose_us.write(exposure);
+					if(test(desaturating)){
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Exposure tuning successful. exposure = ", exposure);
+						preferredExpo = exposure;
+						return true;
+					}
+				}
+
+				// log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Exposure tuning failed. Reducing gain...");
+				// // Start decreasing gain if it's non-zero
+				// int gain = camera.config->gain_dB.read();
+				// for(gain--; gain > 0; gain--)
+				// {
+				// 	camera.config->gain_dB.write(gain);
+				// 	if(test(desaturating)){
+				// 		log(pat_health_port, fileStream, "In tracking.cpp calibration.cpp Calibration::windowAndTune - Gain tuning successful. gain = ", gain);
+				// 		return true;
+				// 	}
+				// }
+
+				// Camera reached lower limit, too high power
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to reduce brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, ") with minimum parameters: CALIB_MIN_EXPOSURE = ", CALIB_MIN_EXPOSURE, ", gain = 0");
+			}
+			// Otherwise, have to increase exposure
+			else
+			{
+				desaturating = false; 
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - ",
+				"(spot.valueMax = ", spot.valueMax, ") <= (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS,"). Increasing exposure...");
+				// Start increasing exposure
+				int exposure = preferredExpo;
+				for(exposure += exposure/CALIB_EXP_DIVIDER; (exposure <= CALIB_MAX_EXPOSURE); exposure += exposure/CALIB_EXP_DIVIDER)
+				{
+					camera.config->expose_us.write(exposure);
+					if(test(desaturating)){
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Exposure tuning successful. exposure = ", exposure);
+						preferredExpo = exposure;
+						return true;
+					}
+				}
+
+				// // Start increasing gain
+				// int gain = camera.config->gain_dB.read();
+				// for(gain++; gain <= TRACK_MAX_GAIN; gain++)
+				// {
+				// 	camera.config->gain_dB.write(gain);
+				// 	if(test(desaturating)){
+				// 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain);
+				// 		return true;
+				// 	}
+				// }
+
+				// Very high parameters reached
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, ") with maximum parameters: CALIB_MAX_EXPOSURE = ", CALIB_MAX_EXPOSURE, ", gain = 0");
+			}
+		}
+	}
+	log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Exposure tuning failed!");
 	return false;
 }
 

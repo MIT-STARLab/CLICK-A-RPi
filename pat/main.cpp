@@ -404,12 +404,10 @@ int main() //int argc, char** argv
 						for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
 							//switch laser on
 							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
-								//log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOn fpga command passed.");
 								if(calibration.checkLaserOn(calib)){
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOn check passed.");
 									logImage(string("CMD_CALIB_LASER_TEST_ON"), camera, textFileOut, pat_health_port); //save image
 									if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
-										//log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOff fpga command passed.");
 										if(calibration.checkLaserOff()){
 											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_CALIB_LASER_TEST - laserOff check passed.");
 											logImage(string("CMD_CALIB_LASER_TEST_OFF"), camera, textFileOut, pat_health_port);
@@ -521,12 +519,12 @@ int main() //int argc, char** argv
 							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser on	
 								if(calibration.findExposureRange()) //sets calib exposure & window
 								{
-									calibExposure = camera.config->expose_us.read(); //save calib exposure									
+									calibExposure = calibration.preferredExpo; //camera.config->expose_us.read(); //save calib exposure		
 									log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning complete. Calib Exposure = ", calibExposure, " us.");
 								}
 								else
 								{
-									calibExposure = CALIB_EXPOSURE_SELF_TEST; 
+									calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
 									camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Exposure tuning failed! Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
 								}

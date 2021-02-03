@@ -243,91 +243,88 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		Image frame(camera, fileStream, pat_health_port);
 		if(frame.performPixelGrouping() > 0)
 		{
-			// Determine smoothing
+			//Determine smoothing
 			//beaconSmoothing = calibration.determineSmoothing(frame);
 			//frame.applyFastBlur(beaconSmoothing);
+			// if(frame.performPixelGrouping() > 0){...}
+			Group& spot = frame.groups[0];
+			// Check if tuning is necessary
+			if(abs((int)spot.valueMax - TRACK_HAPPY_BRIGHTNESS) < TRACK_TUNING_TOLERANCE){
+				// Copy properties
+				beacon.x = frame.area.x + spot.x;
+				beacon.y = frame.area.y + spot.y;
+				beacon.valueMax = spot.valueMax;
+				beacon.valueSum = spot.valueSum;
+				beacon.pixelCount = spot.pixelCount;
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Tuning unneccessary. Exiting...");
+				return true;
+			}
+			// Start Tuning
+			updateTrackingWindow(frame, spot, tuningWindow);
+			camera.setWindow(tuningWindow);
+			bool desaturating;
 
-			if(frame.performPixelGrouping() > 0)
+			if(spot.valueMax > TRACK_HAPPY_BRIGHTNESS)
 			{
-				Group& spot = frame.groups[0];
-				// Check if tuning is necessary
-				if(abs((int)spot.valueMax - TRACK_HAPPY_BRIGHTNESS) < TRACK_TUNING_TOLERANCE){
-					// Copy properties
-					beacon.x = frame.area.x + spot.x;
-					beacon.y = frame.area.y + spot.y;
-					beacon.valueMax = spot.valueMax;
-					beacon.valueSum = spot.valueSum;
-					beacon.pixelCount = spot.pixelCount;
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Tuning unneccessary. Exiting...");
-					return true;
-				}
-				// Start Tuning
-				updateTrackingWindow(frame, spot, tuningWindow);
-				camera.setWindow(tuningWindow);
-				bool desaturating;
-
-				if(spot.valueMax > TRACK_HAPPY_BRIGHTNESS)
+				desaturating = true;
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
+				"(spot.valueMax = ", spot.valueMax, ") > (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Reducing exposure..."); 
+				// Start decreasing exposure
+				int exposure = camera.config->expose_us.read();
+				for(exposure -= exposure/TRACK_TUNING_EXP_DIVIDER; (exposure >= TRACK_MIN_EXPOSURE) && (exposure/TRACK_TUNING_EXP_DIVIDER >= 1); exposure -= exposure/TRACK_TUNING_EXP_DIVIDER)
 				{
-					desaturating = true;
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
-					"(spot.valueMax = ", spot.valueMax, ") > (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Reducing exposure..."); 
-					// Start decreasing exposure
-					int exposure = camera.config->expose_us.read();
-					for(exposure -= exposure/TRACK_TUNING_EXP_DIVIDER; (exposure >= TRACK_MIN_EXPOSURE) && (exposure/TRACK_TUNING_EXP_DIVIDER >= 1); exposure -= exposure/TRACK_TUNING_EXP_DIVIDER)
-					{
-						camera.config->expose_us.write(exposure);
-						if(test(desaturating)){
-							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning successful. exposure = ", exposure);
-							return true;
-						}
+					camera.config->expose_us.write(exposure);
+					if(test(desaturating)){
+						log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning successful. exposure = ", exposure);
+						return true;
 					}
-
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning failed. Reducing gain...");
-					// Start decreasing gain if it's non-zero
-					int gain = camera.config->gain_dB.read();
-					for(gain--; gain > 0; gain--)
-					{
-						camera.config->gain_dB.write(gain);
-						if(test(desaturating)){
-							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain);
-							return true;
-						}
-					}
-
-					// Camera reached lower limit, too high power
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reduce brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with minimum parameters: TRACK_MIN_EXPOSURE = ", TRACK_MIN_EXPOSURE, ", gain = 0");
 				}
-				// Otherwise, have to increase exposure
-				else
+
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning failed. Reducing gain...");
+				// Start decreasing gain if it's non-zero
+				int gain = camera.config->gain_dB.read();
+				for(gain--; gain > 0; gain--)
 				{
-					desaturating = false; 
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
-					"(spot.valueMax = ", spot.valueMax, ") <= (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Increasing exposure...");
-					// Start increasing exposure
-					int exposure = camera.config->expose_us.read();
-					for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= TRACK_MAX_EXPOSURE); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
-					{
-						camera.config->expose_us.write(exposure);
-						if(test(desaturating)){
-							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning successful. exposure = ", exposure);
-							return true;
-						}
+					camera.config->gain_dB.write(gain);
+					if(test(desaturating)){
+						log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain);
+						return true;
 					}
-
-					// Start increasing gain
-					int gain = camera.config->gain_dB.read();
-					for(gain++; gain <= TRACK_MAX_GAIN; gain++)
-					{
-						camera.config->gain_dB.write(gain);
-						if(test(desaturating)){
-							log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain);
-							return true;
-						}
-					}
-
-					// Very high parameters reached
-					log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: TRACK_MAX_EXPOSURE = ", TRACK_MAX_EXPOSURE, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
 				}
+
+				// Camera reached lower limit, too high power
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reduce brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with minimum parameters: TRACK_MIN_EXPOSURE = ", TRACK_MIN_EXPOSURE, ", gain = 0");
+			}
+			// Otherwise, have to increase exposure
+			else
+			{
+				desaturating = false; 
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
+				"(spot.valueMax = ", spot.valueMax, ") <= (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Increasing exposure...");
+				// Start increasing exposure
+				int exposure = camera.config->expose_us.read();
+				for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= TRACK_MAX_EXPOSURE); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
+				{
+					camera.config->expose_us.write(exposure);
+					if(test(desaturating)){
+						log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Exposure tuning successful. exposure = ", exposure);
+						return true;
+					}
+				}
+
+				// Start increasing gain
+				int gain = camera.config->gain_dB.read();
+				for(gain++; gain <= TRACK_MAX_GAIN; gain++)
+				{
+					camera.config->gain_dB.write(gain);
+					if(test(desaturating)){
+						log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Gain tuning successful. gain = ", gain);
+						return true;
+					}
+				}
+
+				// Very high parameters reached
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: TRACK_MAX_EXPOSURE = ", TRACK_MAX_EXPOSURE, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
 			}
 		}
 	}
