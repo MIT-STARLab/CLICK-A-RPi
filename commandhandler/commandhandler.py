@@ -313,17 +313,23 @@ while True:
             list_raw_size = ipc_rxcompacket.size - 2
             directory_path_len, directory_path_payload = struct.unpack('!H%ds'%list_raw_size, ipc_rxcompacket.payload)
             directory_path = directory_path_payload[0:directory_path_len] #Strip any padding
-            directory_listing = os.listdir(directory_path) #Get directory list
-            #Convert list to single string for telemetry:
-            return_data = ""
-            for list_item in directory_listing:
-                return_data += (list_item + "\n")
+
+            try:
+                directory_listing = os.listdir(directory_path) #Get directory list
+                #Convert list to single string for telemetry:
+                return_data = ""
+                for list_item in directory_listing:
+                    return_data += (list_item + "\n")
+                log_to_hk('ACK CMD PL_LIST_FILE')
+            except:
+                return_data = ("ERROR CMD PL_LIST_FILE: " + traceback.format_exc()
+                log_to_hk(return_data)
+            
             list_file_txpacket = TxPacket()
             raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
             print (list_file_txpacket) #Debug printing
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
-            log_to_hk('ACK CMD PL_LIST_FILE')
 
         elif(CMD_ID == CMD_PL_REQUEST_FILE):
             send_file_chunks(ipc_rxcompacket, socket_tx_packets)
