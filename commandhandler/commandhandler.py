@@ -121,8 +121,8 @@ def initialize_cal_laser():
                 power.heaters_on()
         #Make sure cal laser diode is on
         if(fpga.read_reg(mmap.CAL) != 85):
-                power.calib_diode_on()       
-        #Set DAC                         
+                power.calib_diode_on()
+        #Set DAC
         fpga.write_reg(mmap.DAC_SETUP,1)
         fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
 cal_laser_init = False #identifies if cal laser has been initialized yet or not
@@ -160,7 +160,7 @@ def get_pat_status():
         return_addr = -1
         status_flag = -1
         received_status = False
-    
+
     return received_status, status_flag, return_addr
 
 def stop_pat():
@@ -180,21 +180,21 @@ def start_pat(allow_camera_init = False):
                 if(status_flag == PAT_STATUS_CAMERA_INIT):
                     log_to_hk('=PAT Process Started (PID: ' + str(return_addr) + '). Status: In Camera Initialization Loop') #start camera command failed
                     if(allow_camera_init):
-                        return True 
+                        return True
                     else:
                         stop_pat()
                         return False
                 elif(status_flag == PAT_STATUS_STANDBY):
                     log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: In Standby Loop')
-                    return True 
+                    return True
                 elif(status_flag == PAT_STATUS_MAIN):
                     log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: In Main Loop - skipped standby loop anomalously') #this should not happen
                     stop_pat()
-                    return False 
+                    return False
             else:
                 log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: Unrecognized')
                 stop_pat()
-                return False     
+                return False
     log_to_hk('PAT Process Unresponsive.')
     stop_pat()
     return False
@@ -272,11 +272,21 @@ while True:
         if(CMD_ID != APID_TIME_AT_TONE):
             #don't print the time at tone receives
             print (ipc_rxcompacket)
-            print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))      
-        
+            print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
+
         if(CMD_ID == APID_TIME_AT_TONE):
-            #TODO: parse the time at tone packet for clock sync
-            pass
+            if (TIME_SET_ENABLE > 0):
+                tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!7LB4LB', ipc_rxcompacket.payload)
+                set_time = time.gmtime(tai_secs)
+                os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
+                                                                                    set_time.tm_mon,
+                                                                                    set_time.tm_mday,
+                                                                                    set_time.tm_hour,
+                                                                                    set_time.tm_min,
+                                                                                    set_time.tm_sec))
+                TIME_SET_ENABLE -= 1
+            else:
+                pass
 
         elif(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
@@ -284,12 +294,8 @@ while True:
             os.system("sudo shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
 
         elif(CMD_ID == CMD_PL_ENABLE_TIME):
-            #TODO: set mode to sync CPU clock with time at tone packet
+            TIME_SET_ENABLE = 1
             log_to_hk('ACK CMD PL_ENABLE_TIME')
-
-        elif(CMD_ID == CMD_PL_DISABLE_TIME):
-            #TODO: set mode to NOT sync CPU clock with time at tone packet
-            log_to_hk('ACK CMD PL_DISABLE_TIME')
 
         elif(CMD_ID == CMD_PL_EXEC_FILE):
             ex_raw_size = ipc_rxcompacket.size - 4
@@ -368,7 +374,7 @@ while True:
                     exp_cmd = 10
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = 10000000            
+                    exp_cmd = 10000000
             if(pat_process_running):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
@@ -421,7 +427,7 @@ while True:
                 #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process is not running.')
-        
+
         elif(CMD_ID == CMD_PL_PAT_TEST):
             if(pat_process_running):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
@@ -493,7 +499,7 @@ while True:
             print (fpga_read_payload) #debug print
             fpga_read_txpacket = TxPacket()
             raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
-            socket_tx_packets.send(raw_fpga_read_txpacket) #send packet   
+            socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
 
             ###OLD FPGA Interface
             # #send fpga request
@@ -576,12 +582,12 @@ while True:
                         stop_pat()
                     else:
                         log_to_hk('PAT process initialization not working.')
-                    
+
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             start_time = time.time()
             CH_MODE_ID = CH_MODE_DOWNLINK
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + start_time)
-            
+
             if(pat_process_running):
                 #Start Main PAT Loop:
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
