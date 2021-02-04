@@ -489,10 +489,11 @@ while True:
         elif(CMD_ID == CMD_PL_GET_FPGA):
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
             read_data = fpga.read_reg(start_addr, num_registers)
-            if(num_registers != len(read_data)):
+            read_data_len = len(read_data)
+            if(num_registers != read_data_len):
                 log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
             #send on tx port
-            fpga_read_payload = struct.pack('!BHB%ds'%len(read_data), rq_number, start_addr, len(read_data), read_data)
+            fpga_read_payload = struct.pack('!BHB%dI'%read_data_len, rq_number, start_addr, read_data_len, *read_data)
             print (fpga_read_payload) #debug print
             fpga_read_txpacket = TxPacket()
             raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
