@@ -298,7 +298,7 @@ while True:
         elif(CMD_ID == CMD_PL_EXEC_FILE):
             ex_raw_size = ipc_rxcompacket.size - 4
             output_to_file, file_out_num, file_path_len, file_path_payload = struct.unpack('!BBH%ds'%ex_raw_size, ipc_rxcompacket.payload)
-            file_path = file_path_payload[0:(file_path_len-1)] #Strip padding
+            file_path = file_path_payload[0:file_path_len] #Strip padding
             try:
                 if(output_to_file):
                     os.system(file_path + ' > /root/log/' + str(file_out_num) + '.log')
