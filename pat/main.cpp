@@ -514,8 +514,8 @@ int main() //int argc, char** argv
 					case CMD_TX_ALIGN:
 						if(haveCalibKnowledge){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Executing CMD_TX_ALIGN command.");
-							calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX + tx_offset_x;
-							calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY + tx_offset_y;
+							calib.x = (CAMERA_WIDTH/2) + 2*calibration.centerOffsetX + tx_offset_x;
+							calib.y = (CAMERA_HEIGHT/2) + 2*calibration.centerOffsetY + tx_offset_y;
 							track.controlOpenLoop(fsm, calib.x, calib.y);
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - Do not have calibration knowledge. Run CMD_CALIB_TEST first.");
