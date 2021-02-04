@@ -16,7 +16,6 @@
 #define TX_ADCS_APID 0x250 //(CLICK-A CPU Software Architecture on Google Drive)
 #define TX_SELF_TEST_APID 0x3D2 //(CLICK-A CPU Software Architecture on Google Drive)
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
-#define ERROR_BUFFER_SIZE 249 //Make it such that the total message length is 256
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
 #define FPGA_READ_SIZE 4
@@ -127,7 +126,7 @@ struct pat_self_test_packet_struct{
 	uint8_t laser_test_result;
 	uint8_t fsm_test_result;
 	uint8_t calibration_test_result;
-	char error[ERROR_BUFFER_SIZE];
+	char error[BUFFER_SIZE];
 };
 
 // Packet Sending for PUB Processes:

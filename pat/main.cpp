@@ -205,7 +205,7 @@ int main() //int argc, char** argv
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
-	char self_test_error_buffer[ERROR_BUFFER_SIZE];	
+	char self_test_error_buffer[BUFFER_SIZE];	
 	self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
 
 	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
