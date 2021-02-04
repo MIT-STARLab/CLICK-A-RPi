@@ -601,7 +601,7 @@ while True:
             CH_MODE_ID = CH_MODE_DEBUG
             log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time)
 
-            if(!pat_process_running):
+            if(not pat_process_running):
                 log_to_hk('ERROR CMD PL_DEBUG_MODE: PAT process is not running.')
 
             ###TODO: add any other debug process start-up tasks
