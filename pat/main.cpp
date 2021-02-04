@@ -201,6 +201,7 @@ int main() //int argc, char** argv
 	bool OPERATIONAL = true, STANDBY = true; 
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
+	int main_entry_flag;
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -332,14 +333,35 @@ int main() //int argc, char** argv
 				switch(command)
 				{
 					case CMD_START_PAT:
-						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command. Proceeding to main PAT loop...");
-						STANDBY = false;
+						main_entry_flag = atoi(command_data); 
+						if(main_entry_flag == TEST_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in test configuration. Proceeding to ACQUISITION...");
+							phase = ACQUISITION;
+							STANDBY = false;
+						} else if(main_entry_flag == FLIGHT_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in flight configuration. Proceeding to CALIBRATION...");
+							phase = CALIBRATION;
+							STANDBY = false;
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in unknown configuration. Standing by...");
+						}
 						break;
 						
 					case CMD_START_PAT_OPEN_LOOP:
-						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command. Proceeding to main PAT loop...");
-						openLoop = true;
-						STANDBY = false;
+						main_entry_flag = atoi(command_data); 
+						if(main_entry_flag == TEST_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in test configuration. Proceeding to ACQUISITION...");
+							openLoop = true;
+							phase = ACQUISITION;
+							STANDBY = false;
+						} else if(main_entry_flag == FLIGHT_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in flight configuration. Proceeding to CALIBRATION...");
+							openLoop = true;
+							phase = CALIBRATION;
+							STANDBY = false;
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in unknown configuration. Standing by...");
+						}
 						break;
 					
 					case CMD_START_PAT_STATIC_POINT:
@@ -349,17 +371,40 @@ int main() //int argc, char** argv
 						break;
 						
 					case CMD_START_PAT_BUS_FEEDBACK:
-						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command.");
-						sendBusFeedback = true;
-						STANDBY = false;
-						break;	
+						main_entry_flag = atoi(command_data); 
+						if(main_entry_flag == TEST_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in test configuration. Proceeding to ACQUISITION...");
+							sendBusFeedback = true;
+							phase = ACQUISITION;
+							STANDBY = false;
+						} else if(main_entry_flag == FLIGHT_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in flight configuration. Proceeding to CALIBRATION...");
+							sendBusFeedback = true;
+							phase = CALIBRATION;
+							STANDBY = false;
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in unknown configuration. Standing by...");
+						}
+						break;
 
 					case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
-						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command.");
-						openLoop = true; 
-						sendBusFeedback = true;
-						STANDBY = false;
-						break;			
+						main_entry_flag = atoi(command_data); 
+						if(main_entry_flag == TEST_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in test configuration. Proceeding to ACQUISITION...");
+							openLoop = true; 
+							sendBusFeedback = true;
+							phase = ACQUISITION;
+							STANDBY = false;
+						} else if(main_entry_flag == FLIGHT_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in flight configuration. Proceeding to CALIBRATION...");
+							openLoop = true; 
+							sendBusFeedback = true;
+							phase = CALIBRATION;
+							STANDBY = false;
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in unknown configuration. Standing by...");
+						}
+						break;		
 						
 					case CMD_GET_IMAGE:
 						//set to commanded exposure
@@ -744,7 +789,7 @@ int main() //int argc, char** argv
 				// Beacon acquisition phase, internal laser has to be off!
 				case ACQUISITION:
 					log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switching off Cal Laser.");
-					if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for acquistion
+					if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for acquistion
 						if(track.runAcquisition(beacon, beaconWindow)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 						{
 							// Acquisition passed!
@@ -1114,7 +1159,7 @@ int main() //int argc, char** argv
 
 				// Control in open-loop, sampling only beacon spot!
 				case OPEN_LOOP:
-					if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer) || bcnAlignment){ //turn calibration laser off for open-loop
+					if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for open-loop
 						// Request new frame
 						camera.config->expose_us.write(beaconExposure); //set cam to beacon exposure, beaconExposure is beacon exposure, pg
 						camera.setWindow(beaconWindow);

@@ -172,7 +172,15 @@ while True:
                                         print "Exposure above maximum of 10000000 us entered. Using 10000000 us."
                                         exp_cmd = 10000000
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(exp_cmd))     
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(exp_cmd))  
+                        elif(user_cmd in [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK]):
+                                if(bool(input('Enter 1 to skip calibration: '))):
+                                        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                        ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_TEST_FLAG)) 
+                                else:
+                                        print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                        ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_FLIGHT_FLAG)) 
+
                         elif(user_cmd == PAT_CMD_UPDATE_TX_OFFSET_X):
                                 tx_offset_x = int(input("Enter new Tx Offset in X (pixels): "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))

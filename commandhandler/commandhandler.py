@@ -35,6 +35,8 @@ CH_MODE_DEBUG = 1
 CH_MODE_DOWNLINK = 2
 CH_MODE_ID = CH_MODE_GROUND_TEST #default for ground testing (can replace with debug for flight)
 PAT_MODE_ID = PAT_CMD_START_PAT #set PAT mode to default for execution w/o ground specified mode change
+pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK, PAT_CMD_BCN_ALIGN]
+pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Default w/ Bus Feedback', 'Open-Loop w/ Bus Feedback', 'Beacon Alignment Mode']
 
 # timing parameters
 #ground test mode doesn't timeout for convenience during testing (can remove this mode for flight)
@@ -350,15 +352,10 @@ while True:
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload)
-            pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK]
-            pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Default w/ Bus Feedback', 'Open-Loop w/ Bus Feedback']
             if(pat_process_running):
                 if(pat_mode_cmd in pat_mode_list):
                     PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
                     log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
-                elif(pat_mode_cmd == PAT_CMD_END_PROCESS):
-                    stop_pat()
-                    log_to_hk('ACK CMD PL_SET_PAT_MODE with PAT_CMD_END_PROCESS')
                 else:
                     log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
             else:
@@ -424,6 +421,27 @@ while True:
                 #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process is not running.')
+        
+        elif(CMD_ID == CMD_PL_PAT_TEST):
+            if(pat_process_running):
+                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_TEST_FLAG))
+                print(ipc_patControlPacket) #debug print
+                log_to_hk('ACK CMD PL_PAT_TEST')
+                #Manage image telemetry files...
+            else:
+                log_to_hk('ERROR CMD PL_PAT_TEST: PAT process is not running.')
+
+        elif(CMD_ID == CMD_PL_END_PAT_PROCESS):
+            stop_pat()
+            log_to_hk('ACK CMD PL_END_PAT_PROCESS')
+
+        elif(CMD_ID == CMD_PL_RESTART_PAT_PROCESS):
+            pat_process_running = start_pat()
+            if(pat_process_running):
+                log_to_hk('ACK CMD PL_RESTART_PAT_PROCESS')
+            else:
+                log_to_hk('ERROR CMD PL_RESTART_PAT_PROCESS')
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
             set_fpga_raw_size = ipc_rxcompacket.size - 4
@@ -567,7 +585,7 @@ while True:
             if(pat_process_running):
                 #Start Main PAT Loop:
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID)
+                ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_FLIGHT_FLAG))
                 print(ipc_patControlPacket) #debug print
             else:
                 log_to_hk('ERROR CMD PL_DWNLINK_MODE: PAT process is not running.')
