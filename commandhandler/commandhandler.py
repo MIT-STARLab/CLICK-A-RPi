@@ -322,7 +322,7 @@ while True:
                     return_data += (list_item + "\n")
                 log_to_hk('ACK CMD PL_LIST_FILE')
             except:
-                return_data = ("ERROR CMD PL_LIST_FILE: " + traceback.format_exc()
+                return_data = ("ERROR CMD PL_LIST_FILE: " + traceback.format_exc())
                 log_to_hk(return_data)
             
             list_file_txpacket = TxPacket()
