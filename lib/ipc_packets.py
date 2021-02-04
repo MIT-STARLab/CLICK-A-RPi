@@ -211,7 +211,13 @@ class PATHealthPacket(IpcPacket):
 
         payload_list = self.payload.split(b'\n')
 
-        telemetry_string = payload_list[0].decode('utf-8')
+        print('payload_list[0]: ', payload_list[0])
+        print("payload_list[0].decode('utf-8'):", payload_list[0].decode('utf-8'))
+        print("type(payload_list[0].decode('utf-8')):", type(payload_list[0].decode('utf-8')))
+        print("payload_list[0].decode('ascii'):", payload_list[0].decode('ascii'))
+        print("type(payload_list[0].decode('ascii')):", type(payload_list[0].decode('ascii')))
+
+        telemetry_string = str(payload_list[0].decode('utf-8'))
 
         return telemetry_string, self.return_addr, self.size, self.payload
         
