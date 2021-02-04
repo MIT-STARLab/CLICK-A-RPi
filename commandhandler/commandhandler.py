@@ -458,7 +458,7 @@ while True:
                 addresses = range(start_addr, start_addr+num_registers)
                 return_message = ""
                 num_errors = 0
-                for i in range(num_registers)
+                for i in range(num_registers):
                     if check_write_data[i] != write_data[i]:
                         return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
                         num_errors += 1
