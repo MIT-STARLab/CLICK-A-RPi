@@ -11,6 +11,7 @@ import sys
 import struct
 import math
 import hashlib
+import traceback
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
