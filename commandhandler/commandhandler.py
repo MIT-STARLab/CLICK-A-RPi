@@ -312,7 +312,7 @@ while True:
         elif(CMD_ID == CMD_PL_LIST_FILE):
             list_raw_size = ipc_rxcompacket.size - 2
             directory_path_len, directory_path_payload = struct.unpack('!H%ds'%list_raw_size, ipc_rxcompacket.payload)
-            directory_path = directory_path_payload[0:(directory_path_len-1)] #Strip padding
+            directory_path = directory_path_payload[0:directory_path_len] #Strip any padding
             directory_listing = os.listdir(directory_path) #Get directory list
             #Convert list to single string for telemetry:
             return_data = ""
