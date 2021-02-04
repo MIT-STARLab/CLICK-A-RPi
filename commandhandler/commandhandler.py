@@ -207,10 +207,7 @@ counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
 
 # #start PAT process
-# if(start_pat()):
-#     pat_process_running = True
-# else:
-#     pat_process_running = False
+# pat_process_running = start_pat()
 pat_process_running = False #test housekeeping output to COSMOS before trying PAT tests
 
 #start command handling
