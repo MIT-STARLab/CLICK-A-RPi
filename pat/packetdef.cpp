@@ -301,20 +301,23 @@ void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_r
 {
 	pat_self_test_packet_struct packet_struct = pat_self_test_packet_struct();
 	packet_struct.apid = TX_SELF_TEST_APID;
-	packet_struct.camera_test_result = htonl(camera_test_result);
-	packet_struct.fpga_test_result = htonl(fpga_test_result);
-	packet_struct.laser_test_result = htonl(laser_test_result);
-	packet_struct.fsm_test_result = htonl(fsm_test_result);
-	packet_struct.calibration_test_result = htonl(calibration_test_result);
+	packet_struct.camera_test_result = camera_test_result;
+	packet_struct.fpga_test_result = fpga_test_result;
+	packet_struct.laser_test_result = laser_test_result;
+	packet_struct.fsm_test_result = fsm_test_result;
+	packet_struct.calibration_test_result = calibration_test_result;
 	memcpy(packet_struct.error, error, strlen(error)+1);
-	printf("In packetdef.cpp - send_packet_self_test - APID: %d, Camera: %d, FPGA: %d, Laser: %d, FSM: %d, Calibration: %d, Error: %s \n", 
+	packet_struct.data_size = sizeof(packet_struct) - sizeof(packet_struct.apid) - sizeof(packet_struct.data_size);
+	printf("In packetdef.cpp - send_packet_self_test - APID: %d, Size: %d, Camera: %d, FPGA: %d, Laser: %d, FSM: %d, Calibration: %d, Error: %.*s \n", 
 		packet_struct.apid, 
-		unsigned(camera_test_result), 
-		unsigned(fpga_test_result), 
-		unsigned(laser_test_result), 
-		unsigned(fsm_test_result), 
-		unsigned(calibration_test_result), 
-		error);
+		packet_struct.data_size,
+		unsigned(packet_struct.camera_test_result), 
+		unsigned(packet_struct.fpga_test_result), 
+		unsigned(packet_struct.laser_test_result), 
+		unsigned(packet_struct.fsm_test_result), 
+		unsigned(packet_struct.calibration_test_result), 
+		(int) sizeof(packet_struct.error),
+		packet_struct.error);
 
 	char packet[sizeof(pat_self_test_packet_struct)];
 	memcpy(packet, &packet_struct, sizeof(packet));	

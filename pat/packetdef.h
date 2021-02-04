@@ -121,6 +121,7 @@ struct fpga_answer_struct{
 
 struct pat_self_test_packet_struct{
 	uint16_t apid;
+	uint16_t data_size;
 	uint8_t camera_test_result;
 	uint8_t fpga_test_result;
 	uint8_t laser_test_result;
