@@ -334,8 +334,6 @@ def file_test():
     val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
     validate_file(val_file_cmd_pkt)
 
-    _ = input('Enter Anything to Continue to PL_MOVE_FILE')
-
     '''PL_MOVE_FILE move file test'''
     mov_src_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     mov_src_file_name_len = len(mov_src_file_name)
