@@ -19,6 +19,7 @@ SPI_DEV = '/dev/bct'
 CCSDS_HEADER_LEN = 6
 APID_INDEX = 1
 PKT_LEN_INDEX = 4
+APID_SYNC = 0xFF #TBR - think the VNC is supposed to get rid of this
 
 class Depacketizer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])
