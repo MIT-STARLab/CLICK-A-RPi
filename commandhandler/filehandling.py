@@ -248,7 +248,7 @@ def file_test():
     '''PL_REQUEST_FILE send file test'''
     send_file_name = 'test_file.txt'
     send_file_name_len = len(send_file_name)
-    send_file_transfer_id = 01234
+    send_file_transfer_id = 0x1234
     send_file_chunk_size = 1024
     send_file_cmd = struct.pack('!HHH%ds' % (send_file_name_len), send_file_transfer_id, send_file_chunk_size, send_file_name_len, send_file_name)
     send_file_cmd_pkt = RxCommandPacket()
