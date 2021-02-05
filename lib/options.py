@@ -37,6 +37,7 @@ EDFA_VIRTUAL_REGS_GOOD_FOR = 0.5
 
 #Time at tone packet APID
 APID_TIME_AT_TONE = 0x280
+APID_SYNC = 0x2FF #TBR - think the VNC is supposed to get rid of this
 
 #Ground Command IDs
 CMD_PL_REBOOT = 0x01

@@ -11,7 +11,7 @@ from crccheck.crc import Crc16CcittFalse as crc16
 sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('/root/lib/') #flight path 
 from ipc_packets import RxCommandPacket, RxPATPacket
-from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT, APID_TIME_AT_TONE
+from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT, APID_TIME_AT_TONE, APID_SYNC
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
@@ -183,12 +183,13 @@ class Depacketizer:
 
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
-        if(APID != APID_TIME_AT_TONE):
+        if(APID not in [APID_TIME_AT_TONE, APID_SYNC]):
             #don't print the time at tone packets
             print(binascii.hexlify(raw_ipc_pkt))
 
-        # in the future, consider the pat packets and send those separately
-        self.rx_cmd_socket.send(raw_ipc_pkt)
+        if(APID != APID_SYNC):
+            # in the future, consider the pat packets and send those separately
+            self.rx_cmd_socket.send(raw_ipc_pkt)
 
 
     def run(self):
