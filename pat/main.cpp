@@ -30,8 +30,8 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X 20 //pixels, from GSE calibration
-#define TX_OFFSET_Y -50 //pixels, from GSE calibration
+#define TX_OFFSET_X -14 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y 112 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
@@ -514,12 +514,22 @@ int main() //int argc, char** argv
 					case CMD_TX_ALIGN:
 						if(haveCalibKnowledge){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Executing CMD_TX_ALIGN command.");
-							calib.x = (CAMERA_WIDTH/2) + 2*calibration.centerOffsetX + tx_offset_x;
-							calib.y = (CAMERA_HEIGHT/2) + 2*calibration.centerOffsetY + tx_offset_y;
+							calib.x = (CAMERA_WIDTH/2) + tx_offset_x;
+							calib.y = (CAMERA_HEIGHT/2) + tx_offset_y;
 							track.controlOpenLoop(fsm, calib.x, calib.y);
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - Do not have calibration knowledge. Run CMD_CALIB_TEST first.");
 						}
+						break;
+
+					case CMD_UPDATE_TX_OFFSET_X:
+						tx_offset_x += atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_X - Updating Tx Offset X to ", tx_offset_x);
+						break;
+
+					case CMD_UPDATE_TX_OFFSET_Y:
+						tx_offset_y += atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", tx_offset_y);
 						break;
 
 					case CMD_UPDATE_FSM_X:
@@ -706,10 +716,10 @@ int main() //int argc, char** argv
 					OPERATIONAL = false;
 					break; 
 				} else if(command == CMD_UPDATE_TX_OFFSET_X){
-					tx_offset_x = atoi(command_data); 
+					tx_offset_x += atoi(command_data); 
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", tx_offset_x);
 				} else if(command == CMD_UPDATE_TX_OFFSET_Y){
-					tx_offset_y = atoi(command_data); 
+					tx_offset_y += atoi(command_data); 
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", tx_offset_y);
 				}
 			}
@@ -805,8 +815,8 @@ int main() //int argc, char** argv
 							logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 							if(!bcnAlignment){
 								// Set initial pointing in open-loop
-								calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-								calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+								calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
+								calib.y = CAMERA_HEIGHT - beacon.y + tx_offset_y;
 								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain); //, ", smoothing: ", calibration.smoothing ",  smoothing: ", track.beaconSmoothing
 								track.controlOpenLoop(fsm, calib.x, calib.y);
 							}
@@ -1062,9 +1072,10 @@ int main() //int argc, char** argv
 												calib.valueSum = spot.valueSum;
 												calib.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, calibWindow);
+												
 												// Control in closed loop!
-												double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
-												double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
+												double setPointX = CAMERA_WIDTH - beacon.x + tx_offset_x;
+												double setPointY = CAMERA_HEIGHT - beacon.y + tx_offset_y;
 												track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 
 												check_csv_write = steady_clock::now(); // Record current time
@@ -1197,8 +1208,8 @@ int main() //int argc, char** argv
 												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 												if(!bcnAlignment){
 													// Control pointing in open-loop
-													calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
-													calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
+													calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
+													calib.y = CAMERA_HEIGHT - beacon.y + tx_offset_y;
 													track.controlOpenLoop(fsm, calib.x, calib.y);
 												}
 												check_csv_write = steady_clock::now(); // Record current time

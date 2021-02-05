@@ -393,6 +393,35 @@ while True:
                 #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
+        
+        elif(CMD_ID == CMD_PL_TX_ALIGN):
+            if(pat_status_is(PAT_STATUS_STANDBY)):
+                send_pat_command(socket_PAT_control, PAT_CMD_TX_ALIGN)
+                log_to_hk('ACK CMD PL_TX_ALIGN')
+            else:
+                log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
+
+        elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
+            tx_update_x, tx_update_y = struct.unpack('HH', ipc_rxcompacket.payload)
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_MAIN)):
+                if(tx_update_x > 0):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
+                if(tx_update_y > 0):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_Y, str(tx_update_y))
+                log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
+            else:
+                log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in MAIN.')
+
+        elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
+            fsm_update_x, fsm_update_y = struct.unpack('HH', ipc_rxcompacket.payload)
+            if(pat_status_is(PAT_STATUS_STANDBY)):
+                if(fsm_update_x > 0):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_X, str(fsm_update_x))
+                if(fsm_update_y > 0):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_Y, str(fsm_update_y))
+                log_to_hk('ACK CMD PL_UPDATE_FSM_ANGLES')
+            else:
+                log_to_hk('ERROR CMD PL_UPDATE_FSM_ANGLES: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_PAT_TEST):
             if(pat_status_is(PAT_STATUS_STANDBY)):
