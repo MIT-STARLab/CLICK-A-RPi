@@ -250,6 +250,15 @@ def file_test():
     socket_tx = context.socket(zmq.PUB)
     socket_tx.connect("tcp://localhost:%s" % TX_PACKETS_PORT)
 
+    echo_txpacket = TxPacket()
+    echo_payload = 'Ping Test'
+    raw_echo_txpacket = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload)
+    print (echo_payload) #debug printing
+    print ('SENDING to %s' % (socket_tx.get_string(zmq.LAST_ENDPOINT))) #Debug printing
+    socket_tx.send(raw_echo_txpacket) #send packet
+
+    _ = input('Press Enter to Continue to PL_REQUEST_FILE using test_file.txt as source.')
+
     '''PL_REQUEST_FILE send file test'''
     send_file_name = 'test_file.txt'
     send_file_name_len = len(send_file_name)
