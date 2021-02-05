@@ -252,7 +252,7 @@ def file_test():
     send_file_chunk_size = 1024
     send_file_cmd = struct.pack('!HHH%ds' % (send_file_name_len), send_file_transfer_id, send_file_chunk_size, send_file_name_len, send_file_name)
     send_file_cmd_pkt = RxCommandPacket()
-    send_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=send_file_cmd)
+    send_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(send_file_cmd))
     send_file_chunks(send_file_cmd_pkt, socket_tx)
 
     '''PL_UPLOAD_FILE receive file test'''
@@ -268,7 +268,7 @@ def file_test():
             receive_file_cmd = struct.pack('!HHHH%ds' % (receive_chunk_size), receive_transfer_id, receive_seq_num, receive_seq_len, receive_chunk_size, receive_data)
             receive_file_cmd_pkt = RxCommandPacket()
 
-            receive_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=receive_file_cmd)
+            receive_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(receive_file_cmd))
             receive_file_chunk(receive_file_cmd_pkt)
 
             receive_seq_num += 1
@@ -280,7 +280,7 @@ def file_test():
             receive_file_cmd = struct.pack('!HHHH%ds' % (receive_chunk_size), receive_transfer_id, receive_seq_num, receive_seq_len, receive_chunk_size, receive_data)
             receive_file_cmd_pkt = RxCommandPacket()
 
-            receive_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=receive_file_cmd)
+            receive_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(receive_file_cmd))
             receive_file_chunk(receive_file_cmd_pkt)
 
     '''PL_ASSEMBLE_FILE assemble file test'''
@@ -289,7 +289,7 @@ def file_test():
     assm_file_transfer_id = 56789
     assm_file_cmd = struct.pack('!HH%ds' % (assm_file_name_len), assm_file_transfer_id, assm_file_name_len, assm_file_name)
     assm_file_cmd_pkt = RxCommandPacket()
-    assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=assm_file_cmd)
+    assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(assm_file_cmd))
     assemble_file(assm_file_cmd_pkt, socket_tx)
 
     '''PL_VALIDATE_FILE validate file test'''
@@ -307,7 +307,7 @@ def file_test():
     val_file_transfer_id = 0x1234
     val_file_cmd = struct.pack('!%dsH%ds' % (16, val_file_name_len), val_file_hash, val_file_name_len, val_file_name)
     val_file_cmd_pkt = RxCommandPacket()
-    val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=val_file_cmd)
+    val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
     validate_file(val_file_cmd_pkt)
 
     '''PL_MOVE_FILE move file test'''
@@ -319,7 +319,7 @@ def file_test():
 
     mov_file_cmd = struct.pack('!HH%ds%ds' % (mov_src_file_name_len, mov_dest_file_name_len), mov_src_file_name_len, mov_dest_file_name_len, mov_src_file_name, mov_dest_file_name)
     mov_file_cmd_pkt = RxCommandPacket()
-    mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=mov_file_cmd)
+    mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(mov_file_cmd))
     move_file(mov_file_cmd_pkt)
 
     '''PL_DEL_FILE delete file test'''
@@ -329,7 +329,7 @@ def file_test():
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
     del_file_cmd_pkt = RxCommandPacket()
-    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=del_file_cmd)
+    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
     del_flag = 0xFF
@@ -338,7 +338,7 @@ def file_test():
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
     del_file_cmd_pkt = RxCommandPacket()
-    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=del_file_cmd)
+    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
 if __name__ == '__main__':
