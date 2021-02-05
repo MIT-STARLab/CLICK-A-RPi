@@ -248,7 +248,7 @@ while True:
             if (TIME_SET_ENABLE > 0):
                 print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
                 print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
-                tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!7LB4LB', ipc_rxcompacket.payload)
+                tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
                 set_time = time.gmtime(tai_secs)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
                                                                                     set_time.tm_mon,
@@ -299,7 +299,7 @@ while True:
             except:
                 return_data = ("ERROR CMD PL_LIST_FILE: " + traceback.format_exc())
                 log_to_hk(return_data)
-            
+
             list_file_txpacket = TxPacket()
             raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
             print (list_file_txpacket) #Debug printing
