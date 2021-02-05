@@ -365,7 +365,7 @@ def file_test():
     del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
-    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/test_file_staging/56789)
+    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/test_file_staging/56789')
 
     del_flag = 0xFF
     del_file_name = '/root/test_file_staging/56789'
