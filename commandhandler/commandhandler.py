@@ -60,7 +60,7 @@ socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
 
 socket_tx_packets = context.socket(zmq.PUB)
-socket_tx_packets.connect("tcp://localhost:%s" % TX_PACKETS_PORT)
+socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
 print ("Pulling Rx Cmd Packets")
 print ("on port {}".format(RX_CMD_PACKETS_PORT))
