@@ -250,7 +250,7 @@ def file_test():
     socket_tx = context.socket(zmq.PUB)
     socket_tx.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
-    _ = input('Press Enter to Continue to PL_REQUEST_FILE using test_file.txt as source.')
+    _ = input('Enter Anything to Continue to PL_REQUEST_FILE using test_file.txt as source.')
 
     '''PL_REQUEST_FILE send file test'''
     send_file_name = 'test_file.txt'
@@ -299,10 +299,10 @@ def file_test():
             receive_file_chunk(receive_file_cmd_pkt)
             print('Chunk file created at /root/file_staging/'+str(receive_transfer_id)+'/'+str(receive_seq_num)+'_'+str(receive_seq_len)+'.chunk')
 
-    _ = input('Enter Anything to Continue to PL_ASSEMBLE_FILE to reassembled_file.txt')
+    _ = input('Enter Anything to Continue to PL_ASSEMBLE_FILE to ' + '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt')
 
     '''PL_ASSEMBLE_FILE assemble file test'''
-    assm_file_name = 'reassembled_file.txt'
+    assm_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     assm_file_name_len = len(assm_file_name)
     assm_file_transfer_id = 56789
     assm_file_cmd = struct.pack('!HH%ds' % (assm_file_name_len), assm_file_transfer_id, assm_file_name_len, assm_file_name)
@@ -311,10 +311,10 @@ def file_test():
     assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(assm_file_cmd))
     assemble_file(assm_file_cmd_pkt, socket_tx)
 
-    _ = input('Enter Anything to Continue to PL_VALIDATE_FILE with reassembled_file.txt')
+    _ = input('Enter Anything to Continue to PL_VALIDATE_FILE with ' + '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt')
 
     '''PL_VALIDATE_FILE validate file test'''
-    val_file_name = 'reassembled_file.txt'
+    val_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     val_file_name_len = len(val_file_name)
 
     val_hash_func = hashlib.md5()
@@ -337,10 +337,10 @@ def file_test():
     _ = input('Enter Anything to Continue to PL_MOVE_FILE')
 
     '''PL_MOVE_FILE move file test'''
-    mov_src_file_name = 'reassembled_file.txt'
+    mov_src_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     mov_src_file_name_len = len(mov_src_file_name)
 
-    mov_dest_file_name = 'final_file.txt'
+    mov_dest_file_name = '/root/commandhandler/final_file.txt'
     mov_dest_file_name_len = len(mov_dest_file_name)
 
     print('mov_src_file_name: ', mov_src_file_name)
@@ -353,11 +353,11 @@ def file_test():
     mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(mov_file_cmd))
     move_file(mov_file_cmd_pkt)
 
-    _ = input('Enter Anything to Continue to PL_DEL_FILE with final_file.txt')
+    _ = input('Enter Anything to Continue to PL_DEL_FILE with /root/commandhandler/final_file.txt')
 
     '''PL_DEL_FILE delete file test'''
     del_flag = 0x00
-    del_file_name = 'final_file.txt'
+    del_file_name = '/root/commandhandler/final_file.txt'
     del_file_name_len = len(del_file_name)
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
@@ -365,10 +365,10 @@ def file_test():
     del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
-    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory test_file_staging/56789')
+    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/test_file_staging/56789)
 
     del_flag = 0xFF
-    del_file_name = 'test_file_staging/56789'
+    del_file_name = '/root/test_file_staging/56789'
     del_file_name_len = len(del_file_name)
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
