@@ -64,6 +64,8 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
             # FOR TEST:
             # print(len(packet))
             # print(binascii.hexlify(packet))
+            print('send_file_chunks - seq_num: ', seq_num)
+            print('send_file_chunks - packet: ', packet)
 
             txpacket = TxPacket()
             raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
@@ -80,6 +82,9 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
             # FOR TEST:
             # print(len(packet))
             # print(binascii.hexlify(packet))
+            print('send_file_chunks - seq_num: ', seq_num)
+            print('send_file_chunks - packet: ', packet)
+
             txpacket = TxPacket()
             raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
             socket_tx_packets.send(raw_packet)
@@ -208,7 +213,7 @@ def validate_file(ipc_rxcompacket):
 
     if (check_hash != file_hash):
         # TODO: handle incorrect hash error
-        pass
+        print('Hash Check Failed!')
     else:
         pass
 
@@ -251,9 +256,13 @@ def file_test():
     send_file_transfer_id = 0x1234
     send_file_chunk_size = 1024
     send_file_cmd = struct.pack('!HHH%ds' % (send_file_name_len), send_file_transfer_id, send_file_chunk_size, send_file_name_len, send_file_name)
+    print('Test PL_REQUEST_FILE using ' + send_file_name)
+    print('send_file_cmd: ', send_file_cmd)
     send_file_cmd_pkt = RxCommandPacket()
     send_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(send_file_cmd))
     send_file_chunks(send_file_cmd_pkt, socket_tx)
+
+    _ = input('Press Enter to Continue to PL_UPLOAD_FILE using test_file.txt as source.')
 
     '''PL_UPLOAD_FILE receive file test'''
     receive_file_len = os.stat('test_file.txt').st_size
@@ -266,31 +275,41 @@ def file_test():
         while (receive_seq_num*receive_chunk_size) < receive_file_len:
             receive_data = rec_test_file.read(receive_chunk_size)
             receive_file_cmd = struct.pack('!HHHH%ds' % (receive_chunk_size), receive_transfer_id, receive_seq_num, receive_seq_len, receive_chunk_size, receive_data)
-            receive_file_cmd_pkt = RxCommandPacket()
+            print('receive_seq_num: ', receive_seq_num)
+            print('receive_file_cmd: ', receive_file_cmd)
 
+            receive_file_cmd_pkt = RxCommandPacket()
             receive_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(receive_file_cmd))
             receive_file_chunk(receive_file_cmd_pkt)
+            print('Chunk file created at /root/file_staging/'+str(receive_transfer_id)+'/'+str(receive_seq_num)+'_'+str(receive_seq_len)+'.chunk')
 
             receive_seq_num += 1
 
         if (((receive_seq_num - 1) * receive_chunk_size) < receive_file_len):
             receive_chunk_size = receive_file_len - ((receive_seq_num - 1) * receive_chunk_size)
             receive_data = rec_test_file.read(receive_chunk_size)
-
             receive_file_cmd = struct.pack('!HHHH%ds' % (receive_chunk_size), receive_transfer_id, receive_seq_num, receive_seq_len, receive_chunk_size, receive_data)
-            receive_file_cmd_pkt = RxCommandPacket()
+            print('receive_seq_num: ', receive_seq_num)
+            print('receive_file_cmd: ', receive_file_cmd)
 
+            receive_file_cmd_pkt = RxCommandPacket()
             receive_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(receive_file_cmd))
             receive_file_chunk(receive_file_cmd_pkt)
+            print('Chunk file created at /root/file_staging/'+str(receive_transfer_id)+'/'+str(receive_seq_num)+'_'+str(receive_seq_len)+'.chunk')
+
+    _ = input('Press Enter to Continue to PL_ASSEMBLE_FILE to reassembled_file.txt')
 
     '''PL_ASSEMBLE_FILE assemble file test'''
     assm_file_name = 'reassembled_file.txt'
     assm_file_name_len = len(assm_file_name)
     assm_file_transfer_id = 56789
     assm_file_cmd = struct.pack('!HH%ds' % (assm_file_name_len), assm_file_transfer_id, assm_file_name_len, assm_file_name)
+    print('assm_file_cmd: ', assm_file_cmd)
     assm_file_cmd_pkt = RxCommandPacket()
     assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(assm_file_cmd))
     assemble_file(assm_file_cmd_pkt, socket_tx)
+
+    _ = input('Press Enter to Continue to PL_VALIDATE_FILE with reassembled_file.txt')
 
     '''PL_VALIDATE_FILE validate file test'''
     val_file_name = 'reassembled_file.txt'
@@ -303,12 +322,17 @@ def file_test():
             val_hash_func.update(buf)
             buf = source_file.read(1024)
     val_file_hash = val_hash_func.digest()
+    print('val_file_hash: ', val_file_hash)
 
     val_file_transfer_id = 0x1234
     val_file_cmd = struct.pack('!%dsH%ds' % (16, val_file_name_len), val_file_hash, val_file_name_len, val_file_name)
+    print('val_file_cmd: ', val_file_cmd)
+
     val_file_cmd_pkt = RxCommandPacket()
     val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
     validate_file(val_file_cmd_pkt)
+
+    _ = input('Press Enter to Continue to PL_MOVE_FILE')
 
     '''PL_MOVE_FILE move file test'''
     mov_src_file_name = 'reassembled_file.txt'
@@ -317,10 +341,17 @@ def file_test():
     mov_dest_file_name = 'final_file.txt'
     mov_dest_file_name_len = len(mov_dest_file_name)
 
+    print('mov_src_file_name: ', mov_src_file_name)
+    print('mov_dest_file_name: ', mov_dest_file_name)
+
     mov_file_cmd = struct.pack('!HH%ds%ds' % (mov_src_file_name_len, mov_dest_file_name_len), mov_src_file_name_len, mov_dest_file_name_len, mov_src_file_name, mov_dest_file_name)
+    print('mov_file_cmd: ', mov_file_cmd)
+    
     mov_file_cmd_pkt = RxCommandPacket()
     mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(mov_file_cmd))
     move_file(mov_file_cmd_pkt)
+
+    _ = input('Press Enter to Continue to PL_DEL_FILE with final_file.txt')
 
     '''PL_DEL_FILE delete file test'''
     del_flag = 0x00
@@ -331,6 +362,8 @@ def file_test():
     del_file_cmd_pkt = RxCommandPacket()
     del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
+
+    _ = input('Press Enter to Continue to recursive PL_DEL_FILE with staging directory test_file_staging/56789')
 
     del_flag = 0xFF
     del_file_name = 'test_file_staging/56789'
