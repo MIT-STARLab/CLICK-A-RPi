@@ -1,0 +1,6 @@
+[Unit]
+Description=Housekeeping
+
+[Service]
+Type=simple
+ExecStart=/bin/python -u /root/housekeeping/housekeeping.py
