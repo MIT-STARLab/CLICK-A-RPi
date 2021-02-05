@@ -164,40 +164,37 @@ def get_pat_status():
 
     return received_status, status_flag, return_addr
 
+def restart_pat():
+    start_camera()
+    cal_laser_on()
+    os.system('start pat')
+
 def stop_pat():
-    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-    ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS)
-    print(ipc_patControlPacket) #debug print
+    os.system('stop pat') #stop the pat service
     cal_laser_off()
     stop_camera()
 
-def start_pat(allow_camera_init = False):
-    start_camera() #start camera
-    os.system('pat') #run the /root/bin/pat executable
-    for i in range(10): #try to get the status of pat
+def pat_is_running(allow_camera_init = False):
+    for _ in range(10): #try to get the status of pat
         received_status, status_flag, return_addr = get_pat_status()
         if(received_status):
             if(status_flag in pat_status_list):
                 if(status_flag == PAT_STATUS_CAMERA_INIT):
-                    log_to_hk('=PAT Process Started (PID: ' + str(return_addr) + '). Status: In Camera Initialization Loop') #start camera command failed
+                    log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: In Camera Initialization Loop') #start camera command failed
                     if(allow_camera_init):
                         return True
                     else:
-                        stop_pat()
                         return False
                 elif(status_flag == PAT_STATUS_STANDBY):
-                    log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: In Standby Loop')
+                    log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: In Standby Loop')
                     return True
                 elif(status_flag == PAT_STATUS_MAIN):
-                    log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: In Main Loop - skipped standby loop anomalously') #this should not happen
-                    stop_pat()
+                    log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: In Main Loop - skipped standby loop anomalously') #this should not happen
                     return False
             else:
-                log_to_hk('PAT Process Started (PID: ' + str(return_addr) + '). Status: Unrecognized')
-                stop_pat()
+                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: Unrecognized')
                 return False
     log_to_hk('PAT Process Unresponsive.')
-    stop_pat()
     return False
 
 #initialization
@@ -206,10 +203,6 @@ counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
-
-# #start PAT process
-# pat_process_running = start_pat()
-pat_process_running = False #test housekeeping output to COSMOS before trying PAT tests
 
 #start command handling
 while True:
@@ -360,7 +353,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload)
-            if(pat_process_running):
+            if(pat_is_running()):
                 if(pat_mode_cmd in pat_mode_list):
                     PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
                     log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list == PAT_MODE_ID])
@@ -377,7 +370,7 @@ while True:
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
-            if(pat_process_running):
+            if(pat_is_running()):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
                 print(ipc_patControlPacket) #debug print
@@ -394,7 +387,7 @@ while True:
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
-            if(pat_process_running):
+            if(pat_is_running()):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
                 print(ipc_patControlPacket) #debug print
@@ -411,7 +404,7 @@ while True:
             elif(exp_cmd > 10000000):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
-            if(pat_process_running):
+            if(pat_is_running()):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
                 print(ipc_patControlPacket) #debug print
@@ -421,7 +414,7 @@ while True:
                 log_to_hk('ERROR CMD PL_FSM_TEST: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
-            if(pat_process_running):
+            if(pat_is_running()):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
                 print(ipc_patControlPacket) #debug print
@@ -431,7 +424,7 @@ while True:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process is not running.')
 
         elif(CMD_ID == CMD_PL_PAT_TEST):
-            if(pat_process_running):
+            if(pat_is_running()):
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_TEST_FLAG))
                 print(ipc_patControlPacket) #debug print
@@ -445,8 +438,9 @@ while True:
             log_to_hk('ACK CMD PL_END_PAT_PROCESS')
 
         elif(CMD_ID == CMD_PL_RESTART_PAT_PROCESS):
-            pat_process_running = start_pat()
-            if(pat_process_running):
+            restart_pat()
+            time.sleep(2)
+            if(pat_is_running()):
                 log_to_hk('ACK CMD PL_RESTART_PAT_PROCESS')
             else:
                 log_to_hk('ERROR CMD PL_RESTART_PAT_PROCESS')
@@ -571,12 +565,12 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
 
                 elif(test_id == PAT_SELF_TEST):
-                    if(pat_process_running):
+                    if(pat_is_running()):
                         #execute PAT self test
                         print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                         ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                         print(ipc_patControlPacket) #debug print
-                    elif(start_pat(allow_camera_init = True)):
+                    elif(pat_is_running(allow_camera_init = True)):
                         #Check if camera failure is to blame and run self test in camera initialization loop
                         print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                         ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
@@ -591,7 +585,7 @@ while True:
             CH_MODE_ID = CH_MODE_DOWNLINK
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + start_time)
 
-            if(pat_process_running):
+            if(pat_is_running()):
                 #Start Main PAT Loop:
                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
                 ipc_patControlPacket = send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_FLIGHT_FLAG))
@@ -606,7 +600,7 @@ while True:
             CH_MODE_ID = CH_MODE_DEBUG
             log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time)
 
-            if(not pat_process_running):
+            if(not pat_is_running()):
                 log_to_hk('ERROR CMD PL_DEBUG_MODE: PAT process is not running.')
 
             ###TODO: add any other debug process start-up tasks
