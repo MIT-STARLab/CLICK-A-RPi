@@ -1,0 +1,6 @@
+[Unit]
+Description=Depacketizer
+
+[Service]
+Type=simple
+ExecStart=/bin/python -u /root/bus/depacketizer.py

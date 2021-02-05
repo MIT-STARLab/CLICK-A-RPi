@@ -1,0 +1,6 @@
+[Unit]
+Description=Packetizer
+
+[Service]
+Type=simple
+ExecStart=/bin/python -u /root/bus/packetizer.py

@@ -81,13 +81,12 @@ class ProcessID:
         self. name = name
 
 class Housekeeping:
-    # TODO: Update this for whatever the real process names are
     # TODO: Add additional processes as necessary
-    procs = {HK_PAT_ID:'pat process',
-             HK_CH_ID:'ch process',
-             HK_FPGA_ID:'fpga process',
-             HK_PKT_ID:'packetizer process',
-             HK_DEPKT_ID:'depacketizer process'}
+    procs = {HK_PAT_ID:'pat',
+             HK_CH_ID:'commandhandler',
+             HK_FPGA_ID:'fpga',
+             HK_PKT_ID:'packetizer',
+             HK_DEPKT_ID:'depacketizer'}
     procs.update(dict(reversed(item) for item in procs.items()))
 
     def __init__(self):
@@ -332,7 +331,7 @@ class Housekeeping:
         if ((process_id == HK_CH_ID & self.ch_restart_enable) |
             (process_id == HK_PAT_ID & self.pat_restart_enable) |
             (process_id == HK_FPGA_ID & self.fpga_restart_enable)):
-            status = subprocess.call("systemctl --user restart " + process_name)
+            status = subprocess.call("systemctl --user restart " + process_name) #this code is giving an error in flat sat unit tests... maybe replace with os.system("systemctl --user restart " + process_name)
             # TODO: Format and send the error packet
 
     def handle_hk_command(self, command):
