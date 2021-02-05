@@ -72,26 +72,27 @@ class Depacketizer:
         buf = self.read_data(CCSDS_HEADER_LEN)
 
         apid =  buf[APID_INDEX]
-        pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
-        # Read payload data bytes and crc bytes
-        pkt = self.read_data(pkt_len)
-        # Assuming crc is included in the packet length
+        if(apid != APID_SYNC):
+            pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
+            # Read payload data bytes and crc bytes
+            pkt = self.read_data(pkt_len)
+            # Assuming crc is included in the packet length
 
-        buf.extend(pkt)
+            buf.extend(pkt)
 
-        # Check crc
-        crc_index = CCSDS_HEADER_LEN + pkt_len - 2
-        crc = (buf[crc_index] << 8) | buf[crc_index + 1]
+            # Check crc
+            crc_index = CCSDS_HEADER_LEN + pkt_len - 2
+            crc = (buf[crc_index] << 8) | buf[crc_index + 1]
 
-        #Calculate CRC over the entire packet
-        crcinst = crc16()
-        crc_check = crc16.calc(buf[:crc_index])
+            #Calculate CRC over the entire packet
+            crcinst = crc16()
+            crc_check = crc16.calc(buf[:crc_index])
 
-        if (crc == crc_check):
-            self.bus_pkts_buffer.append(buf)
-        else:
-            print('crc did not work')
-            #do some error handling
+            if (crc == crc_check):
+                self.bus_pkts_buffer.append(buf)
+            else:
+                print('crc did not work')
+                #do some error handling
 
     def handle_bus_pkts(self):
 
@@ -183,13 +184,12 @@ class Depacketizer:
 
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
-        if(APID not in [APID_TIME_AT_TONE, APID_SYNC]):
+        if(APID != APID_TIME_AT_TONE):
             #don't print the time at tone packets
             print(binascii.hexlify(raw_ipc_pkt))
 
-        if(APID != APID_SYNC):
-            # in the future, consider the pat packets and send those separately
-            self.rx_cmd_socket.send(raw_ipc_pkt)
+        # in the future, consider the pat packets and send those separately
+        self.rx_cmd_socket.send(raw_ipc_pkt)
 
 
     def run(self):
