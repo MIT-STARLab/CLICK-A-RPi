@@ -11,7 +11,7 @@ from crccheck.crc import Crc16CcittFalse as crc16
 sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('/root/lib/') #flight path 
 from ipc_packets import RxCommandPacket, RxPATPacket
-from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT, APID_TIME_AT_TONE, APID_SYNC
+from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT, APID_TIME_AT_TONE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
