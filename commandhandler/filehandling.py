@@ -242,7 +242,7 @@ def del_file(ipc_rxcompacket):
         else:
             os.remove(file_name)
     else:
-        pass
+        print("File Name Does Not Exist: " + file_name)
 
 
 def file_test():
@@ -343,8 +343,7 @@ def file_test():
     mov_dest_file_name = '/root/commandhandler/final_file.txt'
     mov_dest_file_name_len = len(mov_dest_file_name)
 
-    print('mov_src_file_name: ', mov_src_file_name)
-    print('mov_dest_file_name: ', mov_dest_file_name)
+    _ = input('Enter Anything to Continue to PL_MOVE_FILE. Source: ' + mov_src_file_name + '. Destination: ' + mov_dest_file_name)
 
     mov_file_cmd = struct.pack('!HH%ds%ds' % (mov_src_file_name_len, mov_dest_file_name_len), mov_src_file_name_len, mov_dest_file_name_len, mov_src_file_name, mov_dest_file_name)
     print('mov_file_cmd: ', mov_file_cmd)
@@ -365,10 +364,10 @@ def file_test():
     del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
-    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/test_file_staging/56789')
+    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/file_staging/56789')
 
     del_flag = 0xFF
-    del_file_name = '/root/test_file_staging/56789'
+    del_file_name = '/root/file_staging/56789'
     del_file_name_len = len(del_file_name)
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
