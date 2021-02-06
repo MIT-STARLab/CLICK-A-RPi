@@ -111,7 +111,7 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
     file_name = file_name_payload[0:file_name_len]
     print('assemble file - file_name: ', file_name)
     missing_chunks = []
-    pkt_data = []
+    pkt_data = ''
     try:
         # FOR TEST:
         # chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
@@ -168,42 +168,39 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
 
 
     except FileError as e:
-	print('assemble_file - except')
-	print('transfer_id: ', transfer_id)
-	print('Error: ', e)
+        print('assemble_file - except')
+        print('transfer_id: ', transfer_id)
+        print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
     else:
-	print('assemble_file - else')
+        print('assemble_file - else')
         pkt_data = format_success_response(transfer_id)
 
     finally:
         # FOR TEST
         # print(pkt_data)
         # print(binascii.hexlify(bytearray(pkt_data)))
-	print('assemble_file - pkt_data: ', pkt_data)
+        print('assemble_file - pkt_data: ', pkt_data)
         tx_pkt = TxPacket()
-        raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data)
+        raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data) #pkt_data is a single byte string (e.g. the output of struct.pack)
         socket_tx_packets.send(raw_tx_pkt)
 
 
 def format_err_response(transfer_id, file_error, missing_chunks):
-    pkt = []
-    pkt.extend(struct.pack('H', transfer_id))
-    pkt.extend(struct.pack('B', file_error.flag))
-    pkt.extend(struct.pack('H', len(missing_chunks)))
-
+    pkt = ''
+    pkt += struct.pack('H', transfer_id)
+    pkt += struct.pack('B', file_error.flag)
+    pkt += struct.pack('H', len(missing_chunks))
     for chunk_id in missing_chunks:
-        pkt.extend(struct.pack('H', chunk_id))
-
-    return str(pkt)
+        pkt += struct.pack('H', chunk_id)
+    return pkt
 
 def format_success_response(transfer_id):
-    pkt = []
-    pkt.extend(struct.pack('H', transfer_id))
-    pkt.extend(struct.pack('B', FL_SUCCESS))
-    pkt.extend(struct.pack('H', 0))
-
-    return str(pkt)
+    pkt = ''
+    pkt += struct.pack('H', transfer_id)
+    pkt += struct.pack('B', FL_SUCCESS)
+    pkt += struct.pack('H', 0)
+    return pkt
 
 def validate_file(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 18
