@@ -64,10 +64,10 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
             # FOR TEST:
             # print(len(packet))
             # print(binascii.hexlify(packet))
-	    print('send_file_chunks - file_hash: ', file_hash)
             print('send_file_chunks - transfer_id: ', transfer_id)
-	    print('send_file_chunks - seq_num: ', seq_num)
-            print('send_file_chunks - packet: ', packet)
+	        #print('send_file_chunks - file_hash: ', file_hash)
+	        print('send_file_chunks - seq_num: ', seq_num)
+            #print('send_file_chunks - packet: ', packet)
 
             txpacket = TxPacket()
             raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
@@ -84,10 +84,10 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
             # FOR TEST:
             # print(len(packet))
             # print(binascii.hexlify(packet))
-	    print('send_file_chunks - file_hash: ', file_hash)
-	    print('send_file_chunks - transfer_id: ', transfer_id)
+            print('send_file_chunks - transfer_id: ', transfer_id)
+	        #print('send_file_chunks - file_hash: ', file_hash)
             print('send_file_chunks - seq_num: ', seq_num)
-            print('send_file_chunks - packet: ', packet)
+            #print('send_file_chunks - packet: ', packet)
 
             txpacket = TxPacket()
             raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
