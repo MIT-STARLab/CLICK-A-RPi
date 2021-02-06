@@ -59,12 +59,14 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
         seq_num = 1
         while (seq_num*chunk_size) < file_len:
             packet_payload = source_file.read(chunk_size)
-            packet = struct.pack('H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
+            packet = struct.pack('!H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
 
             # FOR TEST:
             # print(len(packet))
             # print(binascii.hexlify(packet))
-            print('send_file_chunks - seq_num: ', seq_num)
+	    print('send_file_chunks - file_hash: ', file_hash)
+            print('send_file_chunks - transfer_id: ', transfer_id)
+	    print('send_file_chunks - seq_num: ', seq_num)
             print('send_file_chunks - packet: ', packet)
 
             txpacket = TxPacket()
@@ -77,11 +79,13 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
             packet_data_len = file_len - ((seq_num - 1) * chunk_size)
             packet_payload = source_file.read(packet_data_len)
 
-            packet = struct.pack('H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
+            packet = struct.pack('!H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
 
             # FOR TEST:
             # print(len(packet))
             # print(binascii.hexlify(packet))
+	    print('send_file_chunks - file_hash: ', file_hash)
+	    print('send_file_chunks - transfer_id: ', transfer_id)
             print('send_file_chunks - seq_num: ', seq_num)
             print('send_file_chunks - packet: ', packet)
 
