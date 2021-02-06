@@ -107,9 +107,9 @@ def receive_file_chunk(ipc_rxcompacket):
 def assemble_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 4
     transfer_id, file_name_len, file_name_payload = struct.unpack('!HH%ds'%req_raw_size, ipc_rxcompacket.payload)
-
+    print('assemble_file - received transfer_id: ', transfer_id)
     file_name = file_name_payload[0:file_name_len]
-
+    print('assemble file - file_name: ', file_name)
     missing_chunks = []
     pkt_data = []
     try:
@@ -168,14 +168,19 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
 
 
     except FileError as e:
+	print('assemble_file - except')
+	print('transfer_id: ', transfer_id)
+	print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
     else:
+	print('assemble_file - else')
         pkt_data = format_success_response(transfer_id)
 
     finally:
         # FOR TEST
         # print(pkt_data)
         # print(binascii.hexlify(bytearray(pkt_data)))
+	print('assemble_file - pkt_data: ', pkt_data)
         tx_pkt = TxPacket()
         raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data)
         socket_tx_packets.send(raw_tx_pkt)
