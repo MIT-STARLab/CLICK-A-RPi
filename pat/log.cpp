@@ -21,7 +21,7 @@ std::string getExperimentId()
 	std::ifstream fin("/root/log/id_experiment.csv");
 	std::string reader = "0";
 	while(getline(fin, reader)){}  // get previous experiment number (or 0)
-	int expNumPrev = atoi(reader); 
+	int expNumPrev = stoi(reader); 
 	int expNum = expNumPrev++;
 	std::string expId = std::string::to_string(expNum);
 	std::ofstream fout("/root/log/id_experiment.csv");
