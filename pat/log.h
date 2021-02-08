@@ -43,6 +43,6 @@ void log(zmq::socket_t& pat_health_port, std::ofstream& fileStream, args&&... ms
 std::string timeStamp();
 
 // Get folder number to save experiment data in
-std::string getExperimentId();
+std::string getExperimentId(bool updateExpId = false);
 
 #endif
