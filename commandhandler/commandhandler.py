@@ -163,21 +163,23 @@ def get_pat_status():
 
     return received_status, status_flag, return_addr
 
-def pat_status_is(pat_status):
-    for _ in range(10): #try to get the status of pat
-        received_status, status_flag, return_addr = get_pat_status()
-        if(received_status):
-            if(status_flag in pat_status_list):
-                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status)])
-                print('status_flag: ', status_flag)
-                print('pat_status: ', pat_status)
-                print('bool: ', (status_flag == pat_status))
-                return (status_flag == pat_status)
-            else:
-                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: Unrecognized')
-                return False
-    log_to_hk('PAT Process Unresponsive.')
-    return False
+#update PAT status
+pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
+
+def pat_status_is(pat_status_check):
+    if(pat_received_status):
+        if(pat_status_flag in pat_status_list):
+            log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+            print('status_flag: ', pat_status_flag)
+            print('pat_status_check: ', pat_status_check)
+            print('bool: ', (pat_status_flag == pat_status_check))
+            return (pat_status_flag == pat_status_check)
+        else:
+            log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
+            return False
+    else:
+         log_to_hk('PAT Process Unresponsive')
+         return False
 
 #initialization
 start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
@@ -230,6 +232,9 @@ while True:
         #print(ipc_heartbeatPacket) #Debug printing
         socket_housekeeping.send(raw_ipc_heartbeatPacket)
         counter_heartbeat += 1
+    
+    #update PAT status
+    pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
 
     #poll for received commands
     sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds

@@ -1378,7 +1378,8 @@ int main() //int argc, char** argv
 	if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
 		log(pat_health_port, textFileOut,  "In main.cpp - End of PAT process laserOff FPGA command failed!");
 	}
-	fsm.setNormalizedAngles(0, 0); //reset to zero before FSM object destruction
+	//reset FSM before ending PAT process
+	fsm.resetFSM();
 
 	if(haveCsvData){
 		log(pat_health_port, textFileOut,  "In main.cpp - Saving csv file.");
