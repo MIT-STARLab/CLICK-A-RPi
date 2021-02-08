@@ -23,7 +23,7 @@ std::string getExperimentId()
 	while(getline(fin, reader)){}  // get previous experiment number (or 0)
 	int expNumPrev = stoi(reader); 
 	int expNum = expNumPrev++;
-	std::string expId = std::string::to_string(expNum);
+	std::string expId = std::to_string(expNum);
 	std::ofstream fout("/root/log/id_experiment.csv");
 	fout << expId << std::endl;
 	fout.close();
