@@ -168,7 +168,10 @@ def pat_status_is(pat_status):
         received_status, status_flag, return_addr = get_pat_status()
         if(received_status):
             if(status_flag in pat_status_list):
-                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: ', pat_status_names[pat_status_list.index(pat_status)])
+                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status)])
+                print('status_flag: ', status_flag)
+                print('pat_status: ', pat_status)
+                print('bool: ', (status_flag == pat_status))
                 return (status_flag == pat_status)
             else:
                 log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: Unrecognized')
