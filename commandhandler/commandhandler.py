@@ -54,8 +54,8 @@ pat_status_names = ['CAMERA INIT', 'STANDBY', 'MAIN']
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-socket_pat_control = context.socket(zmq.PUB) #send messages on this port
-socket_pat_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
+socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
+socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
@@ -331,7 +331,8 @@ while True:
             log_to_hk('ACK CMD PL_DELETE_FILE')
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
-            pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload)
+            pat_mode_cmd_tuple = struct.unpack('B', ipc_rxcompacket.payload)
+            pat_mode_cmd = pat_mode_cmd_tuple[0]
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 if(pat_mode_cmd in pat_mode_list):
                     PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
@@ -342,7 +343,8 @@ while True:
                 log_to_hk('ERROR CMD PL_SET_PAT_MODE: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -357,7 +359,8 @@ while True:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
-            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -372,7 +375,8 @@ while True:
                 log_to_hk('ERROR CMD PL_CALIB_LASER_TEST: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
-            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -535,7 +539,8 @@ while True:
             log_to_hk('ACK CMD PL_NOOP')
 
         elif(CMD_ID == CMD_PL_SELF_TEST):
-            test_id = struct.unpack('B', ipc_rxcompacket.payload)
+            test_id_tuple = struct.unpack('B', ipc_rxcompacket.payload)
+            test_id = test_id_tuple[0]
             test_list = [GENERAL_SELF_TEST, LASER_SELF_TEST, PAT_SELF_TEST]
             test_names = ['GENERAL_SELF_TEST', 'LASER_SELF_TEST', 'PAT_SELF_TEST']
             if(test_id not in test_list):
