@@ -27,4 +27,5 @@ std::string getExperimentId()
 	std::ofstream fout("/root/log/id_experiment.csv");
 	fout << expId << std::endl;
 	fout.close();
+	return expId; 
 }
