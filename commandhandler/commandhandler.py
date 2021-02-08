@@ -331,7 +331,7 @@ while True:
             log_to_hk('ACK CMD PL_DELETE_FILE')
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
-            pat_mode_cmd_tuple = struct.unpack('B', ipc_rxcompacket.payload)
+            pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             pat_mode_cmd = pat_mode_cmd_tuple[0]
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 if(pat_mode_cmd in pat_mode_list):
@@ -343,7 +343,7 @@ while True:
                 log_to_hk('ERROR CMD PL_SET_PAT_MODE: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            exp_cmd_tuple = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
             exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
@@ -359,7 +359,7 @@ while True:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
-            exp_cmd_tuple = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
             exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
@@ -375,7 +375,7 @@ while True:
                 log_to_hk('ERROR CMD PL_CALIB_LASER_TEST: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
-            exp_cmd_tuple = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
             exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
@@ -406,7 +406,7 @@ while True:
                 log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
-            tx_update_x, tx_update_y = struct.unpack('HH', ipc_rxcompacket.payload)
+            tx_update_x, tx_update_y = struct.unpack('!HH', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_MAIN)):
                 if(tx_update_x > 0):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
@@ -417,7 +417,7 @@ while True:
                 log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in MAIN.')
 
         elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
-            fsm_update_x, fsm_update_y = struct.unpack('HH', ipc_rxcompacket.payload)
+            fsm_update_x, fsm_update_y = struct.unpack('!HH', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 if(fsm_update_x > 0):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_X, str(fsm_update_x))
@@ -539,7 +539,7 @@ while True:
             log_to_hk('ACK CMD PL_NOOP')
 
         elif(CMD_ID == CMD_PL_SELF_TEST):
-            test_id_tuple = struct.unpack('B', ipc_rxcompacket.payload)
+            test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             test_id = test_id_tuple[0]
             test_list = [GENERAL_SELF_TEST, LASER_SELF_TEST, PAT_SELF_TEST]
             test_names = ['GENERAL_SELF_TEST', 'LASER_SELF_TEST', 'PAT_SELF_TEST']
