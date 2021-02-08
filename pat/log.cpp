@@ -19,12 +19,13 @@ std::string getExperimentId()
 //-----------------------------------------------------------------------------
 {
 	std::ifstream fin("/root/log/id_experiment.csv");
-	std::string reader = "0";
-	while(getline(fin, reader)){}  // get previous experiment number (or 0)
-	int expNumPrev = stoi(reader); 
-	int expNum = expNumPrev++;
+	std::string reader;
+	int expNumPrev = 0;
+	while(getline(fin, reader)){expNumPrev = stoi(reader);}  // get previous experiment number (or 0)
+	int expNum = expNumPrev + 1;
 	std::string expId = std::to_string(expNum);
-	std::ofstream fout("/root/log/id_experiment.csv");
+	std::ofstream fout;
+	fout.open("/root/log/id_experiment.csv", std::ios::app);
 	fout << expId << std::endl;
 	fout.close();
 	return expId; 
