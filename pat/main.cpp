@@ -274,7 +274,7 @@ int main() //int argc, char** argv
 	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
+	Tracking track(camera, calibration, textFileOut, pat_status_port, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// CSV data saving for main PAT loop
