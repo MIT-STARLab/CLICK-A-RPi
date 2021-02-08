@@ -129,22 +129,22 @@ def initialize_cal_laser():
     log_to_hk('CALIBRATION LASER OFF')
 
 def start_camera():
-    os.system('start camera') #calls camera.service to turn on camera
+    os.system('systemctl --user start camera') #calls camera.service to turn on camera
     log_to_hk('CAMERA ON')
 
 def stop_camera():
-    os.system('stop camera') #calls camera.service to turn off camera
+    os.system('systemctl --user stop camera') #calls camera.service to turn off camera
     log_to_hk('CAMERA OFF')
 
 def stop_pat():
-    send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS)
-    #os.system('stop pat') #stop the pat service
+    send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS) #this isn't necessary if PAT is running as a service
+    os.system("systemctl --user stop pat") #stop the pat service
     log_to_hk('PAT STOPPED')
 
 def restart_pat():
     stop_pat()
     time.sleep(1)
-    os.system('start pat') #restart the pat service
+    os.system("systemctl --user restart pat") #restart the pat service
     log_to_hk('PAT RESTARTED')
 
 def get_pat_status():
