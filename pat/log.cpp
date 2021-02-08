@@ -12,3 +12,19 @@ std::string timeStamp()
 	strftime(dateTime, sizeof(dateTime), "%Y-%m-%d-%H-%M-%S", &tstruct);
 	return std::string(dateTime);
 }
+
+// Get folder number to save experiment data in
+//-----------------------------------------------------------------------------
+std::string getExperimentId()
+//-----------------------------------------------------------------------------
+{
+	std::ifstream fin("/root/log/id_experiment.csv");
+	std::string reader = "0";
+	while(getline(fin, reader)){}  // get previous experiment number (or 0)
+	int expNumPrev = atoi(reader); 
+	int expNum = expNumPrev++;
+	std::string expId = std::string::to_string(expNum);
+	std::ofstream fout("/root/log/id_experiment.csv");
+	fout << expId << std::endl;
+	fout.close();
+}
