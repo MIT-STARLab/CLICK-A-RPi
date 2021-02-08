@@ -443,13 +443,12 @@ while True:
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_FSM_ANGLES: PAT process not in STANDBY.')
 
-        elif(CMD_ID == CMD_PL_PAT_TEST):
+        elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_TEST_FLAG))
-                log_to_hk('ACK CMD PL_PAT_TEST')
-                #Manage image telemetry files...
+                log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
             else:
-                log_to_hk('ERROR CMD PL_PAT_TEST: PAT process not in STANDBY.')
+                log_to_hk('ERROR CMD PL_ENTER_PAT_MAIN: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_EXIT_PAT_MAIN):
             if(pat_status_is(PAT_STATUS_MAIN)):
