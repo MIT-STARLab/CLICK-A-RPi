@@ -331,7 +331,7 @@ class Housekeeping:
         if ((process_id == HK_CH_ID & self.ch_restart_enable) |
             (process_id == HK_PAT_ID & self.pat_restart_enable) |
             (process_id == HK_FPGA_ID & self.fpga_restart_enable)):
-            status = subprocess.call("systemctl --user restart " + process_name) #this code is giving an error in flat sat unit tests... maybe replace with os.system("systemctl --user restart " + process_name)
+            status = subprocess.call("systemctl --user restart " + process_name, shell = True) #this code is giving an error in flat sat unit tests... maybe replace with os.system("systemctl --user restart " + process_name)
             # TODO: Format and send the error packet
 
     def handle_hk_command(self, command):
