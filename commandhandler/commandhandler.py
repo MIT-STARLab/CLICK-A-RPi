@@ -151,7 +151,7 @@ def get_pat_status():
     #get pat status
     socks_status = dict(poller_PAT_status.poll(250)) #poll for 250 ms
     if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
-        print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+        #print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
         message = recv_zmq(socket_PAT_status)
         ipc_patStatusPacket = PATStatusPacket()
         return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
