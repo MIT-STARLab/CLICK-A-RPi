@@ -61,8 +61,8 @@ public:
 	double transformDy(double x, double y);
 	double affineTransformX(double x, double y);
 	double affineTransformY(double x, double y);
-	bool run(Group& calib, std::string filePath = std::string("/root/log/pat/") + getExperimentId() + std::string("/"));
-	bool findExposureRange(std::string filePath = std::string("/root/log/pat/") + getExperimentId() + std::string("/"));
+	bool run(Group& calib, std::string filePath = getExperimentFolder());
+	bool findExposureRange(std::string filePath = getExperimentFolder());
 	bool checkLaserOn(Group& calib);
 	bool checkLaserOff();
 	bool testFSM(Group& calib);
