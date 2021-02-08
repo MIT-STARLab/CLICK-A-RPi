@@ -279,7 +279,7 @@ while True:
         elif(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
             time.sleep(1)
-            os.system("sudo shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
+            os.system("shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
 
         elif(CMD_ID == CMD_PL_ENABLE_TIME):
             TIME_SET_ENABLE = 1
