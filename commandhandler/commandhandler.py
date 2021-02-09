@@ -262,8 +262,8 @@ while True:
 
         if(CMD_ID == APID_TIME_AT_TONE):
             if (TIME_SET_ENABLE > 0):
-                print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
-                print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
+                #print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
+                #print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
                 set_time = time.gmtime(tai_secs)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
