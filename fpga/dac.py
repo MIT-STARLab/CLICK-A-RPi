@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 sys.path.append('/root/lib/')
 import options

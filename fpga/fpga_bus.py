@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import itertools
 sys.path.append('/root/lib/')

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #Wavelength Alignment Functions
 
 import fl

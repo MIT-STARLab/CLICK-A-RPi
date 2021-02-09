@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import binascii
 from crccheck.crc import Crc16CcittFalse as crc16
 

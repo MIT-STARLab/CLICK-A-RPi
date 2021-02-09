@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import zmq
 import ipc_packets
 import options

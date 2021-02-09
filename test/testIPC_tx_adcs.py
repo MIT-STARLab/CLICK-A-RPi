@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 import zmq
@@ -6,7 +6,7 @@ import json
 import time
 
 import sys #importing options and functions
-sys.path.append('../../lib/')
+sys.path.append('/root/lib/')
 from options import TX_PACKETS_PORT
 from ipc_packets import TxPacket
 from zmqTxRx import recv_zmq #send_zmq
