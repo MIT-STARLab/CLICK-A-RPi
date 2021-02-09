@@ -18,7 +18,7 @@ import ipc_helper
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, TLM_HK_SYS, TLM_HK_PAT, TLM_HK_FPGA_MAP
-from options import HK_FPGA_CHECK_PD, HK_SYS_CHECK_PD, HK_CH_HEARTBEAT_PD, HK_PAT_HEALTH_PD, HK_FPGA_ANS_PD
+from options import HK_FPGA_CHECK_PD, HK_SYS_CHECK_PD, HK_CH_HEARTBEAT_PD, HK_PAT_HEALTH_PD
 from options import HK_FPGA_REQ_ENABLE, HK_SYS_HK_SEND_ENABLE, HK_FPGA_HK_SEND_ENABLE, HK_PAT_HK_SEND_ENABLE, HK_CH_RESTART_ENABLE, HK_PAT_RESTART_ENABLE, HK_FPGA_RESTART_ENABLE, HK_ALLPKTS_SEND_ENABLE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
@@ -209,22 +209,15 @@ class Housekeeping:
 
         # 1: Enable flags
         enables = 0
-        if (self.all_pkts_send_enable):
-            enables |= 1 << 7
-        if (self.fpga_req_enable):
-            enables |= 1 << 6
-        if (self.sys_hk_send_enable):
-            enables |= 1 << 5
-        if (self.fpga_hk_send_enable):
-            enables |= 1 << 4
-        if (self.pat_hk_send_enable):
-            enables |= 1 << 3
-        if (self.ch_restart_enable):
-            enables |= 1 << 2
-        if (self.pat_restart_enable):
-            enables |= 1 << 1
-        if (self.fpga_restart_enable):
-            enables |= 1 << 0
+        enables |= (self.all_pkts_send_enable & 1) << 7
+        enables |= (self.fpga_req_enable & 1) << 6
+        enables |= (self.sys_hk_send_enable & 1) << 5
+        enables |= (self.fpga_hk_send_enable & 1) << 4
+        enables |= (self.pat_hk_send_enable & 1) << 3
+        enables |= (self.ch_restart_enable & 1) << 2
+        enables |= (self.pat_restart_enable & 1) << 1
+        enables |= (self.fpga_restart_enable & 1) << 0
+
         pkt.extend(struct.pack('B', enables))
 
         # 2: FPGA housekeeping period
@@ -325,9 +318,23 @@ class Housekeeping:
             # TODO: Format and send the error packet
 
     def handle_hk_command(self, command):
-        hk = HousekeepingControlPacket()
-        cmd, payload = hk.decode(command)
-        # TODO: Handle housekeeping command
+        hk_control_pkt = HousekeepingControlPacket()
+        hk_control_pkt.decode(command)
+        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!%BBBBB', hk_control_pkt.payload)
+
+        self.all_pkts_send_enable = (flags >> 7) & 1
+        self.fpga_req_enable = (flags >> 6) & 1
+        self.sys_hk_send_enable  = (flags >> 5) & 1
+        self.fpga_hk_send_enable = (flags >> 4) & 1
+        self.pat_hk_send_enable = (flags >> 3) & 1
+        self.ch_restart_enable = (flags >> 2) & 1
+        self.pat_restart_enable = (flags >> 1) & 1
+        self.fpga_restart_enable = (flags >> 6) & 1
+
+        self.fpga_check_period = new_fpga_check_pd
+        self.sys_check_period = new_sys_check_pd
+        self.ch_heartbeat_period = new_ch_heartbeat_pd
+        self.pat_health_period = new_pat_health_pd
 
     def run(self):
         self.fpga_check_timer.start()

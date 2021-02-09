@@ -60,6 +60,9 @@ socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to spe
 socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
 
+socket_hk_control = context.socket(zmq.PUB) #send messages on this port
+socket_hk_control.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to specific address (localhost)
+
 socket_tx_packets = context.socket(zmq.PUB)
 socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
@@ -239,7 +242,7 @@ while True:
         #print(ipc_heartbeatPacket) #Debug printing
         socket_housekeeping.send(raw_ipc_heartbeatPacket)
         counter_heartbeat += 1
-    
+
     #update PAT status
     pat_status_flag = update_pat_status(pat_status_flag)
 
@@ -413,7 +416,7 @@ while True:
                 #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
-        
+
         elif(CMD_ID == CMD_PL_TX_ALIGN):
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 send_pat_command(socket_PAT_control, PAT_CMD_TX_ALIGN)
@@ -537,8 +540,10 @@ while True:
             #     socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
 
         elif(CMD_ID == CMD_PL_SET_HK):
+            ipc_HKControlPacket = HKControlPacket()
+            raw_HKControlPacket = ipc_HKControlPacket.encode(CMD_ID, ipc_rxcompacket.payload)
+            socket_hk_control.send(raw_HKControlPacket)
             log_to_hk('ACK CMD PL_SET_HK')
-            #TODO
 
         elif(CMD_ID == CMD_PL_ECHO):
             echo_raw_size = ipc_rxcompacket.size
