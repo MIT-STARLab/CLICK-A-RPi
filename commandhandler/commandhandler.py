@@ -82,20 +82,6 @@ socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_status = zmq.Poller()
 poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
-# socket_test_response_packets = context.socket(zmq.PUB) #send messages on this port
-# socket_test_response_packets.connect("tcp://localhost:%s" % TEST_RESPONSE_PORT) #connect to specific address (localhost)
-
-# socket_FPGA_map_request = context.socket(zmq.PUB) #send messages on this port
-# socket_FPGA_map_request.connect("tcp://localhost:%s" % FPGA_MAP_REQUEST_PORT) #connect to specific address (localhost)
-
-# print ("Subscribing to FPGA_MAP_ANSWER topic {}".format(topic))
-# print ("on port {}".format(FPGA_MAP_ANSWER_PORT))
-# socket_FPGA_map_answer = context.socket(zmq.SUB)
-# #socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, topic.encode('ascii'))
-# socket_FPGA_map_answer.setsockopt(zmq.SUBSCRIBE, struct.pack('I',pid))
-# socket_FPGA_map_answer.setsockopt(zmq.RCVTIMEO, MESSAGE_TIMEOUT) # 5 second timeout on receive
-# socket_FPGA_map_answer.connect ("tcp://localhost:%s" % FPGA_MAP_ANSWER_PORT)
-
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
 
@@ -174,10 +160,13 @@ def update_pat_status(status_flag):
 
     return status_flag
 
-#update PAT status
-pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
+#intialize PAT status
+for i in range(10):
+    pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
+    if(pat_received_status):
+        break 
 if(not pat_received_status):
-    log_to_hk('WARNING: PAT process unresponsive at CH startup.')
+    log_to_hk('WARNING: PAT process unresponsive at CH (' + str(pid) + ') startup.')
 
 def pat_status_is(pat_status_check):
     if(pat_status_flag in pat_status_list):
@@ -190,14 +179,12 @@ def pat_status_is(pat_status_check):
         log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
         return False
 
-
 #initialization
 start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
 counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
-initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
 
 #start command handling
 while True:
@@ -387,6 +374,7 @@ while True:
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
             if(pat_status_is(PAT_STATUS_STANDBY)):
+                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
                 #Manage image telemetry files...
@@ -403,6 +391,7 @@ while True:
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = 10000000
             if(pat_status_is(PAT_STATUS_STANDBY)):
+                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_FSM_TEST')
                 #Manage image telemetry files...
@@ -411,6 +400,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
             if(pat_status_is(PAT_STATUS_STANDBY)):
+                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
                 log_to_hk('ACK CMD PL_RUN_CALIBRATION')
                 #Manage image telemetry files...
@@ -465,16 +455,13 @@ while True:
             log_to_hk('ACK CMD PL_END_PAT_PROCESS')
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
-            print('payload: ', ipc_rxcompacket.payload)
-	    print('size: ', ipc_rxcompacket.size)
-	    set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
-	    print('set_fpga_num_reg: ', set_fpga_num_reg)
+            set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
             set_fpga_data = struct.unpack('!BHB%dI'%set_fpga_num_reg, ipc_rxcompacket.payload)
             rq_number = set_fpga_data[0]
-	    start_addr = set_fpga_data[1]
-	    num_registers = set_fpga_data[2]
-	    write_data = list(set_fpga_data[3:])
-	    print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
+            start_addr = set_fpga_data[1]
+            num_registers = set_fpga_data[2]
+            write_data = list(set_fpga_data[3:])
+            print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
             if(num_registers != len(write_data)):
                 log_to_hk('ERROR CMD PL_SET_FPGA - Packet Error: expected number of registers (= ' + str(num_registers) +  ' not equal to data length (= ' + str(len(write_data)))
             else:
@@ -493,26 +480,8 @@ while True:
                     log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
                 else:
                     log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-            #TODO: add direct telemetry message instead of just housekeeping
-
-            ###OLD FPGA Interface
-            # #send fpga request
-            # fpga_req_pkt = FPGAMapRequestPacket()
-            # raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers, write_data)
-            # socket_FPGA_map_request.send(raw_fpga_req_pkt)
-
-            # #get fpga answer
-            # fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
-            # ipc_fpgaaswpacket = FPGAMapAnswerPacket()
-            # ipc_fpgaaswpacket.decode(fpga_answer_message)
-            # print (ipc_fpgaaswpacket) #debug print
-            # if(ipc_fpgaaswpacket.error):
-            #     log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
-            # else:
-            #     log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
-
+            
         elif(CMD_ID == CMD_PL_GET_FPGA):
-	    print('payload: ', ipc_rxcompacket.payload)
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
             read_data = fpga.read_reg(start_addr, num_registers)
             read_data_len = len(read_data)
@@ -524,28 +493,6 @@ while True:
             fpga_read_txpacket = TxPacket()
             raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
             socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
-
-            ###OLD FPGA Interface
-            # #send fpga request
-            # fpga_req_pkt = FPGAMapRequestPacket()
-            # raw_fpga_req_pkt = fpga_req_pkt.encode(pid, rq_number, rw_flag, start_addr, num_registers)
-            # socket_FPGA_map_request.send(raw_fpga_req_pkt)
-
-            # #get fpga answer
-            # fpga_answer_message = recv_zmq(socket_FPGA_map_answer)
-            # ipc_fpgaaswpacket = FPGAMapAnswerPacket()
-            # ipc_fpgaaswpacket.decode(fpga_answer_message)
-            # print (ipc_fpgaaswpacket) #debug print
-            # if(ipc_fpgaaswpacket.error):
-            #     log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ FAILURE. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
-            # else:
-            #     log_to_hk('ACK CMD CMD_PL_GET_FPGA. READ SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
-            #     #send on tx port
-            #     fpga_read_payload = struct.pack('!BHB%ds'%ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.rq_number, ipc_fpgaaswpacket.start_addr, ipc_fpgaaswpacket.size, ipc_fpgaaswpacket.read_data)
-            #     print (fpga_read_payload)
-            #     fpga_read_txpacket = TxPacket()
-            #     raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
-            #     socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
 
         elif(CMD_ID == CMD_PL_SET_HK):
             ipc_HKControlPacket = HKControlPacket()
@@ -598,6 +545,7 @@ while True:
                 elif(test_id == PAT_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
                     if(pat_status_is(PAT_STATUS_STANDBY)):
+                        initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                         #execute PAT self test
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                     elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
@@ -612,12 +560,13 @@ while True:
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + start_time)
 
             if(pat_status_is(PAT_STATUS_STANDBY)):
+                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #Start Main PAT Loop:
                 send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_FLIGHT_FLAG))
             else:
                 log_to_hk('ERROR CMD PL_DWNLINK_MODE: PAT process not in STANDBY.')
 
-            ###TODO: add any other lasercom experiment process start-up tasks
+            ###TODO: variable delay until lasercom tx script execution
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
