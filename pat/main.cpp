@@ -579,9 +579,14 @@ int main() //int argc, char** argv
 						//Laser Test:
 						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
 							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
-							calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
-							camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
-							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
+							if(calibration.findExposureRange(true)){
+								calibExposure = calibration.preferredExpo;
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Using auto-tuned exposure = ", calibExposure, " us.");
+							} else{
+								calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
+								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
+							}
 							camera.config->expose_us.write(calibExposure); //set calib exposure
 							int laser_tests_passed = 0;
 							for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
