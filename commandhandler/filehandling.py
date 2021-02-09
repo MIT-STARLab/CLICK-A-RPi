@@ -42,56 +42,59 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 6
     transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
     file_name = file_name_payload[0:file_name_len]
+    try:
+        # TODO: Error handling for file not found (send error packet)
+        hash_func = hashlib.md5()
+        with open(file_name, "rb") as source_file:
+            buf = source_file.read(1024) # Hash block size is 1024, change if necessary
+            while (len(buf) > 0):
+                hash_func.update(buf)
+                buf = source_file.read(1024)
+        file_hash = hash_func.digest()
 
-    # TODO: Error handling for file not found (send error packet)
-    hash_func = hashlib.md5()
-    with open(file_name, "rb") as source_file:
-        buf = source_file.read(1024) # Hash block size is 1024, change if necessary
-        while (len(buf) > 0):
-            hash_func.update(buf)
-            buf = source_file.read(1024)
-    file_hash = hash_func.digest()
+        # TODO: Better to handle with only looping once...
+        with open(file_name, "rb") as source_file:
+            file_len = os.stat(file_name).st_size
+            seq_len = math.ceil(float(file_len)/chunk_size)
+            seq_num = 1
+            while (seq_num*chunk_size) < file_len:
+                packet_payload = source_file.read(chunk_size)
+                packet = struct.pack('!H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
 
-    # TODO: Better to handle with only looping once...
-    with open(file_name, "rb") as source_file:
-        file_len = os.stat(file_name).st_size
-        seq_len = math.ceil(float(file_len)/chunk_size)
-        seq_num = 1
-        while (seq_num*chunk_size) < file_len:
-            packet_payload = source_file.read(chunk_size)
-            packet = struct.pack('!H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
+                # FOR TEST:
+                # print(len(packet))
+                # print(binascii.hexlify(packet))
+                print('send_file_chunks - transfer_id: ', transfer_id)
+                print('send_file_chunks - seq_num: ', seq_num)
+                #print('send_file_chunks - file_hash: ', file_hash)
+                #print('send_file_chunks - packet: ', packet)
 
-            # FOR TEST:
-            # print(len(packet))
-            # print(binascii.hexlify(packet))
-            print('send_file_chunks - transfer_id: ', transfer_id)
-            print('send_file_chunks - seq_num: ', seq_num)
-	        #print('send_file_chunks - file_hash: ', file_hash)
-            #print('send_file_chunks - packet: ', packet)
+                txpacket = TxPacket()
+                raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
+                socket_tx_packets.send(raw_packet)
 
-            txpacket = TxPacket()
-            raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
-            socket_tx_packets.send(raw_packet)
+                seq_num += 1
 
-            seq_num += 1
+            if (((seq_num - 1) * chunk_size) < file_len):
+                packet_data_len = file_len - ((seq_num - 1) * chunk_size)
+                packet_payload = source_file.read(packet_data_len)
 
-        if (((seq_num - 1) * chunk_size) < file_len):
-            packet_data_len = file_len - ((seq_num - 1) * chunk_size)
-            packet_payload = source_file.read(packet_data_len)
+                packet = struct.pack('!H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
 
-            packet = struct.pack('!H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
+                # FOR TEST:
+                # print(len(packet))
+                # print(binascii.hexlify(packet))
+                print('send_file_chunks - transfer_id: ', transfer_id)
+                print('send_file_chunks - seq_num: ', seq_num)
+                #print('send_file_chunks - file_hash: ', file_hash)
+                #print('send_file_chunks - packet: ', packet)
 
-            # FOR TEST:
-            # print(len(packet))
-            # print(binascii.hexlify(packet))
-            print('send_file_chunks - transfer_id: ', transfer_id)
-            print('send_file_chunks - seq_num: ', seq_num)
-            #print('send_file_chunks - file_hash: ', file_hash)
-            #print('send_file_chunks - packet: ', packet)
-
-            txpacket = TxPacket()
-            raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
-            socket_tx_packets.send(raw_packet)
+                txpacket = TxPacket()
+                raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
+                socket_tx_packets.send(raw_packet)
+    except:
+        #TODO error handling telemetry
+        print('In filehandling - send_file_chunks - Error - File Not Found: ', file_name)
 
 def receive_file_chunk(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 8
