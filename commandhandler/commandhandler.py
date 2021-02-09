@@ -462,9 +462,16 @@ while True:
             log_to_hk('ACK CMD PL_END_PAT_PROCESS')
 
         elif(CMD_ID == CMD_PL_SET_FPGA):
-            set_fpga_raw_size = ipc_rxcompacket.size - 4
-            rq_number, start_addr, num_registers, write_data = struct.unpack('!BHB%dI'%set_fpga_raw_size, ipc_rxcompacket.payload)
-            print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
+            print('payload: ', ipc_rxcompacket.payload)
+	    print('size: ', ipc_rxcompacket.size)
+	    set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
+	    print('set_fpga_num_reg: ', set_fpga_num_reg)
+            set_fpga_data = struct.unpack('!BHB%dI'%set_fpga_num_reg, ipc_rxcompacket.payload)
+            rq_number = set_fpga_data[0]
+	    start_addr = set_fpga_data[1]
+	    num_registers = set_fpga_data[2]
+	    write_data = list(set_fpga_data[3:])
+	    print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
             if(num_registers != len(write_data)):
                 log_to_hk('ERROR CMD PL_SET_FPGA - Packet Error: expected number of registers (= ' + str(num_registers) +  ' not equal to data length (= ' + str(len(write_data)))
             else:
@@ -502,6 +509,7 @@ while True:
             #     log_to_hk('ACK CMD CMD_PL_SET_FPGA. WRITE SUCCESS. Request Number: ' + str(ipc_fpgaaswpacket.rq_number) + '. Start Address: ' + str(ipc_fpgaaswpacket.start_addr))
 
         elif(CMD_ID == CMD_PL_GET_FPGA):
+	    print('payload: ', ipc_rxcompacket.payload)
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
             read_data = fpga.read_reg(start_addr, num_registers)
             read_data_len = len(read_data)
