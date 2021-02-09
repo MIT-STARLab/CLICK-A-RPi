@@ -8,6 +8,8 @@
 #include <string>
 #include <sstream>
 #include <ctime>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "packetdef.h"
 
 // Variable argument logging function with clock timestamp
@@ -40,8 +42,9 @@ void log(zmq::socket_t& pat_health_port, std::ofstream& fileStream, args&&... ms
 }
 
 // Get date and time for telemetry file names
-//-----------------------------------------------------------------------------
 std::string timeStamp();
-//-----------------------------------------------------------------------------
+
+// Get folder number to save experiment data in
+std::string getExperimentFolder(bool updateExpId = false);
 
 #endif

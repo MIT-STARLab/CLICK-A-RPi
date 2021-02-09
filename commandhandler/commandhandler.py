@@ -54,8 +54,8 @@ pat_status_names = ['CAMERA INIT', 'STANDBY', 'MAIN']
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-socket_pat_control = context.socket(zmq.PUB) #send messages on this port
-socket_pat_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
+socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
+socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
@@ -129,28 +129,29 @@ def initialize_cal_laser():
     log_to_hk('CALIBRATION LASER OFF')
 
 def start_camera():
-    os.system('start camera') #calls camera.service to turn on camera
+    os.system('systemctl --user start camera') #calls camera.service to turn on camera
     log_to_hk('CAMERA ON')
 
 def stop_camera():
-    os.system('stop camera') #calls camera.service to turn off camera
+    os.system('systemctl --user stop camera') #calls camera.service to turn off camera
     log_to_hk('CAMERA OFF')
 
 def stop_pat():
-    os.system('stop pat') #stop the pat service
+    send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS) #this isn't necessary if PAT is running as a service
+    os.system("systemctl --user stop pat") #stop the pat service
     log_to_hk('PAT STOPPED')
 
 def restart_pat():
     stop_pat()
     time.sleep(1)
-    os.system('start pat') #restart the pat service
+    os.system("systemctl --user restart pat") #restart the pat service
     log_to_hk('PAT RESTARTED')
 
 def get_pat_status():
     #get pat status
     socks_status = dict(poller_PAT_status.poll(250)) #poll for 250 ms
     if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
-        print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+        #print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
         message = recv_zmq(socket_PAT_status)
         ipc_patStatusPacket = PATStatusPacket()
         return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
@@ -162,18 +163,30 @@ def get_pat_status():
 
     return received_status, status_flag, return_addr
 
-def pat_status_is(pat_status):
-    for _ in range(10): #try to get the status of pat
-        received_status, status_flag, return_addr = get_pat_status()
-        if(received_status):
-            if(status_flag in pat_status_list):
-                return (status_flag == pat_status)
-                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: ', pat_status_names[pat_status_list.index(pat_status)])
-            else:
-                log_to_hk('PAT Process Running (PID: ' + str(return_addr) + '). Status: Unrecognized')
-                return False
-    log_to_hk('PAT Process Unresponsive.')
-    return False
+def update_pat_status(status_flag):
+    #get pat status
+    received_status, new_status_flag, _ = get_pat_status()
+    if(received_status):
+        status_flag = new_status_flag
+
+    return status_flag
+
+#update PAT status
+pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
+if(not pat_received_status):
+    log_to_hk('WARNING: PAT process unresponsive at CH startup.')
+
+def pat_status_is(pat_status_check):
+    if(pat_status_flag in pat_status_list):
+        log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+        print('status_flag: ', pat_status_flag)
+        print('pat_status_check: ', pat_status_check)
+        print('bool: ', (pat_status_flag == pat_status_check))
+        return (pat_status_flag == pat_status_check)
+    else:
+        log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
+        return False
+
 
 #initialization
 start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
@@ -226,6 +239,9 @@ while True:
         #print(ipc_heartbeatPacket) #Debug printing
         socket_housekeeping.send(raw_ipc_heartbeatPacket)
         counter_heartbeat += 1
+    
+    #update PAT status
+    pat_status_flag = update_pat_status(pat_status_flag)
 
     #poll for received commands
     sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds
@@ -246,8 +262,8 @@ while True:
 
         if(CMD_ID == APID_TIME_AT_TONE):
             if (TIME_SET_ENABLE > 0):
-                print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
-                print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
+                #print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
+                #print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
                 set_time = time.gmtime(tai_secs)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
@@ -263,7 +279,7 @@ while True:
         elif(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
             time.sleep(1)
-            os.system("sudo shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
+            os.system("shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
 
         elif(CMD_ID == CMD_PL_ENABLE_TIME):
             TIME_SET_ENABLE = 1
@@ -331,7 +347,8 @@ while True:
             log_to_hk('ACK CMD PL_DELETE_FILE')
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
-            pat_mode_cmd = struct.unpack('B', ipc_rxcompacket.payload)
+            pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
+            pat_mode_cmd = pat_mode_cmd_tuple[0]
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 if(pat_mode_cmd in pat_mode_list):
                     PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
@@ -342,7 +359,8 @@ while True:
                 log_to_hk('ERROR CMD PL_SET_PAT_MODE: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
+            exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -357,7 +375,8 @@ while True:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
-            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
+            exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -372,7 +391,8 @@ while True:
                 log_to_hk('ERROR CMD PL_CALIB_LASER_TEST: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
-            exp_cmd = struct.unpack('I', ipc_rxcompacket.payload) #TBR
+            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
+            exp_cmd = exp_cmd_tuple[0]
             if(exp_cmd < 10):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
                     exp_cmd = 10
@@ -402,34 +422,33 @@ while True:
                 log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
-            tx_update_x, tx_update_y = struct.unpack('HH', ipc_rxcompacket.payload)
+            tx_update_x, tx_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_MAIN)):
-                if(tx_update_x > 0):
+                if(abs(tx_update_x) < 1000):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
-                if(tx_update_y > 0):
+                if(abs(tx_update_y) < 1000):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_Y, str(tx_update_y))
                 log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in MAIN.')
 
         elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
-            fsm_update_x, fsm_update_y = struct.unpack('HH', ipc_rxcompacket.payload)
+            fsm_update_x, fsm_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY)):
-                if(fsm_update_x > 0):
+                if(abs(fsm_update_x) < 1000):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_X, str(fsm_update_x))
-                if(fsm_update_y > 0):
+                if(abs(fsm_update_y) < 1000):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_Y, str(fsm_update_y))
                 log_to_hk('ACK CMD PL_UPDATE_FSM_ANGLES')
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_FSM_ANGLES: PAT process not in STANDBY.')
 
-        elif(CMD_ID == CMD_PL_PAT_TEST):
+        elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_TEST_FLAG))
-                log_to_hk('ACK CMD PL_PAT_TEST')
-                #Manage image telemetry files...
+                log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
             else:
-                log_to_hk('ERROR CMD PL_PAT_TEST: PAT process not in STANDBY.')
+                log_to_hk('ERROR CMD PL_ENTER_PAT_MAIN: PAT process not in STANDBY.')
 
         elif(CMD_ID == CMD_PL_EXIT_PAT_MAIN):
             if(pat_status_is(PAT_STATUS_MAIN)):
@@ -535,15 +554,16 @@ while True:
             log_to_hk('ACK CMD PL_NOOP')
 
         elif(CMD_ID == CMD_PL_SELF_TEST):
-            test_id = struct.unpack('B', ipc_rxcompacket.payload)
+            test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
+            test_id = test_id_tuple[0]
             test_list = [GENERAL_SELF_TEST, LASER_SELF_TEST, PAT_SELF_TEST]
             test_names = ['GENERAL_SELF_TEST', 'LASER_SELF_TEST', 'PAT_SELF_TEST']
             if(test_id not in test_list):
                 log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + str(test_id))
             else:
-                log_to_hk('ACK CMD PL_SELF_TEST: Test is ' + test_names[test_list == test_id])
                 #execute test
                 if(test_id == GENERAL_SELF_TEST):
+                    log_to_hk('ACK CMD PL_SELF_TEST: Test is GENERAL_SELF_TEST')
                     #Execute general self test script
                     run_test_script = 'python /root/test/general_functionality_test.py'
                     try:
@@ -553,6 +573,7 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
 
                 elif(test_id == LASER_SELF_TEST):
+                    log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
                     #Execute laser self test script
                     run_test_script = 'python /root/test/automated_laser_checks.py'
                     try:
@@ -562,6 +583,7 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
 
                 elif(test_id == PAT_SELF_TEST):
+                    log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
                     if(pat_status_is(PAT_STATUS_STANDBY)):
                         #execute PAT self test
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)

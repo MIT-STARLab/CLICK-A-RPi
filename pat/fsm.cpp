@@ -31,12 +31,14 @@ fileStream(fileStreamIn), pat_health_port(pat_health_port_in), fpga_map_request_
 	setNormalizedAngles(0, 0);
 }
 
+// Resets angles to (0,0) and turns off LD Bias 
 //-----------------------------------------------------------------------------
-FSM::~FSM()
+void FSM::resetFSM()
 //-----------------------------------------------------------------------------
 {
-	//setNormalizedAngles(0, 0); //reset to zero before destruction
-	//std::cout << "FSM Destroyed." << std::endl;
+	setNormalizedAngles(0, 0);
+	send_packet_fpga_map_request(fpga_map_request_port, (bool) WRITE, fsm_request_number, (uint16_t) LD_BIAS_CH, (uint8_t) LD_BIAS_OFF);
+	fsm_request_number = (fsm_request_number + 1) % 0xFF; //increment request number modulo size(uint8_t)
 }
 
 //-----------------------------------------------------------------------------

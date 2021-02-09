@@ -170,7 +170,7 @@ int main() //int argc, char** argv
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 		
 	//telemetry file names
-	std::string pathName = string("/root/log/pat/"); //save path
+	std::string pathName = getExperimentFolder(true); //save path, get experiment id, update exp id csv file, make experiment folder
 	std::string textFileName = pathName + timeStamp() + string("_pat_logs.txt"); //used for text telemetry
 	std::string dataFileName = pathName + timeStamp() + string("_pat_data.csv"); //used by csv data file generation
 
@@ -274,7 +274,7 @@ int main() //int argc, char** argv
 	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
+	Tracking track(camera, calibration, textFileOut, pat_status_port, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// CSV data saving for main PAT loop
@@ -1378,7 +1378,8 @@ int main() //int argc, char** argv
 	if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
 		log(pat_health_port, textFileOut,  "In main.cpp - End of PAT process laserOff FPGA command failed!");
 	}
-	fsm.setNormalizedAngles(0, 0); //reset to zero before FSM object destruction
+	//reset FSM before ending PAT process
+	fsm.resetFSM();
 
 	if(haveCsvData){
 		log(pat_health_port, textFileOut,  "In main.cpp - Saving csv file.");

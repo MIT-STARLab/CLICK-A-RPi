@@ -252,22 +252,22 @@ class Housekeeping:
             with open('/mnt/journal/id.txt', 'r') as boot_id_list:
                 for count, l in enumerate(boot_id_list, 1):
                     pass
-            pkt.extend(struct.pack('H', count))
+            pkt.extend(struct.pack('!L', count))
         except:
             # Error if journal file can't be opened
-            pkt.extend([0xFF, 0xFF])
+            pkt.extend(struct.pack('!L', 0xFFFFFFFF))
 
         # 13-16: Disk usage
         # TODO: Update path if necessary
         disk = psutil.disk_usage('/')
-        pkt.extend(struct.pack('>L', (disk.used % 2**32)))
+        pkt.extend(struct.pack('!L', (disk.used % 2**32)))
 
         # 17-20: Disk free
-        pkt.extend(struct.pack('>L', (disk.free % 2**32)))
+        pkt.extend(struct.pack('!L', (disk.free % 2**32)))
 
         # 21-24: Available virtual memory
         vmem = psutil.virtual_memory()
-        pkt.extend(struct.pack('>L', (vmem.available % 2**32)))
+        pkt.extend(struct.pack('!L', (vmem.available % 2**32)))
 
         # 25-N: Process info
         for p in psutil.process_iter(['pid','name','cpu_percent','memory_percent']):
@@ -321,8 +321,7 @@ class Housekeeping:
         if ((process_id == HK_CH_ID & self.ch_restart_enable) |
             (process_id == HK_PAT_ID & self.pat_restart_enable) |
             (process_id == HK_FPGA_ID & self.fpga_restart_enable)):
-
-            status = os.system("systemctl --user restart " + process_name)
+            status = subprocess.call("systemctl --user restart " + process_name, shell = True) #this code is giving an error in flat sat unit tests... maybe replace with os.system("systemctl --user restart " + process_name)
             # TODO: Format and send the error packet
 
     def handle_hk_command(self, command):
