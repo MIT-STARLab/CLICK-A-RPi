@@ -5,13 +5,16 @@ import time
 import os
 import threading
 import struct
-import subprocess
 import zmq
 import psutil
 import binascii
 import struct
+import Queue
+
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
+
+import ipc_helper
 from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, TLM_HK_SYS, TLM_HK_PAT, TLM_HK_FPGA_MAP
@@ -75,11 +78,6 @@ class WatchdogTimer:
         self.timer = threading.Timer(self.timeout, self.callback)
         self.timer.start()
 
-class ProcessID:
-    def __init__(self, id, name):
-        self.id = id
-        self. name = name
-
 class Housekeeping:
     # TODO: Add additional processes as necessary
     procs = {HK_PAT_ID:'pat',
@@ -107,7 +105,6 @@ class Housekeeping:
         self.sys_check_period = HK_SYS_CHECK_PD
         self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD
         self.pat_health_period = HK_PAT_HEALTH_PD
-        self.fpga_ans_period = HK_FPGA_ANS_PD
 
         self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
         self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
@@ -115,7 +112,9 @@ class Housekeeping:
         self.ch_heartbeat_wd = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch)
         self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
 
-        self.fpga_answer_timer = None
+        self.fpga_interface = ipc_helper.FPGAClientInterface()
+
+        self.fpga_queue = Queue.Queue()
 
         self.fpga_check_flag = threading.Event()
         self.sys_check_flag = threading.Event()
@@ -134,35 +133,27 @@ class Housekeeping:
 
         self.context = zmq.Context()
         self.pat_health_socket = self.context.socket(zmq.SUB)
-        self.fpga_req_socket = self.context.socket(zmq.PUB)
-        self.fpga_ans_socket = self.context.socket(zmq.SUB)
         self.tx_socket = self.context.socket(zmq.PUB)
         self.hk_control_socket = self.context.socket(zmq.SUB)
         self.ch_heartbeat_socket = self.context.socket(zmq.SUB)
 
         self.pat_health_socket.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
-        
-        self.fpga_req_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_REQUEST_PORT)
-        self.fpga_ans_socket.connect("tcp://127.0.0.1:%s" % FPGA_MAP_ANSWER_PORT)
         self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
         self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
 
         self.pat_health_socket.setsockopt(zmq.SUBSCRIBE, b'')
-        self.fpga_ans_socket.setsockopt(zmq.SUBSCRIBE, str(self.pid).encode('ascii'))
 
         self.poller = zmq.Poller()
 
         self.poller.register(self.pat_health_socket, zmq.POLLIN)
         self.poller.register(self.hk_control_socket, zmq.POLLIN)
         self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
-        self.poller.register(self.fpga_ans_socket, zmq.POLLIN)
 
         # Initialize packet buffer
         self.packet_buf = []
 
         # Initialize counters
-        self.fpga_req_count = 0
         self.sys_hk_count = 0
         self.fpga_hk_count = 0
         self.ack_cmd_count = 0
@@ -187,26 +178,25 @@ class Housekeeping:
     def alert_missing_fpga(self):
         self.missing_fpga_flag.set()
 
-    def send_fpga_request(self):
-        # TODO: Update this with properly-formatted FPGA telemetry request
-        pkt = FPGAMapRequestPacket()
-        tc_pkt = pkt.encode(return_addr=self.pid,
-                            rq_number=self.fpga_req_count,
-                            rw_flag=0,
-                            start_addr=200,
-                            size=19)
-
+    def init_fpga_read(self):
         if (self.fpga_req_enable):
-            self.fpga_req_socket.send(tc_pkt)
-            self.fpga_req_count += 1
-            self.fpga_answer_timer = threading.Timer(self.fpga_check_period, self.alert_missing_fpga)
+            fpga_thread = threading.Thread(target=self.fpga_read, args=(self.fpga_queue,), daemon=True)
+            fpga_thread.start()
+
+    def fpga_read(self):
+        # TODO: Update this with whatever the actual fpga telemetry should be
+        try:
+            read = self.fpga_interface.read_reg(200, 4)
+            self.fpga_queue.put(read)
+        except error as e:
+            # TODO: some form of error handling
+            self.alert_missing_fpga()
 
     def check_fpga(self, answer_pkt):
         pkt = []
 
         # 0: HK counter
         pkt.extend(struct.pack('B', self.fpga_hk_count % 256))
-
         # 1-N:
         # TODO: Format packet properly if necessary
         pkt.extend(answer_pkt)
@@ -348,7 +338,7 @@ class Housekeeping:
         while True:
             # Periodically send FPGA request
             if (self.fpga_check_flag.is_set()):
-                self.send_fpga_request()
+                self.init_fpga_read()
                 self.fpga_check_flag.clear()
 
             # Periodically generate system HK
@@ -372,9 +362,12 @@ class Housekeeping:
                 self.restart_process(HK_FPGA_ID)
                 self.missing_fpga_flag.clear()
 
+            if(self.fpga_queue.qsize() > 0):
+                pkt = self.check_fpga(self.fpga_queue.get())
+                self.handle_hk_pkt(pkt, HK_FPGA_ID)
+
             # Receive packets from the other processes
             sockets = dict(self.poller.poll(500)) # 500 ms timeout
-
             if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
                 message = self.pat_health_socket.recv()
                 self.handle_hk_pkt(message, HK_PAT_ID)
@@ -391,12 +384,6 @@ class Housekeeping:
                     self.ch_heartbeat_wd.kick()
                 else:
                     self.handle_hk_pkt(message, HK_CH_ID)
-
-            elif self.fpga_ans_socket in sockets and sockets[self.fpga_ans_socket] == zmq.POLLIN:
-                message = self.fpga_ans_socket.recv()
-                pkt = self.check_fpga(message)
-                self.handle_hk_pkt(pkt, HK_FPGA_ID)
-                self.fpga_check_timer.cancel()
 
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
