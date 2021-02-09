@@ -21,12 +21,15 @@ std::string getExperimentFolder(bool updateExpId)
 	std::ifstream fin("/root/log/id_experiment.csv");
 	std::string reader;
 	int expNum = 0;
+	std::string expId;
+	std::string directory_path;
+
 	while(getline(fin, reader)){expNum = stoi(reader);}  // get previous experiment number (or 0)
 	if(updateExpId){
 		//update from previous experiment id
 		expNum += 1;
-		std::string expId = std::to_string(expNum);
-		std::string directory_path = std::string("/root/log/pat/") + expId;
+		expId = std::to_string(expNum);
+		directory_path = std::string("/root/log/pat/") + expId;
 
 		//update experiment id list
 		std::ofstream fout;
@@ -39,8 +42,8 @@ std::string getExperimentFolder(bool updateExpId)
 		if(dir_err == -1){std::cout << "Experiment Directory Creation Error" << std::endl;}
 	} else{
 		//output current experiment id
-		std::string expId = std::to_string(expNum);
-		std::string directory_path = std::string("/root/log/pat/") + expId;
+		expId = std::to_string(expNum);
+		directory_path = std::string("/root/log/pat/") + expId;
 	}
 	return directory_path + std::string("/"); 
 }
