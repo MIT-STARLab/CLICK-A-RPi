@@ -561,9 +561,9 @@ while True:
             if(test_id not in test_list):
                 log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + str(test_id))
             else:
-                log_to_hk('ACK CMD PL_SELF_TEST: Test is ' + test_names[test_list == test_id])
                 #execute test
                 if(test_id == GENERAL_SELF_TEST):
+                    log_to_hk('ACK CMD PL_SELF_TEST: Test is GENERAL_SELF_TEST')
                     #Execute general self test script
                     run_test_script = 'python /root/test/general_functionality_test.py'
                     try:
@@ -573,6 +573,7 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
 
                 elif(test_id == LASER_SELF_TEST):
+                    log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
                     #Execute laser self test script
                     run_test_script = 'python /root/test/automated_laser_checks.py'
                     try:
@@ -582,6 +583,7 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
 
                 elif(test_id == PAT_SELF_TEST):
+                    log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
                     if(pat_status_is(PAT_STATUS_STANDBY)):
                         #execute PAT self test
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
