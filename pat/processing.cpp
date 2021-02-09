@@ -377,7 +377,7 @@ void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn,
 				log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
 				frame.saveBMP(imageFileName);
 			} else if((fileType.compare(std::string("png")) == 0) || (fileType.compare(std::string("PNG")) == 0)){
-				std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".png");
+				std::string imageFileName = std::string(getExperimentFolder()) + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(exposures[i]) + std::string(".png");
 				log(pat_health_port, textFileIn, "In processing.cpp logImage - Saving image telemetry as: ", imageFileName);
 				frame.savePNG(imageFileName);
 			} else{
