@@ -171,7 +171,6 @@ int main() //int argc, char** argv
 		
 	//telemetry file names
 	std::string pathName = getExperimentFolder(true); //save path, get experiment id, update exp id csv file, make experiment folder
-	std::cout << "pathName: " << pathName << std::endl;
 	std::string textFileName = pathName + timeStamp() + string("_pat_logs.txt"); //used for text telemetry
 	std::string dataFileName = pathName + timeStamp() + string("_pat_data.csv"); //used by csv data file generation
 

@@ -24,7 +24,7 @@ std::string getExperimentFolder(bool updateExpId)
 	while(getline(fin, reader)){expNumPrev = stoi(reader);}  // get previous experiment number (or 0)
 	int expNum = expNumPrev + 1;
 	std::string expId = std::to_string(expNum);
-	std::string directory_path = std::string("/root/log/pat/") + expId + std::string("/");
+	std::string directory_path = std::string("/root/log/pat/") + expId;
 	if(updateExpId){
 		//update experiement id list
 		std::ofstream fout;
@@ -36,5 +36,5 @@ std::string getExperimentFolder(bool updateExpId)
 		const int dir_err = mkdir(directory_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if(dir_err == -1){std::cout << "Experiment Directory Creation Error" << std::endl;}
 	}
-	return directory_path; 
+	return directory_path + std::string("/"); 
 }
