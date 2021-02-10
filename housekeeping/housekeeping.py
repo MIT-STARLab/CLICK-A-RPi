@@ -109,7 +109,7 @@ class Housekeeping:
         self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
         self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
 
-        self.ch_heartbeat_wd = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch)
+        self.ch_heartbeat_wds = {}
         self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
 
         self.fpga_interface = ipc_helper.FPGAClientInterface()
@@ -344,7 +344,6 @@ class Housekeeping:
     def run(self):
         self.fpga_check_timer.start()
         self.sys_check_timer.start()
-        self.ch_heartbeat_wd.start()
         self.pat_health_wd.start()
 
         while True:
@@ -387,13 +386,15 @@ class Housekeeping:
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
                 message = self.ch_heartbeat_socket.recv()
-
-                # TODO: consider more than 1 command handler
                 ch_packet = CHHeartbeatPacket()
                 ch_packet.decode(message)
-                # TODO: implement something with timestamp
-                self.ch_heartbeat_wd.kick()
 
+                if ch_packet.origin in self.ch_heartbeat_wds:
+                    self.ch_heartbeat_wds[ch_packet.origin].kick()
+                else:
+                    # TODO: restarting commandhandler needs to consider multiple commandhandlers
+                    self.ch_heartbeat_wds[ch_packet.origin] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch)
+                    self.ch_heartbeat_wds[ch_packet.origin].start()
 
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
