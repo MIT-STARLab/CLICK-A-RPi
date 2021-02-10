@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 CHECK_ASSERTS = 1
 
 COMMAND_HANDLERS_COUNT = 1

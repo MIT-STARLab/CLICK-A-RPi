@@ -1,4 +1,4 @@
-# fsm.py
+#!/usr/bin/env python
 # Joe Kusters
 # helper functions for writing to FSM DAC (AD5664R)
 import fl

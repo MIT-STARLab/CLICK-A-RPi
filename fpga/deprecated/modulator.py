@@ -1,4 +1,4 @@
-# Joe Kusters
+#!/usr/bin/env python
 # modulator.py
 # helper functions for reading in a file and packing the bits to be sent to the modulator
 
