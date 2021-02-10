@@ -79,12 +79,14 @@ class WatchdogTimer:
         self.timer.start()
 
 class Housekeeping:
-    # TODO: Add additional processes as necessary
-    procs = {HK_PAT_ID:'pat',
-             HK_CH_ID:'commandhandler',
-             HK_FPGA_ID:'fpga',
-             HK_PKT_ID:'packetizer',
-             HK_DEPKT_ID:'depacketizer'}
+    # TODO: Update if necessary
+    procs = {HK_PAT_ID:'/root/bin/pat',
+             HK_CH_ID:'/root/commandhandler/commandhandler.py',
+             HK_FPGA_ID:'/root/fpga/fpga.py',
+             HK_PKT_ID:'/root/bus/packetizer.py',
+             HK_DEPKT_ID:'/root/bus/depacketizer.py',
+             HK_SYS_ID: '/root/housekeeping/housekeeping.py'}
+
     procs.update(dict(reversed(item) for item in procs.items()))
 
     def __init__(self):
@@ -263,8 +265,13 @@ class Housekeeping:
         pkt.extend(struct.pack('!L', (vmem.available % 2**32)))
 
         # 25-N: Process info
-        for p in psutil.process_iter(['pid','name','cpu_percent','memory_percent']):
-            p_name = p.info['name']
+        for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
+            p_name = ''
+            if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
+                p_name = p.info['cmdline'][2]
+            elif (p.info['name'] == 'pat' and len(p.info['cmdline']) == 1):
+                p_name = p.info['cmdline'][0]
+
             if p_name in self.procs:
                 pkt.extend(struct.pack('B', self.procs[p_name]))
                 pkt.extend(struct.pack('B', (p.cpu_percent() % 256)))
@@ -309,14 +316,15 @@ class Housekeeping:
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id):
-        process_name = self.procs[process_id]
-        # print("Restart "+process_name)
-        if ((process_id == HK_CH_ID & self.ch_restart_enable) |
-            (process_id == HK_PAT_ID & self.pat_restart_enable) |
-            (process_id == HK_FPGA_ID & self.fpga_restart_enable)):
-            status = subprocess.call("systemctl --user restart " + process_name, shell = True) #this code is giving an error in flat sat unit tests... maybe replace with os.system("systemctl --user restart " + process_name)
-            # TODO: Format and send the error packet
 
+        if (process_id == HK_CH_ID & self.ch_restart_enable):
+            subprocess.call("systemctl --user restart commandhandler.service", shell = True)
+        if (process_id == HK_PAT_ID & self.pat_restart_enable):
+            subprocess.call("systemctl --user restart pat.service", shell = True)
+        if (process_id == HK_FPGA_ID & self.fpga_restart_enable):
+            status = subprocess.call("systemctl --user restart fpga.service", shell = True)
+
+        # TODO: Format and send the error packet
     def handle_hk_command(self, command):
         hk_control_pkt = HousekeepingControlPacket()
         hk_control_pkt.decode(command)
@@ -329,7 +337,7 @@ class Housekeeping:
         self.pat_hk_send_enable = (flags >> 3) & 1
         self.ch_restart_enable = (flags >> 2) & 1
         self.pat_restart_enable = (flags >> 1) & 1
-        self.fpga_restart_enable = (flags >> 6) & 1
+        self.fpga_restart_enable = (flags >> 0) & 1
 
         self.fpga_check_period = new_fpga_check_pd
         self.sys_check_period = new_sys_check_pd
