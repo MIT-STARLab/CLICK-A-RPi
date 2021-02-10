@@ -16,11 +16,8 @@ sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 
 import ipc_helper
-from ipc_packets import TxPacket, CHHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket, CHAckPacket, CHLogPacket
-from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
-from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, TLM_HK_SYS, TLM_HK_PAT, TLM_HK_FPGA_MAP
-from options import HK_FPGA_CHECK_PD, HK_SYS_CHECK_PD, HK_CH_HEARTBEAT_PD, HK_PAT_HEALTH_PD
-from options import HK_FPGA_REQ_ENABLE, HK_SYS_HK_SEND_ENABLE, HK_FPGA_HK_SEND_ENABLE, HK_PAT_HK_SEND_ENABLE, HK_CH_RESTART_ENABLE, HK_PAT_RESTART_ENABLE, HK_FPGA_RESTART_ENABLE, HK_ALLPKTS_SEND_ENABLE
+from ipc_packets import TxPacket, CHHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HKControlPacket, PATControlPacket, PATHealthPacket
+from options import *
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 HK_PAT_ID = 0xA0
@@ -305,10 +302,11 @@ class Housekeeping:
             print('Handling SYS pkt w/ payload: ', payload)
 
         elif (process_id == HK_CH_ID):
-            # TODO: Update command counters
             apid = TLM_HK_CH
-            ch_pkt = CHHealthPacket()
-            _, size, payload = ch_pkt.decode(data)
+            ch_pkt = HKControlPacket()
+            origin, _, data = ch_pkt.decode(data)
+            # TODO: Maybe format this better
+            payload = str(origin)+": "+data
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             print('Handling CH pkt w/ payload: ', payload)
 
@@ -324,12 +322,10 @@ class Housekeeping:
             subprocess.call("systemctl --user restart pat.service", shell = True)
         if (process_id == HK_FPGA_ID & self.fpga_restart_enable):
             status = subprocess.call("systemctl --user restart fpga.service", shell = True)
-
         # TODO: Format and send the error packet
+
     def handle_hk_command(self, command):
-        hk_control_pkt = HousekeepingControlPacket()
-        hk_control_pkt.decode(command)
-        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!%BBBBB', hk_control_pkt.payload)
+        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!%BBBBB', command)
 
         self.all_pkts_send_enable = (flags >> 7) & 1
         self.fpga_req_enable = (flags >> 6) & 1
@@ -402,17 +398,26 @@ class Housekeeping:
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
                 # Check if command or log or ack packet
-                # TODO: come up with a better way to do this
-                if (len(message) == 8):
-                    # TODO: handle acknowledge packet
-                    pass
-                elif (len(message) == 9):
-                    # TODO: handle command packet
-                    self.handle_hk_command(message)
-                else:
-                    # TODO: handle log packet
-                    self.handle_hk_pkt(message, HK_CH_ID)
+                hk_packet = HKControlPacket()
+                hk_packet.decode(message)
+                if (hk_packet.command == HK_CONTROL_ACK):
+                    # Handle ack packet
+                    cmd_id, status = struct.unpack('HH', hk_packet.payload)
 
+                    if (status == CMD_ACK):
+                        self.ack_cmd_count += 1
+                        self.last_ack_cmd_id = cmd_id
+                    elif (status == CMD_ERR):
+                        self.err_cmd_count += 1
+                        self.last_err_cmd_id = cmd_id
+
+                elif (hk_packet.command == HK_CONTROL_LOG):
+                    # TODO: Potentially update handling log packet
+                    self.handle_hk_pkt(message, TLM_HK_CH)
+
+                elif (hk_packet.command == CMD_PL_SET_HK):
+                    # handle command packet
+                    self.handle_hk_command(hk_packet.payload)
 
             # Send housekeeping packets to TX packets queue
             while self.packet_buf:

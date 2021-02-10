@@ -16,7 +16,7 @@ import traceback
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 from options import *
-from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, CHHeartbeatPacket, CHLogPacket, CHAckPacket, PATStatusPacket
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, CHHeartbeatPacket, HKControlPacket, PATStatusPacket
 from zmqTxRx import recv_zmq, separate
 import ipc_helper
 import fpga_map as mmap
@@ -104,13 +104,14 @@ def send_pat_command(socket_PAT_control, command, payload = ''):
 
 def log_to_hk(payload):
     print(payload) #debug printing
-    ipc_healthPacket = CHLogPacket()
-    raw = ipc_healthPacket.encode(pid, payload)
+    ipc_HKPacket = HKControlPacket()
+    raw = ipc_HKPacket.encode(pid, HK_CONTROL_LOG, payload)
     socket_hk_control.send(raw)
 
 def ack_to_hk(cmd_id, status):
-    ipc_ackPacket = CHAckPacket()
-    raw = ipc_ackPacket.encode(pid, cmd_id, status)
+    ipc_HKPacket = HKControlPacket()
+    payload = struct.pack('HH', cmd_id, status)
+    raw = ipc_HKPacket.encode(pid, HK_CONTROL_ACK, payload)
     socket_hk_control.send(raw)
 
 def initialize_cal_laser():
@@ -541,7 +542,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_SET_HK):
             ipc_HKControlPacket = HKControlPacket()
-            raw_HKControlPacket = ipc_HKControlPacket.encode(CMD_ID, ipc_rxcompacket.payload)
+            raw_HKControlPacket = ipc_HKControlPacket.encode(pid, CMD_ID, ipc_rxcompacket.payload)
             socket_hk_control.send(raw_HKControlPacket)
             log_to_hk('ACK CMD PL_SET_HK')
             ack_to_hk(CMD_PL_SET_HK, CMD_ACK)
