@@ -16,7 +16,7 @@ sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 
 import ipc_helper
-from ipc_packets import TxPacket, HandlerHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket
+from ipc_packets import TxPacket, CHHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HousekeepingControlPacket, PATControlPacket, PATHealthPacket, CHAckPacket, CHLogPacket
 from options import PAT_HEALTH_PORT, FPGA_MAP_REQUEST_PORT, FPGA_MAP_ANSWER_PORT
 from options import TX_PACKETS_PORT, HK_CONTROL_PORT, CH_HEARTBEAT_PORT, TLM_HK_SYS, TLM_HK_PAT, TLM_HK_FPGA_MAP
 from options import HK_FPGA_CHECK_PD, HK_SYS_CHECK_PD, HK_CH_HEARTBEAT_PD, HK_PAT_HEALTH_PD
@@ -391,19 +391,28 @@ class Housekeeping:
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
                 message = self.ch_heartbeat_socket.recv()
-                # Check if heartbeat or health packet
-                if (len(message) == 8):
-                    # TODO: consider more than 1 command handler
-                    ch_packet = HandlerHeartbeatPacket()
-                    ch_packet.decode(message)
-                    # TODO: implement something with timestamp
-                    self.ch_heartbeat_wd.kick()
-                else:
-                    self.handle_hk_pkt(message, HK_CH_ID)
+
+                # TODO: consider more than 1 command handler
+                ch_packet = CHHeartbeatPacket()
+                ch_packet.decode(message)
+                # TODO: implement something with timestamp
+                self.ch_heartbeat_wd.kick()
+
 
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
-                self.handle_hk_command(message)
+                # Check if command or log or ack packet
+                # TODO: come up with a better way to do this
+                if (len(message) == 8):
+                    # TODO: handle acknowledge packet
+                    pass
+                elif (len(message) == 9):
+                    # TODO: handle command packet
+                    self.handle_hk_command(message)
+                else:
+                    # TODO: handle log packet
+                    self.handle_hk_pkt(message, HK_CH_ID)
+
 
             # Send housekeeping packets to TX packets queue
             while self.packet_buf:

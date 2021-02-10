@@ -140,3 +140,6 @@ FL_SUCCESS = 0xFF
 
 # Set Time Flag
 TIME_SET_ENABLE = 0
+
+CMD_ACK = 0x0F
+CMD_ERR = 0xF0

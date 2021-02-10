@@ -107,7 +107,7 @@ class RxPATPacket(RxCommandPacket):
         else:
             return 'IPC RX_PAT_PACKET, APID:0x%02X, time:%d.%d s, size:%d' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size)
 
-class HandlerHeartbeatPacket(IpcPacket):
+class CHHeartbeatPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
     def encode(self, origin=0, ts_txed_s=0):
@@ -120,7 +120,7 @@ class HandlerHeartbeatPacket(IpcPacket):
         self.origin = origin
         self.ts_txed_s = ts_txed_s
 
-        self.raw = struct.pack('II',origin,ts_txed_s)
+        self.raw = struct.pack('If',origin,ts_txed_s)
 
         return self.raw
 
@@ -133,14 +133,14 @@ class HandlerHeartbeatPacket(IpcPacket):
 
         self.raw = raw
 
-        self.origin, self.ts_txed_s, = struct.unpack('II',raw)
+        self.origin, self.ts_txed_s, = struct.unpack('If',raw)
 
         return self.origin, self.ts_txed_s
 
     def __str__(self):
         return 'IPC HANDLER_HEARTBEAT_PACKET, PID:%d, time:%d s' % (self.origin, self.ts_txed_s)
 
-class CHHealthPacket(IpcPacket):
+class CHLogPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
     def encode(self, return_addr, payload=''):
@@ -175,6 +175,26 @@ class CHHealthPacket(IpcPacket):
         if options.CHECK_ASSERTS: assert self.size == raw_size
 
         return self.return_addr, self.size, self.payload
+
+class CHAckPacket(IpcPacket):
+    def __init__(self): IpcPacket.__init__(self)
+
+    def encode(self, return_addr, cmd_id, status):
+
+        self.return_addr = return_addr
+        self.cmd_id = cmd_id
+        self.status = status
+        self.raw = struct.pack('IHH',return_addr, cmd_id, status)
+
+        return self.raw
+
+    def decode(self, raw):
+        self.raw = raw
+
+        self.return_addr, self.cmd_id, self.status = struct.unpack('IHH',raw)
+
+        return self.return_addr, self.cmd_id, self.status
+
 
 class PATHealthPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
@@ -214,7 +234,7 @@ class PATHealthPacket(IpcPacket):
         telemetry_string = payload_list[0]
 
         return telemetry_string, self.return_addr, self.size, self.payload
-        
+
 class PATStatusPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
@@ -242,7 +262,7 @@ class PATStatusPacket(IpcPacket):
         payload: raw command contents, bytes'''
 
         self.raw = raw
-        
+
         self.return_addr, self.status_flag = struct.unpack('II',raw)
 
         return self.return_addr, self.status_flag
@@ -309,7 +329,7 @@ class FPGAMapRequestPacket(IpcPacket):
             #Reading
             if options.CHECK_ASSERTS:
                 assert raw_size == 0
-            
+
 
         elif self.rw_flag == 1:
             #Writing
@@ -484,7 +504,7 @@ if __name__ == '__main__':
     not_empty_ipc_rxpatpacket.decode(raw)
     print(not_empty_ipc_rxpatpacket)
 
-    ips_heartbeatpacket = HandlerHeartbeatPacket()
+    ips_heartbeatpacket = CHHeartbeatPacket()
     raw = ips_heartbeatpacket.encode(origin=123,ts_txed_s=456)
     ips_heartbeatpacket.decode(raw)
     print(ips_heartbeatpacket)
