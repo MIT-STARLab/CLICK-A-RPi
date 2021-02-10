@@ -13,21 +13,21 @@
 bool Calibration::findExposureRange(bool testLaser, std::string filePath)
 //-----------------------------------------------------------------------------
 {
-	int skip = camera.queuedCount;
+	//int skip = camera.queuedCount;
 	int exposure = CALIB_MIN_EXPOSURE; 
 	int gain = 0;
 	//preferredExpo = CALIB_MAX_EXPOSURE + 1;
 	//lowestExpoNoGain = 0;
 
 	// Configure camera for big window around center
-	camera.config->gain_dB.write(gain);
-	camera.config->binningMode.write(cbmOff);
+	//camera.config->gain_dB.write(gain);
+	//camera.config->binningMode.write(cbmOff);
 	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
     
 	//Try with minimum exposure
 	camera.config->expose_us.write(exposure);
     camera.requestFrame();	
-	camera.ignoreNextFrames(skip); // Skip pre-queued old frames
+	//camera.ignoreNextFrames(skip); // Skip pre-queued old frames
 	if(camera.waitForFrame())
 	{
 		Image init(camera, fileStream, pat_health_port);
