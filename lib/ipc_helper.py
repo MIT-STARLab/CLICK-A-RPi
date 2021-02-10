@@ -35,7 +35,7 @@ class FPGAClientInterface:
         self.socket_answer.setsockopt(zmq.RCVTIMEO, 100) # Set timout
         while 1:
             try:
-                self.write_reg(0,'')
+                self.write_reg(127,'')
                 break
             except zmq.ZMQError as error:
                 tries -= 1
