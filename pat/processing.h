@@ -48,7 +48,7 @@ public:
 	// Processing functions
 	void applyFastBlur(double radius, double passes = 2);
 	uint16_t autoThresholdPeakToMax(float fraction = 1.75);
-	int performPixelGrouping(uint16_t threshold = 0);
+	int performPixelGrouping(uint16_t threshold = 0, bool printStatus = true);
 	void saveBMP(const string& filename);
 	void savePNG(std::string fileName);
 };

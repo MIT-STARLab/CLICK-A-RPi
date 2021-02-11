@@ -86,7 +86,7 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 		if(camera.waitForFrame())
 		{
 			Image test(camera, fileStream, pat_health_port);
-			if(test.performPixelGrouping() > 0)
+			if(test.performPixelGrouping(0, false) > 0)
 			{
 				Group& spot = test.groups[0];
 				if(desaturating && (spot.valueMax <= CALIB_HAPPY_BRIGHTNESS)) return true;

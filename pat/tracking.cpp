@@ -221,7 +221,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 		if(camera.waitForFrame())
 		{
 			Image test(camera, fileStream, pat_health_port); //, beaconSmoothing
-			if(test.performPixelGrouping() > 0)
+			if(test.performPixelGrouping(0, false) > 0)
 			{
 				Group& spot = test.groups[0];
 				// Copy properties

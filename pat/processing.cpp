@@ -61,7 +61,7 @@ Image::~Image()
 // Maps neighboring pixels to groups and performs group centroiding
 // TODO: seems to crash sometimes when camera is oversaturated, memory problem?!
 //-----------------------------------------------------------------------------
-int Image::performPixelGrouping(uint16_t threshold)
+int Image::performPixelGrouping(uint16_t threshold, bool printStatus)
 //-----------------------------------------------------------------------------
 {
 	unsigned int currentGroup = 0;
@@ -128,7 +128,7 @@ int Image::performPixelGrouping(uint16_t threshold)
 				// Too many active pixels, must be background, clear and return
 				if(groupedPixels.size() > MAX_ACTIVE_PIXELS)
 				{
-					log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many active pixels!");
+					if(printStatus){log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many active pixels!");}
 					groups.clear();
 					return -1;
 				}
@@ -140,7 +140,7 @@ int Image::performPixelGrouping(uint16_t threshold)
 				// Increase and check group count
 				if(++currentGroup > MAX_GROUPS)
 				{
-					log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many groups!");
+					if(printStatus){log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has too many groups!");}
 					sort(groups.begin(), groups.end());
 					return -1;
 				}
@@ -149,8 +149,8 @@ int Image::performPixelGrouping(uint16_t threshold)
 	}
 
 	// Sort max-brightness-descending
-	if(groups.size() > 0) sort(groups.begin(), groups.end());
-	else log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has no groups!");
+	if(groups.size() > 0) {sort(groups.begin(), groups.end());}
+	else {if(printStatus){log(pat_health_port, fileStream, "In processing.cpp Image::performPixelGrouping - Frame has no groups!");}}
 
 	return groups.size();
 }
