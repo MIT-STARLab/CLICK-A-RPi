@@ -523,12 +523,12 @@ int main() //int argc, char** argv
 						break;
 
 					case CMD_UPDATE_TX_OFFSET_X:
-						tx_offset_x += atoi(command_data); 
+						tx_offset_x = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_X - Updating Tx Offset X to ", tx_offset_x);
 						break;
 
 					case CMD_UPDATE_TX_OFFSET_Y:
-						tx_offset_y += atoi(command_data); 
+						tx_offset_y = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", tx_offset_y);
 						break;
 
@@ -723,10 +723,10 @@ int main() //int argc, char** argv
 					OPERATIONAL = false;
 					break; 
 				} else if(command == CMD_UPDATE_TX_OFFSET_X){
-					tx_offset_x += atoi(command_data); 
+					tx_offset_x = atoi(command_data); 
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", tx_offset_x);
 				} else if(command == CMD_UPDATE_TX_OFFSET_Y){
-					tx_offset_y += atoi(command_data); 
+					tx_offset_y = atoi(command_data); 
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", tx_offset_y);
 				}
 			}
