@@ -14,7 +14,7 @@ context = zmq.Context()
 #ZMQ REQ worker socket for load balancing
 ipc_client = ipc_loadbalancer.ClientInterface(context)
 
-for _ in range(3 * 10):
+for _ in range(10):
 
     ipc_rxcompacket = RxCommandPacket()
     raw = ipc_rxcompacket.encode(APID=0x03,ts_txed_s=123,ts_txed_ms=2)
