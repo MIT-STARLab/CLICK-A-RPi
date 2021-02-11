@@ -141,8 +141,15 @@ FL_SUCCESS = 0xFF
 # Set Time Flag
 TIME_SET_ENABLE = 0
 
+# For housekeeping/commandhandler interface
 CMD_ACK = 0x0F
 CMD_ERR = 0xF0
 
 HK_CONTROL_ACK = 0x01
 HK_CONTROL_LOG = 0x02
+
+#Error IDs
+ERR_HK_RESTART = 0x380 #Change
+ERR_FL_FILE_NOT_FOUND = 0x381 #Change
+ERR_FL_FILE_INVALID = 0x382 #Change
+ERR_DPKT_CRC_INVALID = 0x384 #Change

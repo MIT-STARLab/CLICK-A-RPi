@@ -189,7 +189,6 @@ class Housekeeping:
             read = self.fpga_interface.read_reg(200, 4)
             self.fpga_queue.put(read)
         except error as e:
-            # TODO: some form of error handling
             self.alert_missing_fpga()
 
     def check_fpga(self, answer_pkt):
@@ -202,10 +201,10 @@ class Housekeeping:
         pkt.extend(answer_pkt)
 
     def check_sys(self):
-        pkt = []
+        pkt = ''
 
         # 0: HK counter
-        pkt.extend(struct.pack('B', self.sys_hk_count % 256))
+        pkt += struct.pack('B', self.sys_hk_count % 256)
 
         # 1: Enable flags
         enables = 0
@@ -218,49 +217,49 @@ class Housekeeping:
         enables |= (self.pat_restart_enable & 1) << 1
         enables |= (self.fpga_restart_enable & 1) << 0
 
-        pkt.extend(struct.pack('B', enables))
+        pkt += struct.pack('B', enables)
 
         # 2: FPGA housekeeping period
-        pkt.extend(struct.pack('B', self.fpga_check_period))
+        pkt += struct.pack('B', self.fpga_check_period)
         # 3: System housekeeping period
-        pkt.extend(struct.pack('B', self.sys_check_period))
+        pkt += struct.pack('B', self.sys_check_period)
         # 4: Command handler heartbeat period
-        pkt.extend(struct.pack('B', self.ch_heartbeat_period))
+        pkt += struct.pack('B', self.ch_heartbeat_period)
         # 5: PAT health period
-        pkt.extend(struct.pack('B', self.pat_health_period))
+        pkt += struct.pack('B', self.pat_health_period)
         # 6: FPGA response period
-        pkt.extend(struct.pack('B', self.fpga_ans_period))
+        pkt += struct.pack('B', self.fpga_ans_period)
 
         # 7: Acknowledged command count
-        pkt.extend(struct.pack('B', self.ack_cmd_count))
+        pkt += struct.pack('B', self.ack_cmd_count)
         # 8: Last acknowledged command ID
-        pkt.extend(struct.pack('B', self.last_ack_cmd_id))
+        pkt += struct.pack('B', self.last_ack_cmd_id)
         # 9: Error command count
-        pkt.extend(struct.pack('B', self.err_cmd_count))
+        pkt += struct.pack('B', self.err_cmd_count)
         # 10: Last error command ID
-        pkt.extend(struct.pack('B', self.last_err_cmd_id))
+        pkt += struct.pack('B', self.last_err_cmd_id)
 
         # 11-12: Boot count
         try:
             with open('/mnt/journal/id.txt', 'r') as boot_id_list:
                 for count, l in enumerate(boot_id_list, 1):
                     pass
-            pkt.extend(struct.pack('!L', count))
+            pkt += struct.pack('!L', count)
         except:
             # Error if journal file can't be opened
-            pkt.extend(struct.pack('!L', 0xFFFFFFFF))
+            pkt += struct.pack('!L', 0xFFFFFFFF)
 
         # 13-16: Disk usage
         # TODO: Update path if necessary
         disk = psutil.disk_usage('/')
-        pkt.extend(struct.pack('!L', (disk.used % 2**32)))
+        pkt += struct.pack('!L', (disk.used % 2**32))
 
         # 17-20: Disk free
-        pkt.extend(struct.pack('!L', (disk.free % 2**32)))
+        pkt += struct.pack('!L', (disk.free % 2**32))
 
         # 21-24: Available virtual memory
         vmem = psutil.virtual_memory()
-        pkt.extend(struct.pack('!L', (vmem.available % 2**32)))
+        pkt += struct.pack('!L', (vmem.available % 2**32))
 
         # 25-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
@@ -271,18 +270,13 @@ class Housekeeping:
                 p_name = p.info['cmdline'][0]
 
             if p_name in self.procs:
-                pkt.extend(struct.pack('B', self.procs[p_name]))
-                pkt.extend(struct.pack('B', (p.cpu_percent() % 256)))
-                pkt.extend(struct.pack('B', (p.memory_percent('rss') % 256)))
+                pkt += struct.pack('B', self.procs[p_name])
+                pkt += struct.pack('B', (p.cpu_percent() % 256))
+                pkt += struct.pack('B', (p.memory_percent('rss') % 256))
 
-        #compile list of packed byte strings (pkt) into single packed byte string
-        message = ''
-        for i in range(len(pkt)):
-            message += pkt[i]
-        return message
 
     def handle_hk_pkt(self, data, process_id):
-        # TODO: Update packet handling
+        # TODO: Update packet handling if necessary
 
         if (process_id == HK_PAT_ID):
             pat_pkt = PATHealthPacket()
@@ -322,7 +316,10 @@ class Housekeeping:
             subprocess.call("systemctl --user restart pat.service", shell = True)
         if (process_id == HK_FPGA_ID & self.fpga_restart_enable):
             status = subprocess.call("systemctl --user restart fpga.service", shell = True)
-        # TODO: Format and send the error packet
+
+        err_pkt = TxPacket()
+        raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, process_id)
+        self.packet_buf.append(raw_pkt)
 
     def handle_hk_command(self, command):
         flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!%BBBBB', command)
@@ -359,17 +356,14 @@ class Housekeeping:
                 self.sys_check_flag.clear()
 
             if (self.missing_ch_flag.is_set()):
-                # TODO: implement error-handling for not receiving command handler heartbeat
                 self.restart_process(HK_CH_ID)
                 self.missing_ch_flag.clear()
 
             if (self.missing_pat_flag.is_set()):
-                # TODO: implement error handling for not receiving pat health packet
                 self.restart_process(HK_PAT_ID)
                 self.missing_pat_flag.clear()
 
             if (self.missing_fpga_flag.is_set()):
-                # TODO: implement error handling for not receiving fpga response
                 self.restart_process(HK_FPGA_ID)
                 self.missing_fpga_flag.clear()
 
