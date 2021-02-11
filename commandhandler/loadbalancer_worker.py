@@ -16,19 +16,28 @@ context = zmq.Context()
 #ZMQ REQ worker socket for load balancing
 ipc_worker = ipc_loadbalancer.WorkerInterface(context)
 
-total = 0
+# Tell the router we're ready for work
+ipc_worker.send_ready()
+
 while True:
-    # Tell the router we're ready for work
-    ipc_worker.send_ready()
 
-    # Get RxCommandPacket() workload from router
-    workload = ipc_worker.get_request()
+    # Check if new RxCommandPacket() workload is available from router
+    workload = ipc_worker.poll_request(500) #500 ms timeout
 
-    # interpret workload as RxCommandPacket
-    ipc_rxcompacket = RxCommandPacket()
-    ipc_rxcompacket.decode(workload)
+    print('polled')
 
-    print(ipc_rxcompacket)
+    if workload:
 
-    # Do some random work
-    time.sleep(0.1 * random.random())
+        # interpret workload as RxCommandPacket
+        ipc_rxcompacket = RxCommandPacket()
+        ipc_rxcompacket.decode(workload)
+
+        print(ipc_rxcompacket)
+
+        # Do some random work
+        time.sleep(0.1 * random.random())
+
+        # Tell the router we're ready for work
+        ipc_worker.send_ready()
+
+
