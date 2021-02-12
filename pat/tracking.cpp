@@ -5,13 +5,16 @@
 
 // Sweep through expected power ranges and look for spot
 //-----------------------------------------------------------------------------
-bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
+bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
 	uint16_t command;
 
-	camera.setFullWindow();
+	camera.setCenteredWindow(beacon.x, beacon.y, beaconWindow.w); //camera.setFullWindow();
+	beaconWindow.x = camera.config->aoiStartX.read();
+	beaconWindow.y = camera.config->aoiStartY.read();
+	beaconWindow.h = beaconWindow.w;
 	camera.config->binningMode.write(cbmBinningHV);
 	camera.config->expose_us.write(exposure);
 	camera.config->gain_dB.write(gain);
@@ -21,11 +24,11 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 	camera.ignoreNextFrames(skip);
 
 	// Try guessed value
-	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure, "at ", beacon.x - CAMERA_WIDTH/2, beacon.y - CAMERA_HEIGHT/2, " rel-to-center w/ size ", beaconWindow.w);
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
+		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
@@ -52,14 +55,14 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 		}
 
 		//try search up:
-		if(exposure_up <= TRACK_MAX_EXPOSURE){
+		if(exposure_up <= maxExposure){
 			log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_up);
 			send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 			camera.config->expose_us.write(exposure_up);
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
 			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
@@ -92,7 +95,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
 			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
@@ -147,29 +150,34 @@ bool Tracking::verifyFrame(Image& frame)
 
 // Make window around brightest area, fine tune exposure/gain with no binning
 //-----------------------------------------------------------------------------
-bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
+bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
 	// Prepare a small window around brightest group for tuning
-	double fullX = frame.groups[0].x * 2, fullY = frame.groups[0].y * 2;
+	double fullX = frame.groups[0].x * 2 + beaconWindow.x;
+	double fullY = frame.groups[0].y * 2 + beaconWindow.y;
 	int maxValue = frame.groups[0].valueMax;
+	double fullX_test, fullY_test;
 
 	for(int8_t i = 0; i < TRACK_TUNING_MAX_ATTEMPTS; i++)
 	{
 		camera.config->binningMode.write(cbmOff);
-		camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
-		camera.requestFrame();
+		if(beaconWindow.w < TRACK_ACQUISITION_WINDOW){
+			camera.setCenteredWindow(fullX, fullY, beaconWindow.w);
+			log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at ", fullX - CAMERA_WIDTH/2, fullY - CAMERA_HEIGHT/2, " rel-to-center, w = h =", beaconWindow.w, "]");
+		} else{
+			camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
+			log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at ", fullX - CAMERA_WIDTH/2, fullY - CAMERA_HEIGHT/2, " rel-to-center, w = h =", TRACK_ACQUISITION_WINDOW, "]");
+		}
 
 		// Try tuning the windowed frame
-		log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [x = ", fullX, ", y = ", fullY, ", w = ", TRACK_ACQUISITION_WINDOW, ", h = ", TRACK_ACQUISITION_WINDOW, "]");
-		bool success = autoTuneExposure(beacon);
+		bool success = autoTuneExposure(beacon, maxExposure);
 
 		// Switch back to full frame
 		camera.config->binningMode.write(cbmBinningHV);
-		camera.setFullWindow();
+		camera.setWindow(beaconWindow); //camera.setFullWindow();
 		camera.requestFrame();
-
-		// If passed, verify if we are on the right spot in full frame
+		// If passed, verify if we are on the right spot in initial frame
 		if(success)
 		{
 			if(camera.waitForFrame())
@@ -177,25 +185,37 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 				Image test(camera, fileStream, pat_health_port);
 				if(test.performPixelGrouping() > 0)
 				{
-					if(abs(test.groups[0].x * 2 - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
-					   abs(test.groups[0].y * 2 - fullY) < TRACK_TUNING_POSITION_TOLERANCE &&
+					fullX_test = test.groups[0].x * 2 + beaconWindow.x;
+					fullY_test = test.groups[0].y * 2 + beaconWindow.y;
+					if(abs(fullX_test - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
+					   abs(fullY_test - fullY) < TRACK_TUNING_POSITION_TOLERANCE &&
 					   abs((int)test.groups[0].valueMax - maxValue) < TRACK_TUNING_BRIGHTNESS_TOLERANCE)
 					{
 						// Tuned spot is at a good location, success
-						camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
+						if(beaconWindow.w < TRACK_ACQUISITION_WINDOW){
+							camera.setCenteredWindow(fullX, fullY, beaconWindow.w);
+						} else{
+							camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
+						}
 						camera.config->binningMode.write(cbmOff);
-						// save beacon window properties
+						// update beacon window properties
 						beaconWindow.x = camera.config->aoiStartX.read();
 						beaconWindow.y = camera.config->aoiStartY.read();
 						beaconWindow.w = camera.config->aoiWidth.read();
 						beaconWindow.h = camera.config->aoiHeight.read();
 						// exit:
 						return true;
+					} else{
+						log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Final test check failed: ",
+							"abs(fullX_test - fullX) >= TRACK_TUNING_POSITION_TOLERANCE: ", abs(fullX_test - fullX), ">=", TRACK_TUNING_POSITION_TOLERANCE, " OR ",
+							"abs(fullY_test - fullY) >= TRACK_TUNING_POSITION_TOLERANCE: ", abs(fullY_test - fullY), ">=", TRACK_TUNING_POSITION_TOLERANCE, " OR ",
+							"abs((int)test.groups[0].valueMax - maxValue) >= TRACK_TUNING_BRIGHTNESS_TOLERANCE): ", abs((int)test.groups[0].valueMax - maxValue), ">=", TRACK_TUNING_BRIGHTNESS_TOLERANCE);
+							
 					}
 
 					// Tuned the wrong area, repeat
-					fullX = test.groups[0].x * 2;
-					fullY = test.groups[0].y * 2;
+					fullX = fullX_test;
+					fullY = fullY_test;
 					maxValue = test.groups[0].valueMax;
 				}
 				else break;
@@ -209,7 +229,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 
 // Try auto tuning the exposure for the current spot
 //-----------------------------------------------------------------------------
-bool Tracking::autoTuneExposure(Group& beacon)
+bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 //-----------------------------------------------------------------------------
 {
 	AOI tuningWindow;
@@ -240,6 +260,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 	};
 
 	// Grab a frame to determine the next step
+	camera.requestFrame();
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
@@ -305,7 +326,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 				"(spot.valueMax = ", spot.valueMax, ") <= (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Increasing exposure...");
 				// Start increasing exposure
 				int exposure = camera.config->expose_us.read();
-				for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= TRACK_MAX_EXPOSURE); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
+				for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= maxExposure); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
 				{
 					camera.config->expose_us.write(exposure);
 					if(test(desaturating)){
@@ -326,7 +347,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 				}
 
 				// Very high parameters reached
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: TRACK_MAX_EXPOSURE = ", TRACK_MAX_EXPOSURE, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: maxExposure = ", maxExposure, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
 			}
 		}
 	}
@@ -386,7 +407,7 @@ void Tracking::updateTrackingWindow(Image& frame, Group& spot, AOI& window)
 		// Final check
 		if(x != window.x || y != window.y || height != window.h || width != window.w)
 		{
-			log(pat_health_port, fileStream, "In tracking.cpp Tracking::updateTrackingWindow - Updated window to", width, "x", height, "at [", x, ",", y, "]");
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::updateTrackingWindow - Updated window to", width, "x", height, " at ", x - CAMERA_WIDTH/2, y - CAMERA_HEIGHT/2, " rel-to-center]");
 			window.x = x;
 			window.y = y;
 			window.w = width;
@@ -510,7 +531,7 @@ bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 
 //Exposure control function: checks brightness of beacon spot and changes exposure to compensate if necessary, pg
 //-----------------------------------------------------------------------------
-int Tracking::controlExposure(int valueMax, int exposure)
+int Tracking::controlExposure(int valueMax, int exposure, int maxBcnExposure)
 //-----------------------------------------------------------------------------
 {
 	int brightnessDifference = valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
@@ -526,8 +547,8 @@ int Tracking::controlExposure(int valueMax, int exposure)
 		else //too dim, increase exposure
 		{
 			int newExposure = exposure + exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure < TRACK_MAX_EXPOSURE){exposure = newExposure;} //limit at max exposure
-			else{exposure = TRACK_MAX_EXPOSURE;} //set to limit if necessary
+			if(newExposure < maxBcnExposure){exposure = newExposure;} //limit at max exposure
+			else{exposure = maxBcnExposure;} //set to limit if necessary
 		}
 
 		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",

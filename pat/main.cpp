@@ -202,6 +202,13 @@ int main() //int argc, char** argv
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
+	bool initBeaconWindow = false;
+	int beaconWindowSize = CAMERA_HEIGHT;
+	beaconWindow.w = beaconWindowSize;
+	beaconWindow.h = beaconWindow.w;
+	int beacon_x_rel = 0, beacon_y_rel = 0;
+	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
+	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -511,6 +518,30 @@ int main() //int argc, char** argv
 						STANDBY = false;
 						break;
 
+					case CMD_SET_BEACON_X:
+						beacon_x_rel = atoi(command_data); 
+						beacon.x = beacon_x_rel + CAMERA_WIDTH/2;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_X - Updating Beacon X to ", beacon_x_rel, " rel to center =>, ", beacon.x, " absolute");
+						break;
+
+					case CMD_SET_BEACON_Y:
+						beacon_y_rel = atoi(command_data); 
+						beacon.y = beacon_y_rel + CAMERA_HEIGHT/2;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_Y - Updating Beacon Y to ", beacon_y_rel, " rel to center =>, ", beacon.y, " absolute");
+						break;
+
+					case CMD_SET_BEACON_WINDOW_SIZE:
+						beaconWindowSize = atoi(command_data); 
+						beaconWindow.w = beaconWindowSize;
+						beaconWindow.h = beaconWindowSize;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_WINDOW_SIZE - Updating Beacon Window Size to ", beaconWindowSize);
+						break;
+
+					case CMD_SET_BEACON_MAX_EXP:
+						maxBcnExposure = atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_MAX_EXP - Updating Beacon Max Exposure (us) to ", maxBcnExposure);
+						break;
+
 					case CMD_TX_ALIGN:
 						if(haveCalibKnowledge){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Executing CMD_TX_ALIGN command.");
@@ -807,7 +838,7 @@ int main() //int argc, char** argv
 				case ACQUISITION:
 					log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switching off Cal Laser.");
 					if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for acquistion
-						if(track.runAcquisition(beacon, beaconWindow)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
+						if(track.runAcquisition(beacon, beaconWindow, maxBcnExposure)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 						{
 							// Acquisition passed!
 							haveBeaconKnowledge = true;
@@ -840,9 +871,11 @@ int main() //int argc, char** argv
 						else
 						{
 							if(track.received_end_pat_cmd){
+								logImage(std::string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port); //save image telemetry
 								break;
 							}
 							else if(track.received_end_process_cmd){
+								logImage(std::string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port); //save image telemetry
 								OPERATIONAL = false;
 								break; 
 							}
@@ -856,7 +889,7 @@ int main() //int argc, char** argv
 								camera.config->binningMode.write(cbmBinningHV);
 								camera.config->expose_us.write(TRACK_GUESS_EXPOSURE);
 								camera.config->gain_dB.write(0);
-								logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); 
+								logImage(string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port, true); 
 								phase = STATIC_POINT;
 							} else{
 								phase = ACQUISITION;
@@ -934,7 +967,7 @@ int main() //int argc, char** argv
 												beacon.valueSum = spot.valueSum;
 												beacon.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, beaconWindow);
-												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
+												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												// If sending beacon angle errors to the bus adcs
 												if(sendBusFeedback){
 													check_tx_adcs = steady_clock::now(); // Record current time
@@ -1212,7 +1245,7 @@ int main() //int argc, char** argv
 												beacon.valueSum = spot.valueSum;
 												beacon.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, beaconWindow);
-												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
+												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												if(!bcnAlignment){
 													// Control pointing in open-loop
 													calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
