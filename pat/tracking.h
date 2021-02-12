@@ -62,7 +62,7 @@ public:
 	bool received_end_pat_cmd = false;
 	bool received_end_process_cmd = false;
 	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_status_port_in), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), actionX(0), actionY(0) {};
-	bool runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure = TRACK_MAX_EXPOSURE);
+	bool runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure = TRACK_MAX_EXPOSURE, std::string filePath = getExperimentFolder());
 	int findSpotCandidate(Image& frame, Group& oldSpot, double *difference);
 	void updateTrackingWindow(Image& frame, Group& spot, AOI& window);
 	void control(FSM& fsm, double x, double y, double spX, double spY);
