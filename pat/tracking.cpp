@@ -11,7 +11,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
 	uint16_t command;
 
-	camera.setWindow(beaconWindow); //camera.setFullWindow();
+	camera.setCenteredWindow(beacon.x, beacon.y, beaconWindow.w); //camera.setFullWindow();
 	camera.config->binningMode.write(cbmBinningHV);
 	camera.config->expose_us.write(exposure);
 	camera.config->gain_dB.write(gain);

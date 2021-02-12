@@ -203,8 +203,9 @@ int main() //int argc, char** argv
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
 	bool initBeaconWindow = false;
-	int beaconWindowSize = TRACK_ACQUISITION_WINDOW;
+	int beaconWindowSize = CAMERA_HEIGHT;
 	int beacon_x_rel = 0, beacon_y_rel = 0;
+	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	
 	//set up self test error buffer
@@ -513,31 +514,24 @@ int main() //int argc, char** argv
 						bcnAlignment = true; //ignore laser off commands and skip open-loop fsm commands
 						openLoop = true; //transition to open-loop pointing after acquisition for alignment
 						STANDBY = false;
-						if(initBeaconWindow){
-							beaconWindow.x = beacon.x - beaconWindowSize/2;
-							beaconWindow.y = beacon.y - beaconWindowSize/2;
-							beaconWindow.w = beaconWindowSize;
-							beaconWindow.h = beaconWindowSize;
-						}
-
 						break;
 
 					case CMD_SET_BEACON_X:
 						beacon_x_rel = atoi(command_data); 
-						beacon.x = beacon_x_rel + CAMERA_WIDTH/2; 
+						beacon.x = beacon_x_rel + CAMERA_WIDTH/2;
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_X - Updating Beacon X to ", beacon_x_rel, " rel to center =>, ", beacon.x, " absolute");
-						initBeaconWindow = true;
 						break;
 
 					case CMD_SET_BEACON_Y:
 						beacon_y_rel = atoi(command_data); 
 						beacon.y = beacon_y_rel + CAMERA_HEIGHT/2;
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_Y - Updating Beacon Y to ", beacon_y_rel, " rel to center =>, ", beacon.y, " absolute");
-						initBeaconWindow = true;
 						break;
 
 					case CMD_SET_BEACON_WINDOW_SIZE:
 						beaconWindowSize = atoi(command_data); 
+						beaconWindow.w = beaconWindowSize;
+						beaconWindow.h = beaconWindowSize;
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_WINDOW_SIZE - Updating Beacon Window Size to ", beaconWindowSize);
 						break;
 
