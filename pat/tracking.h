@@ -54,8 +54,8 @@ class Tracking
 	zmq::socket_t &pat_control_port;
 	std::vector<zmq::pollitem_t>& poll_pat_control; 
 	bool verifyFrame(Image& frame);
-	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow);
-	bool autoTuneExposure(Group& beacon);
+	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int maxBcnExposure = TRACK_MAX_EXPOSURE);
+	bool autoTuneExposure(Group& beacon, int maxExposure = TRACK_MAX_EXPOSURE);
 public:
 	//int beaconSmoothing = 0;
 	double actionX, actionY;

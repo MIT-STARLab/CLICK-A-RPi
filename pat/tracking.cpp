@@ -28,7 +28,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
+		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
@@ -62,7 +62,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
 			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
@@ -95,7 +95,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow)){return true;}
+				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
 			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
@@ -150,7 +150,7 @@ bool Tracking::verifyFrame(Image& frame)
 
 // Make window around brightest area, fine tune exposure/gain with no binning
 //-----------------------------------------------------------------------------
-bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
+bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
 	// Prepare a small window around brightest group for tuning
@@ -171,7 +171,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 		}
 
 		// Try tuning the windowed frame
-		bool success = autoTuneExposure(beacon);
+		bool success = autoTuneExposure(beacon, maxExposure);
 
 		// Switch back to full frame
 		camera.config->binningMode.write(cbmBinningHV);
@@ -229,7 +229,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 
 // Try auto tuning the exposure for the current spot
 //-----------------------------------------------------------------------------
-bool Tracking::autoTuneExposure(Group& beacon)
+bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 //-----------------------------------------------------------------------------
 {
 	AOI tuningWindow;
@@ -326,7 +326,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 				"(spot.valueMax = ", spot.valueMax, ") <= (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Increasing exposure...");
 				// Start increasing exposure
 				int exposure = camera.config->expose_us.read();
-				for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= TRACK_MAX_EXPOSURE); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
+				for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= maxExposure); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
 				{
 					camera.config->expose_us.write(exposure);
 					if(test(desaturating)){
@@ -347,7 +347,7 @@ bool Tracking::autoTuneExposure(Group& beacon)
 				}
 
 				// Very high parameters reached
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: TRACK_MAX_EXPOSURE = ", TRACK_MAX_EXPOSURE, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: maxExposure = ", maxExposure, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
 			}
 		}
 	}
