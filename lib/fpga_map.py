@@ -10,6 +10,8 @@ Human readable value block starts at reg 200;
 '''
 import math
 import collections 
+import options
+
 
 CTL = 0
 CTL_TX_EN      = 0b00000001
@@ -311,9 +313,8 @@ class EDFA:
 
 #Standard FPGA Telemetry packet
 FPGA_TELEM = 800
-telem_addr = sum([range(0,4), range(32,38), range(47,48), range(53,54), [57], range(60,63), range(96,109), range(112,119), range(602,611), range(502,510)],[])
-FPGA_TELEM_TYPE = [REGISTER_TYPE[reg] for reg in telem_addr]
-for reg in range(800, 800+len(telem_addr)):
+FPGA_TELEM_TYPE = [REGISTER_TYPE[reg] for reg in options.FPGA_TELEM_REGS]
+for reg in range(800, 800+len(FPGA_TELEM_REGS)):
     REGISTER_TYPE[reg] = FPGA_TELEM_TYPE[reg-800]
 
 '''

@@ -8,6 +8,7 @@ import time
 import file_manager
 import traceback
 import tx_packet
+import options
 sys.path.append('/root/fpga/')
 import dac
 import math
@@ -528,11 +529,11 @@ def test_scan_PPM(fo):
     time.sleep(2)
 
     #set points are dependent on temperature
-    payload_seed = [5,107,14,33]
-    flat_sat_seed = [5,67,14,33]
+    payload_seed = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
+    flat_sat_seed = [options.DEFAULT_FTEC_MSB, options.DEFAULT_FTEC_LSB, options.DEFAULT_FLD_MSB, options.DEFAULT_FLD_LSB]
     # seed = payload_seed
     ppm_codes = [4,8,16,32,64,128]
-    ppm4_input = [-2.0, -2.9, -6.4,-7.3]
+    ppm4_input = options.PPM4_THRESHOLDS
 
     if(seed_setting): 
         seed = payload_seed 
@@ -595,10 +596,10 @@ def check_CW_power(fo):
     power.tec_on()
     time.sleep(2)
 
-    payload_seed = [5,141,14,33]
-    flat_sat_seed = [5,107,14,33]
+    payload_seed = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
+    flat_sat_seed = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
     # seed = payload_seed
-    ppm4_input = [4.8, 4.2, -1,-2.3]
+    ppm4_input = options.CW_THRESHOLDS
 
     if(seed_setting): 
         seed = payload_seed 

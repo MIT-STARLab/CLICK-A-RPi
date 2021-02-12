@@ -7,6 +7,24 @@ MESSAGE_TIMEOUT = 5000 # wait 5 seconds for ZeroMQ response
 # File management
 SYMLINK_MAX = 10
 
+#Default Seed register settings
+DEFAULT_TEC_MSB = 5
+DEFAULT_TEC_LSB = 107
+DEFAULT_LD_MSB = 14
+DEFAULT_LD_LSB = 33
+
+DEFAULT_FTEC_MSB = 5
+DEFAULT_FTEC_LSB = 67
+DEFAULT_FLD_MSB = 14
+DEFAULT_FLD_LSB = 33
+
+#HIGH/LOW for Payload/flatsat
+PPM4_THRESHOLDS = [-2.0, -2.9, -6.4,-7.3]
+
+#HIGH/LOW for Payload/flatsat
+CW_THRESHOLDS = [4.8, 4.2, -1,-2.3]
+
+
 #IPC Port Numbers
 TEST_RESPONSE_PORT = "5599"
 
@@ -67,6 +85,7 @@ CMD_PL_SET_HK = 0x97
 CMD_PL_ECHO = 0x3D
 CMD_PL_NOOP = 0x5B
 CMD_PL_SELF_TEST = 0x80 #Change
+CMD_PL_UPDATE_SEED_PARAMS = 0x16
 CMD_PL_DWNLINK_MODE = 0xE0 #Do not change - BCT
 CMD_PL_DEBUG_MODE = 0xD0 #Do not change - BCT
 
@@ -109,6 +128,7 @@ PAT_CMD_SET_BEACON_X = 0x12
 PAT_CMD_SET_BEACON_Y = 0x13
 PAT_CMD_SET_BEACON_WINDOW_SIZE = 0x14
 PAT_CMD_SET_BEACON_MAX_EXP = 0x15
+
 #PAT Status Flags
 PAT_STATUS_CAMERA_INIT = 0x00
 PAT_STATUS_STANDBY = 0x01
@@ -145,7 +165,7 @@ FL_SUCCESS = 0xFF
 # Set Time Flag
 TIME_SET_ENABLE = 0
 
-FPGA_TELEM_REGS = sum([range(0,4), range(32,38), range(47,48), range(53,54), [57], range(60,63), range(96,109), range(112,119), range(602,611), range(502,510)],[])
+FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,1010), range(112,120), range(602,612), range(502,511)],[])
 
 # For housekeeping/commandhandler interface
 CMD_ACK = 0x0F
