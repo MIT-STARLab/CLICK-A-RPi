@@ -33,6 +33,7 @@ FSMb = 9
 FSMc = 10
 
 DATA = 13
+DEL = 14
 
 CAL = 32 #Cal laser
 PO1 = 33 #LD Bias
@@ -41,6 +42,9 @@ PO3 = 35 #Heaters
 PO4 = 36 #TEC
 HE1 = 37 #Heater 1
 HE2 = 38 #Heater 2
+
+DFPa = 47
+DFPb = 48
 
 FLG = 63
 FLG_DCM_LOCKED = 0b00000001
@@ -304,6 +308,13 @@ class EDFA:
  
     def get_case_temp(self):
         return self.handler.read_reg(EDFA_CASE_TEMP)
+
+#Standard FPGA Telemetry packet
+FPGA_TELEM = 800
+telem_addr = sum([range(0,4), range(32,38), range(47,48), range(53,54), [57], range(60,63), range(96,109), range(112,119), range(602,611), range(502,510)],[])
+FPGA_TELEM_TYPE = [REGISTER_TYPE[reg] for reg in telem_addr]
+for reg in range(800, 800+len(telem_addr)):
+    REGISTER_TYPE[reg] = FPGA_TELEM_TYPE[reg-800]
 
 '''
 REGISTERS = [None] * 300 # [encoding B = byte, I = unsigned int, ? = bool, [physical registers, least to most significant bits], rw flag]

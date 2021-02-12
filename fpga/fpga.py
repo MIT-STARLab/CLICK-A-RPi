@@ -87,7 +87,7 @@ def loop():
             if any([x in mmap.EDFA_PARSED_BLOCK for x in addresses]):
                 if time.time() - last_edfa_update > options.EDFA_VIRTUAL_REGS_GOOD_FOR:
                     fline = edfa.fline(fpgabus)
-                    flist = fline.split()          
+                    flist = fline.split()
                     reg_buffer = edfa.parse(reg_buffer, flist)
             # -----------------------------------------
             
@@ -114,7 +114,7 @@ def loop():
                     
                 # ----------------- DACs ----------------- 
                 elif addr == mmap.DAC_SETUP:
-                    dac.init(fpgabus,value)
+                    dac.init(fpgabus, value)
 
                 elif addr == mmap.DAC_ENABLE:
                     dac.set_output_mode(fpgabus, value)
@@ -132,9 +132,18 @@ def loop():
                         target_chan = addr - mmap.DAC_BLOCK[0]
                         dac.write_and_update(fpgabus,target_chan,value)
                     values_out.append(value)
-                # ---------------------------------------- 
-               
+                # ----------Telemetry---------------------- 
+
+                elif addr == mmap.FPGA_TELEM:
+                    telem_addr = [range(0,4), range(32,38), range(47,48), range(53,54), [57], range(60,63), range(96,109), range(112,119), range(602,611), range(502,510)]
+                    addresses = sum(telem_addr, [])
+                    values_out = sum([fpgabus.transfer([addr], [req.rw_flag], [0])[1] for addr in addresses],[])
+                   
+                        
+
+
                 else: req.answer('',error_flag=1)
+
                 
                 
             req.answer(values_out,error_flag)
