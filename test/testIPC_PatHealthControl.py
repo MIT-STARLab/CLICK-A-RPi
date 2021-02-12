@@ -20,7 +20,7 @@ power = mmap.Power(fpga)
 status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_MAIN]
 
 #PAT Command List
-cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS]
+cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS, PAT_CMD_SET_BEACON_X, PAT_CMD_SET_BEACON_Y, PAT_CMD_SET_BEACON_WINDOW_SIZE, PAT_CMD_SET_BEACON_MAX_EXP]
 TURN_ON_CAL_LASER = cmd_list[len(cmd_list)-1] + 1
 TURN_OFF_CAL_LASER = TURN_ON_CAL_LASER + 1
 
@@ -138,11 +138,16 @@ while True:
                                 print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
                                 print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
                                 print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
+                                print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
                                 print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
                                 print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
                                 print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
                                 print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
                                 print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
+                                print "CMD_SET_BEACON_X = ", PAT_CMD_SET_BEACON_X
+                                print "CMD_SET_BEACON_Y = ", PAT_CMD_SET_BEACON_Y
+                                print "CMD_SET_BEACON_WINDOW_SIZE = ", PAT_CMD_SET_BEACON_WINDOW_SIZE
+                                print "CMD_SET_BEACON_MAX_EXP = ", PAT_CMD_SET_BEACON_MAX_EXP
                                 print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
                                 print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
                                 print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
@@ -199,9 +204,27 @@ while True:
                                 fsm_update_y = int(input("Enter FSM Y displacement (pixels): "))
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                 ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(fsm_update_y))
+                        elif(user_cmd == PAT_CMD_SET_BEACON_X):
+                                beacon_x = int(input("Enter beacon X rel to center (pixels): "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(beacon_x))
+                        elif(user_cmd == PAT_CMD_SET_BEACON_Y):
+                                beacon_y = int(input("Enter beacon Y rel to center (pixels): "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(beacon_y))
+                        elif(user_cmd == PAT_CMD_SET_BEACON_WINDOW_SIZE):
+                                beacon_window = int(input("Enter beacon window width = height (pixels): "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(beacon_window))
+                        elif(user_cmd == PAT_CMD_SET_BEACON_MAX_EXP):
+                                beacon_max_exp = int(input("Enter beacon max exp (us): "))
+                                print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(beacon_max_exp))
+
                         else:
                                 print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)     
+                                ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd)  
+
 
                 if(user_cmd == PAT_CMD_END_PROCESS):
                         print "Exiting..."
