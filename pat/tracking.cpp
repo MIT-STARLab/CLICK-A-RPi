@@ -12,6 +12,9 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	uint16_t command;
 
 	camera.setCenteredWindow(beacon.x, beacon.y, beaconWindow.w); //camera.setFullWindow();
+	beaconWindow.x = camera.config->aoiStartX.read();
+	beaconWindow.y = camera.config->aoiStartY.read();
+	beaconWindow.h = beaconWindow.w;
 	camera.config->binningMode.write(cbmBinningHV);
 	camera.config->expose_us.write(exposure);
 	camera.config->gain_dB.write(gain);
@@ -21,7 +24,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	camera.ignoreNextFrames(skip);
 
 	// Try guessed value
-	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure);
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure, "at ", beacon.x, beacon.y, " rel-to-center w/ size ", beaconWindow.w);
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
@@ -151,7 +154,8 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 //-----------------------------------------------------------------------------
 {
 	// Prepare a small window around brightest group for tuning
-	double fullX = frame.groups[0].x * 2, fullY = frame.groups[0].y * 2;
+	double fullX = frame.groups[0].x * 2 + beaconWindow.x;
+	double fullY = frame.groups[0].y * 2 + beaconWindow.y;
 	int maxValue = frame.groups[0].valueMax;
 
 	for(int8_t i = 0; i < TRACK_TUNING_MAX_ATTEMPTS; i++)
@@ -159,10 +163,10 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 		camera.config->binningMode.write(cbmOff);
 		if(beaconWindow.w < TRACK_ACQUISITION_WINDOW){
 			camera.setCenteredWindow(fullX, fullY, beaconWindow.w);
-			log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [x = ", fullX, ", y = ", fullY, ", w = h =", beaconWindow.w, "]");
+			log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at ", fullX - CAMERA_WIDTH/2, fullY - CAMERA_HEIGHT/2, " rel-to-center, w = h =", beaconWindow.w, "]");
 		} else{
 			camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
-			log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at [x = ", fullX, ", y = ", fullY, ", w = h =", TRACK_ACQUISITION_WINDOW, "]");
+			log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Prepared windowed tuning frame at ", fullX - CAMERA_WIDTH/2, fullY - CAMERA_HEIGHT/2, " rel-to-center, w = h =", TRACK_ACQUISITION_WINDOW, "]");
 		}
 
 		// Try tuning the windowed frame
@@ -173,7 +177,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 		camera.setWindow(beaconWindow); //camera.setFullWindow();
 		camera.requestFrame();
 
-		// If passed, verify if we are on the right spot in full frame
+		// If passed, verify if we are on the right spot in initial frame
 		if(success)
 		{
 			if(camera.waitForFrame())
@@ -181,8 +185,8 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 				Image test(camera, fileStream, pat_health_port);
 				if(test.performPixelGrouping() > 0)
 				{
-					if(abs(test.groups[0].x * 2 - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
-					   abs(test.groups[0].y * 2 - fullY) < TRACK_TUNING_POSITION_TOLERANCE &&
+					if(abs(test.groups[0].x * 2 + beaconWindow.x - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
+					   abs(test.groups[0].y * 2 + beaconWindow.y - fullY) < TRACK_TUNING_POSITION_TOLERANCE &&
 					   abs((int)test.groups[0].valueMax - maxValue) < TRACK_TUNING_BRIGHTNESS_TOLERANCE)
 					{
 						// Tuned spot is at a good location, success
@@ -192,7 +196,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 							camera.setCenteredWindow(fullX, fullY, TRACK_ACQUISITION_WINDOW);
 						}
 						camera.config->binningMode.write(cbmOff);
-						// save beacon window properties
+						// update beacon window properties
 						beaconWindow.x = camera.config->aoiStartX.read();
 						beaconWindow.y = camera.config->aoiStartY.read();
 						beaconWindow.w = camera.config->aoiWidth.read();
