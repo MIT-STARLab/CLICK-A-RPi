@@ -204,7 +204,7 @@ int main() //int argc, char** argv
 	int main_entry_flag;
 	bool initBeaconWindow = false;
 	int beaconWindowSize = TRACK_ACQUISITION_WINDOW;
-	int beacon_x_rel, beacon_y_rel;
+	int beacon_x_rel = 0, beacon_y_rel = 0;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	
 	//set up self test error buffer
@@ -522,26 +522,26 @@ int main() //int argc, char** argv
 
 						break;
 
-					case CMD_SET_BEACON_X
+					case CMD_SET_BEACON_X:
 						beacon_x_rel = atoi(command_data); 
 						beacon.x = beacon_x_rel + CAMERA_WIDTH/2; 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_X - Updating Beacon X to ", beacon_x_rel, " rel to center =>, ", beacon.x, " absolute");
 						initBeaconWindow = true;
 						break;
 
-					case CMD_SET_BEACON_Y
+					case CMD_SET_BEACON_Y:
 						beacon_y_rel = atoi(command_data); 
 						beacon.y = beacon_y_rel + CAMERA_HEIGHT/2;
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_Y - Updating Beacon Y to ", beacon_y_rel, " rel to center =>, ", beacon.y, " absolute");
 						initBeaconWindow = true;
 						break;
 
-					case CMD_SET_BEACON_WINDOW_SIZE
+					case CMD_SET_BEACON_WINDOW_SIZE:
 						beaconWindowSize = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_WINDOW_SIZE - Updating Beacon Window Size to ", beaconWindowSize);
 						break;
 
-					case CMD_SET_BEACON_MAX_EXP
+					case CMD_SET_BEACON_MAX_EXP:
 						maxBcnExposure = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_MAX_EXP - Updating Beacon Max Exposure (us) to ", maxBcnExposure);
 						break;
