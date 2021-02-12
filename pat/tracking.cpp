@@ -24,7 +24,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	camera.ignoreNextFrames(skip);
 
 	// Try guessed value
-	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure, "at ", beacon.x, beacon.y, " rel-to-center w/ size ", beaconWindow.w);
+	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure, "at ", beacon.x - CAMERA_WIDTH/2, beacon.y - CAMERA_HEIGHT/2, " rel-to-center w/ size ", beaconWindow.w);
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
@@ -185,8 +185,10 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 				Image test(camera, fileStream, pat_health_port);
 				if(test.performPixelGrouping() > 0)
 				{
-					if(abs(test.groups[0].x * 2 + beaconWindow.x - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
-					   abs(test.groups[0].y * 2 + beaconWindow.y - fullY) < TRACK_TUNING_POSITION_TOLERANCE &&
+					fullX_test = test.groups[0].x * 2 + beaconWindow.x;
+					fullY_test = test.groups[0].y * 2 + beaconWindow.y;
+					if(abs(fullX_test - fullX) < TRACK_TUNING_POSITION_TOLERANCE &&
+					   abs(fullY_test - fullY) < TRACK_TUNING_POSITION_TOLERANCE &&
 					   abs((int)test.groups[0].valueMax - maxValue) < TRACK_TUNING_BRIGHTNESS_TOLERANCE)
 					{
 						// Tuned spot is at a good location, success
@@ -203,11 +205,17 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 						beaconWindow.h = camera.config->aoiHeight.read();
 						// exit:
 						return true;
+					} else{
+						log(pat_health_port, fileStream,  "In tracking.cpp Tracking::windowAndTune - Final test check failed: ",
+							"abs(fullX_test - fullX) >= TRACK_TUNING_POSITION_TOLERANCE: ", abs(fullX_test - fullX), ">=", TRACK_TUNING_POSITION_TOLERANCE, " OR ",
+							"abs(fullY_test - fullY) >= TRACK_TUNING_POSITION_TOLERANCE: ", abs(fullY_test - fullY), ">=", TRACK_TUNING_POSITION_TOLERANCE, " OR ",
+							"abs((int)test.groups[0].valueMax - maxValue) >= TRACK_TUNING_BRIGHTNESS_TOLERANCE): ", abs((int)test.groups[0].valueMax - maxValue), ">=", TRACK_TUNING_BRIGHTNESS_TOLERANCE);
+							
 					}
 
 					// Tuned the wrong area, repeat
-					fullX = test.groups[0].x * 2;
-					fullY = test.groups[0].y * 2;
+					fullX = fullX_test;
+					fullY = fullY_test;
 					maxValue = test.groups[0].valueMax;
 				}
 				else break;
@@ -399,7 +407,7 @@ void Tracking::updateTrackingWindow(Image& frame, Group& spot, AOI& window)
 		// Final check
 		if(x != window.x || y != window.y || height != window.h || width != window.w)
 		{
-			log(pat_health_port, fileStream, "In tracking.cpp Tracking::updateTrackingWindow - Updated window to", width, "x", height, "at [", x, ",", y, "]");
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::updateTrackingWindow - Updated window to", width, "x", height, " at ", x - CAMERA_WIDTH/2, y - CAMERA_HEIGHT/2, " rel-to-center]");
 			window.x = x;
 			window.y = y;
 			window.w = width;
