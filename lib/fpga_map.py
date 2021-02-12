@@ -314,7 +314,7 @@ class EDFA:
 #Standard FPGA Telemetry packet
 FPGA_TELEM = 800
 FPGA_TELEM_TYPE = [REGISTER_TYPE[reg] for reg in options.FPGA_TELEM_REGS]
-for reg in range(800, 800+len(FPGA_TELEM_REGS)):
+for reg in range(800, 800+len(options.FPGA_TELEM_REGS)):
     REGISTER_TYPE[reg] = FPGA_TELEM_TYPE[reg-800]
 
 '''
