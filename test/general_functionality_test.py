@@ -723,7 +723,7 @@ def test_mod_FIFO(fo):
     fpga.write_reg(mmap.CTL, 0x7) 
 
     #LONG FIFO
-    data = '1'*1000
+    data = '1'*10000
     ppm_order = 128
     tx_pkt = tx_packet.txPacket(ppm_order, data)
     tx_pkt.pack()

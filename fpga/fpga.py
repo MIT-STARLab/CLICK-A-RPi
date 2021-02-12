@@ -135,11 +135,8 @@ def loop():
                 # ----------Telemetry---------------------- 
 
                 elif addr == mmap.FPGA_TELEM:
-                    telem_addr = [range(0,4), range(32,38), range(47,48), range(53,54), [57], range(60,63), range(96,109), range(112,119), range(602,611), range(502,510)]
-                    addresses = sum(telem_addr, [])
-                    values_out = sum([fpgabus.transfer([addr], [req.rw_flag], [0])[1] for addr in addresses],[])
-                   
-                        
+                    addresses = sum(options.FPGA_TELEM_REGS, [])
+                    values_out = sum([fpgabus.transfer([addr], [req.rw_flag], [0])[1] for addr in addresses],[])                       
 
 
                 else: req.answer('',error_flag=1)
