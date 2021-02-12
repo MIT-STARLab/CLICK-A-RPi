@@ -176,7 +176,7 @@ def request_file(ipc_rxcompacket, socket_tx_packets):
         #TODO error handling telemetry
         pass
 
-def receive_file_chunk(ipc_rxcompacket, socket_tx_packets):
+def uplink_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 8
     transfer_id, seq_num, seq_len, chunk_len, chunk_payload = struct.unpack('!HHHH%ds'%req_raw_size, ipc_rxcompacket.payload)
 
@@ -333,6 +333,36 @@ def del_file(ipc_rxcompacket, socket_tx_packets):
     else:
         print("File Name Does Not Exist: " + file_name)
 
+def auto_assemble_file(ipc_rxcompacket, socket_tx_packets):
+    req_raw_size = ipc_rxcompacket.size - 20
+    transfer_id, file_hash, dest_file_name_len, dest_file_name_payload = struct.unpack('!H%dsH%ds'% (16, req_raw_size), ipc_rxcompacket.payload)
+    dest_file_name = dest_file_name_payload[0:dest_file_name_len]
+
+    temp_file_name = '/root/file_staging/'+str(transfer_id)+'/reassembled_file.temp'
+    temp_file_name_len = len(temp_file_name)
+    assm_file_cmd = struct.pack('!HH%ds' % (file_name_len), transfer_id, temp_file_name_len, temp_file_name)
+    assm_file_cmd_pkt = RxCommandPacket()
+    assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(assm_file_cmd))
+    assemble_file(assm_file_cmd_pkt, socket_tx_packets)
+
+    val_file_cmd = struct.pack('!%dsH%ds' % (16, file_name_len), file_hash, temp_file_name_len, temp_file_name)
+    val_file_cmd_pkt = RxCommandPacket()
+    val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
+    validate_file(val_file_cmd_pkt, socket_tx_packets)
+
+    mov_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, dest_file_name_len), temp_file_name_len, dest_file_name_len, temp_file_name, dest_file_name)
+    mov_file_cmd_pkt = RxCommandPacket()
+    mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(mov_file_cmd))
+    move_file(mov_file_cmd_pkt, socket_tx_packets)
+
+    del_flag = 0xFF
+    del_file_name = '/root/file_staging/'+str(transfer_id)
+    del_file_name_len = len(del_file_name)
+    del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
+    del_file_cmd_pkt = RxCommandPacket()
+    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
+    del_file(del_file_cmd_pkt, socket_tx_packets)
+
 
 def file_test():
     context = zmq.Context()
@@ -420,7 +450,7 @@ def file_test():
     print('val_file_cmd: ', val_file_cmd)
 
     val_file_cmd_pkt = RxCommandPacket()
-    val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=val_file_cmd)
+    val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
     validate_file(val_file_cmd_pkt)
 
     '''PL_MOVE_FILE move file test'''
@@ -436,7 +466,7 @@ def file_test():
     print('mov_file_cmd: ', mov_file_cmd)
 
     mov_file_cmd_pkt = RxCommandPacket()
-    mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=mov_file_cmd)
+    mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(mov_file_cmd))
     move_file(mov_file_cmd_pkt)
 
     _ = input('Enter Anything to Continue to PL_DEL_FILE with /root/commandhandler/final_file.txt')
@@ -448,7 +478,7 @@ def file_test():
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
     del_file_cmd_pkt = RxCommandPacket()
-    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=del_file_cmd)
+    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
     _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/file_staging/56789')
@@ -459,7 +489,7 @@ def file_test():
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
     del_file_cmd_pkt = RxCommandPacket()
-    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=del_file_cmd)
+    del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
 if __name__ == '__main__':
