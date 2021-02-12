@@ -632,6 +632,36 @@ while True:
 
             ###TODO: add any other debug process start-up tasks
 
+        elif(CMD_ID == CMD_PL_UPDATE_SEED_PARAMS):
+            set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
+            set_fpga_data = struct.unpack('!%dI'%(set_fpga_num_reg+3), ipc_rxcompacket.payload)
+            rq_number = set_fpga_data[0]
+            start_addr = set_fpga_data[1]
+            num_registers = set_fpga_data[2]
+            write_data = list(set_fpga_data[3:])
+            print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
+            if(num_registers != len(write_data)):
+                log_to_hk('ERROR CMD PL_SET_FPGA - Packet Error: expected number of registers (= ' + str(num_registers) +  ' not equal to data length (= ' + str(len(write_data)))
+            else:
+                fpga.write_reg(start_addr, write_data)
+                check_write_data = fpga.read_reg(start_addr, num_registers)
+                addresses = range(start_addr, start_addr+num_registers)
+                return_message = ""
+                num_errors = 0
+                for i in range(num_registers):
+                    if check_write_data[i] != write_data[i]:
+                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
+                        num_errors += 1
+                    else:
+                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
+                if(num_errors == 0):
+                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
+                else:
+                    log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
+
+
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
             # TODO: Send Error Packet
