@@ -531,7 +531,7 @@ bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 
 //Exposure control function: checks brightness of beacon spot and changes exposure to compensate if necessary, pg
 //-----------------------------------------------------------------------------
-int Tracking::controlExposure(int valueMax, int exposure)
+int Tracking::controlExposure(int valueMax, int exposure, int maxBcnExposure)
 //-----------------------------------------------------------------------------
 {
 	int brightnessDifference = valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
@@ -547,8 +547,8 @@ int Tracking::controlExposure(int valueMax, int exposure)
 		else //too dim, increase exposure
 		{
 			int newExposure = exposure + exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure < TRACK_MAX_EXPOSURE){exposure = newExposure;} //limit at max exposure
-			else{exposure = TRACK_MAX_EXPOSURE;} //set to limit if necessary
+			if(newExposure < maxBcnExposure){exposure = newExposure;} //limit at max exposure
+			else{exposure = maxBcnExposure;} //set to limit if necessary
 		}
 
 		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",

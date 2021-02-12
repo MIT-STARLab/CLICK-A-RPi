@@ -967,7 +967,7 @@ int main() //int argc, char** argv
 												beacon.valueSum = spot.valueSum;
 												beacon.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, beaconWindow);
-												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
+												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												// If sending beacon angle errors to the bus adcs
 												if(sendBusFeedback){
 													check_tx_adcs = steady_clock::now(); // Record current time
@@ -1245,7 +1245,7 @@ int main() //int argc, char** argv
 												beacon.valueSum = spot.valueSum;
 												beacon.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, beaconWindow);
-												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
+												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												if(!bcnAlignment){
 													// Control pointing in open-loop
 													calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
