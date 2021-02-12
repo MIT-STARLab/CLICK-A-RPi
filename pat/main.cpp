@@ -875,9 +875,11 @@ int main() //int argc, char** argv
 						else
 						{
 							if(track.received_end_pat_cmd){
+								logImage(std::string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port); //save image telemetry
 								break;
 							}
 							else if(track.received_end_process_cmd){
+								logImage(std::string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port); //save image telemetry
 								OPERATIONAL = false;
 								break; 
 							}
@@ -891,7 +893,7 @@ int main() //int argc, char** argv
 								camera.config->binningMode.write(cbmBinningHV);
 								camera.config->expose_us.write(TRACK_GUESS_EXPOSURE);
 								camera.config->gain_dB.write(0);
-								logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); 
+								logImage(string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port, true); 
 								phase = STATIC_POINT;
 							} else{
 								phase = ACQUISITION;

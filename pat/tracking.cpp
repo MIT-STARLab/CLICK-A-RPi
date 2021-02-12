@@ -5,7 +5,7 @@
 
 // Sweep through expected power ranges and look for spot
 //-----------------------------------------------------------------------------
-bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure, std::string filePath)
+bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
@@ -32,7 +32,6 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure,
 	int exposure_up = exposure, exposure_down = exposure; 
 	exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
 	exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
-	std::string nameTag = std::string("ACQUISITION_DEBUG");
 
 	while(searching_up || searching_down){
 		// Listen for CMD_END_PAT 		
@@ -43,20 +42,12 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure,
 			if (command == CMD_END_PAT){
 				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PAT");
 			  	received_end_pat_cmd = true;
-				//save image telemetry
-				std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Saving debug image telemetry as: ", imageFileName);
-				frame.savePNG(imageFileName);
 			  	return false; 
 			}
 			else if (command == CMD_END_PROCESS){
 				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PROCESS");
 			  	received_end_process_cmd = true;
 			  	return false; 
-				//save image telemetry
-				std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Saving debug image telemetry as: ", imageFileName);
-				frame.savePNG(imageFileName);
 			}
 		}
 
@@ -85,19 +76,11 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure,
 				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PAT");
 			  	received_end_pat_cmd = true;
 			  	return false; 
-				//save image telemetry
-				std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Saving debug image telemetry as: ", imageFileName);
-				frame.savePNG(imageFileName);
 			}
 			else if (command == CMD_END_PROCESS){
 				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Received CMD_END_PROCESS");
 			  	received_end_process_cmd = true;
 			  	return false; 
-				//save image telemetry
-				std::string imageFileName = filePath + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Saving debug image telemetry as: ", imageFileName);
-				frame.savePNG(imageFileName);
 			}
 		}
 		
