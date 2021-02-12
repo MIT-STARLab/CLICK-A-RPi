@@ -144,6 +144,8 @@ while True:
                                 print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
                                 print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
                                 print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
+                                print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
+                                print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
                                 print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
                                 print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
                                 print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 

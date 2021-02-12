@@ -1,0 +1,6 @@
+[Unit]
+Description=Command Handler
+
+[Service]
+Type=simple
+ExecStart=/bin/python -u /root/commandhandler/commandhandler.py

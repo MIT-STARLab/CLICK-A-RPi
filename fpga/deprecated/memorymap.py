@@ -1,4 +1,4 @@
-# Joe Kusters
+#!/usr/bin/env python
 # memorymap.py
 # implements the FPGA memory map has an object which takes in a string and returns the register number for that string
 

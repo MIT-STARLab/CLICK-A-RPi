@@ -47,7 +47,7 @@ class Calibration
 	void calculateSensitivityMatrix(std::vector<Pair>& data);
 	void calculateAffineParameters(std::vector<Pair>& data);
 	bool verifyFrame(Image& frame);
-	bool windowAndTune(Image& frame);
+	bool windowAndTune(Image& frame, bool testLaser);
 public:
 	// Affine transform parameters
 	double a00, a01, a10, a11, t0, t1;
@@ -61,8 +61,8 @@ public:
 	double transformDy(double x, double y);
 	double affineTransformX(double x, double y);
 	double affineTransformY(double x, double y);
-	bool run(Group& calib, std::string filePath = std::string("/root/log/pat/"));
-	bool findExposureRange(std::string filePath = std::string("/root/log/pat/"));
+	bool run(Group& calib, std::string filePath = getExperimentFolder());
+	bool findExposureRange(bool testLaser = false, std::string filePath = getExperimentFolder());
 	bool checkLaserOn(Group& calib);
 	bool checkLaserOff();
 	bool testFSM(Group& calib);

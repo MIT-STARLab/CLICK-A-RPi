@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import hashlib
 import math
 import struct
@@ -42,52 +43,59 @@ def send_file_chunks(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 6
     transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
     file_name = file_name_payload[0:file_name_len]
+    try:
+        # TODO: Error handling for file not found (send error packet)
+        hash_func = hashlib.md5()
+        with open(file_name, "rb") as source_file:
+            buf = source_file.read(1024) # Hash block size is 1024, change if necessary
+            while (len(buf) > 0):
+                hash_func.update(buf)
+                buf = source_file.read(1024)
+        file_hash = hash_func.digest()
 
-    # TODO: Error handling for file not found (send error packet)
-    hash_func = hashlib.md5()
-    with open(file_name, "rb") as source_file:
-        buf = source_file.read(1024) # Hash block size is 1024, change if necessary
-        while (len(buf) > 0):
-            hash_func.update(buf)
-            buf = source_file.read(1024)
-    file_hash = hash_func.digest()
+        # TODO: Better to handle with only looping once...
+        with open(file_name, "rb") as source_file:
+            file_len = os.stat(file_name).st_size
+            seq_len = math.ceil(float(file_len)/chunk_size)
+            seq_num = 1
+            while (seq_num*chunk_size) < file_len:
+                packet_payload = source_file.read(chunk_size)
+                packet = struct.pack('!H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
 
-    # TODO: Better to handle with only looping once...
-    with open(file_name, "rb") as source_file:
-        file_len = os.stat(file_name).st_size
-        seq_len = math.ceil(float(file_len)/chunk_size)
-        seq_num = 1
-        while (seq_num*chunk_size) < file_len:
-            packet_payload = source_file.read(chunk_size)
-            packet = struct.pack('H%dsHHH%ds' % (16, chunk_size), transfer_id, file_hash, seq_num, seq_len, chunk_size, packet_payload)
+                # FOR TEST:
+                # print(len(packet))
+                # print(binascii.hexlify(packet))
+                print('send_file_chunks - transfer_id: ', transfer_id)
+                print('send_file_chunks - seq_num: ', seq_num)
+                #print('send_file_chunks - file_hash: ', file_hash)
+                #print('send_file_chunks - packet: ', packet)
 
-            # FOR TEST:
-            # print(len(packet))
-            # print(binascii.hexlify(packet))
-            print('send_file_chunks - seq_num: ', seq_num)
-            print('send_file_chunks - packet: ', packet)
+                txpacket = TxPacket()
+                raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
+                socket_tx_packets.send(raw_packet)
 
-            txpacket = TxPacket()
-            raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
-            socket_tx_packets.send(raw_packet)
+                seq_num += 1
 
-            seq_num += 1
+            if (((seq_num - 1) * chunk_size) < file_len):
+                packet_data_len = file_len - ((seq_num - 1) * chunk_size)
+                packet_payload = source_file.read(packet_data_len)
 
-        if (((seq_num - 1) * chunk_size) < file_len):
-            packet_data_len = file_len - ((seq_num - 1) * chunk_size)
-            packet_payload = source_file.read(packet_data_len)
+                packet = struct.pack('!H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
 
-            packet = struct.pack('H%dsHHH%ds' % (16, packet_data_len), transfer_id, file_hash, seq_num, seq_len, packet_data_len, packet_payload)
+                # FOR TEST:
+                # print(len(packet))
+                # print(binascii.hexlify(packet))
+                print('send_file_chunks - transfer_id: ', transfer_id)
+                print('send_file_chunks - seq_num: ', seq_num)
+                #print('send_file_chunks - file_hash: ', file_hash)
+                #print('send_file_chunks - packet: ', packet)
 
-            # FOR TEST:
-            # print(len(packet))
-            # print(binascii.hexlify(packet))
-            print('send_file_chunks - seq_num: ', seq_num)
-            print('send_file_chunks - packet: ', packet)
-
-            txpacket = TxPacket()
-            raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
-            socket_tx_packets.send(raw_packet)
+                txpacket = TxPacket()
+                raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
+                socket_tx_packets.send(raw_packet)
+    except:
+        #TODO error handling telemetry
+        print('In filehandling - send_file_chunks - Error - File Not Found: ', file_name)
 
 def receive_file_chunk(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 8
@@ -103,11 +111,11 @@ def receive_file_chunk(ipc_rxcompacket):
 def assemble_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 4
     transfer_id, file_name_len, file_name_payload = struct.unpack('!HH%ds'%req_raw_size, ipc_rxcompacket.payload)
-
+    print('assemble_file - received transfer_id: ', transfer_id)
     file_name = file_name_payload[0:file_name_len]
-
+    print('assemble file - file_name: ', file_name)
     missing_chunks = []
-    pkt_data = []
+    pkt_data = ''
     try:
         # FOR TEST:
         # chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
@@ -164,37 +172,39 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
 
 
     except FileError as e:
+        print('assemble_file - except')
+        print('transfer_id: ', transfer_id)
+        print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
     else:
+        print('assemble_file - else')
         pkt_data = format_success_response(transfer_id)
 
     finally:
         # FOR TEST
         # print(pkt_data)
         # print(binascii.hexlify(bytearray(pkt_data)))
+        print('assemble_file - pkt_data: ', pkt_data)
         tx_pkt = TxPacket()
-        raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data)
+        raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data) #pkt_data is a single byte string (e.g. the output of struct.pack)
         socket_tx_packets.send(raw_tx_pkt)
 
 
 def format_err_response(transfer_id, file_error, missing_chunks):
-    pkt = []
-    pkt.extend(struct.pack('H', transfer_id))
-    pkt.extend(struct.pack('B', file_error.flag))
-    pkt.extend(struct.pack('H', len(missing_chunks)))
-
+    pkt = ''
+    pkt += struct.pack('H', transfer_id)
+    pkt += struct.pack('B', file_error.flag)
+    pkt += struct.pack('H', len(missing_chunks))
     for chunk_id in missing_chunks:
-        pkt.extend(struct.pack('H', chunk_id))
-
-    return str(pkt)
+        pkt += struct.pack('H', chunk_id)
+    return pkt
 
 def format_success_response(transfer_id):
-    pkt = []
-    pkt.extend(struct.pack('H', transfer_id))
-    pkt.extend(struct.pack('B', FL_SUCCESS))
-    pkt.extend(struct.pack('H', 0))
-
-    return str(pkt)
+    pkt = ''
+    pkt += struct.pack('H', transfer_id)
+    pkt += struct.pack('B', FL_SUCCESS)
+    pkt += struct.pack('H', 0)
+    return pkt
 
 def validate_file(ipc_rxcompacket):
     req_raw_size = ipc_rxcompacket.size - 18
@@ -242,13 +252,15 @@ def del_file(ipc_rxcompacket):
         else:
             os.remove(file_name)
     else:
-        pass
+        print("File Name Does Not Exist: " + file_name)
 
 
 def file_test():
     context = zmq.Context()
     socket_tx = context.socket(zmq.PUB)
-    socket_tx.connect("tcp://localhost:%s" % TX_PACKETS_PORT)
+    socket_tx.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
+
+    _ = input('Enter Anything to Continue to PL_REQUEST_FILE using test_file.txt as source.')
 
     '''PL_REQUEST_FILE send file test'''
     send_file_name = 'test_file.txt'
@@ -262,7 +274,7 @@ def file_test():
     send_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(send_file_cmd))
     send_file_chunks(send_file_cmd_pkt, socket_tx)
 
-    _ = input('Press Enter to Continue to PL_UPLOAD_FILE using test_file.txt as source.')
+    _ = input('Enter Anything to Continue to PL_UPLOAD_FILE using test_file.txt as source.')
 
     '''PL_UPLOAD_FILE receive file test'''
     receive_file_len = os.stat('test_file.txt').st_size
@@ -297,10 +309,10 @@ def file_test():
             receive_file_chunk(receive_file_cmd_pkt)
             print('Chunk file created at /root/file_staging/'+str(receive_transfer_id)+'/'+str(receive_seq_num)+'_'+str(receive_seq_len)+'.chunk')
 
-    _ = input('Press Enter to Continue to PL_ASSEMBLE_FILE to reassembled_file.txt')
+    _ = input('Enter Anything to Continue to PL_ASSEMBLE_FILE to ' + '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt')
 
     '''PL_ASSEMBLE_FILE assemble file test'''
-    assm_file_name = 'reassembled_file.txt'
+    assm_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     assm_file_name_len = len(assm_file_name)
     assm_file_transfer_id = 56789
     assm_file_cmd = struct.pack('!HH%ds' % (assm_file_name_len), assm_file_transfer_id, assm_file_name_len, assm_file_name)
@@ -309,10 +321,10 @@ def file_test():
     assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(assm_file_cmd))
     assemble_file(assm_file_cmd_pkt, socket_tx)
 
-    _ = input('Press Enter to Continue to PL_VALIDATE_FILE with reassembled_file.txt')
+    _ = input('Enter Anything to Continue to PL_VALIDATE_FILE with ' + '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt')
 
     '''PL_VALIDATE_FILE validate file test'''
-    val_file_name = 'reassembled_file.txt'
+    val_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     val_file_name_len = len(val_file_name)
 
     val_hash_func = hashlib.md5()
@@ -332,17 +344,14 @@ def file_test():
     val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
     validate_file(val_file_cmd_pkt)
 
-    _ = input('Press Enter to Continue to PL_MOVE_FILE')
-
     '''PL_MOVE_FILE move file test'''
-    mov_src_file_name = 'reassembled_file.txt'
+    mov_src_file_name = '/root/file_staging/'+str(receive_transfer_id)+'/reassembled_file.txt'
     mov_src_file_name_len = len(mov_src_file_name)
 
-    mov_dest_file_name = 'final_file.txt'
+    mov_dest_file_name = '/root/commandhandler/final_file.txt'
     mov_dest_file_name_len = len(mov_dest_file_name)
 
-    print('mov_src_file_name: ', mov_src_file_name)
-    print('mov_dest_file_name: ', mov_dest_file_name)
+    _ = input('Enter Anything to Continue to PL_MOVE_FILE. Source: ' + mov_src_file_name + '. Destination: ' + mov_dest_file_name)
 
     mov_file_cmd = struct.pack('!HH%ds%ds' % (mov_src_file_name_len, mov_dest_file_name_len), mov_src_file_name_len, mov_dest_file_name_len, mov_src_file_name, mov_dest_file_name)
     print('mov_file_cmd: ', mov_file_cmd)
@@ -351,11 +360,11 @@ def file_test():
     mov_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(mov_file_cmd))
     move_file(mov_file_cmd_pkt)
 
-    _ = input('Press Enter to Continue to PL_DEL_FILE with final_file.txt')
+    _ = input('Enter Anything to Continue to PL_DEL_FILE with /root/commandhandler/final_file.txt')
 
     '''PL_DEL_FILE delete file test'''
     del_flag = 0x00
-    del_file_name = 'final_file.txt'
+    del_file_name = '/root/commandhandler/final_file.txt'
     del_file_name_len = len(del_file_name)
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
@@ -363,10 +372,10 @@ def file_test():
     del_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(del_file_cmd))
     del_file(del_file_cmd_pkt)
 
-    _ = input('Press Enter to Continue to recursive PL_DEL_FILE with staging directory test_file_staging/56789')
+    _ = input('Enter Anything to Continue to recursive PL_DEL_FILE with staging directory /root/file_staging/56789')
 
     del_flag = 0xFF
-    del_file_name = 'test_file_staging/56789'
+    del_file_name = '/root/file_staging/56789'
     del_file_name_len = len(del_file_name)
 
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import zmq
 
 def push_zmq(socket, payload):

@@ -30,8 +30,8 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X 20 //pixels, from GSE calibration
-#define TX_OFFSET_Y -50 //pixels, from GSE calibration
+#define TX_OFFSET_X -135 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y 55 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
@@ -170,7 +170,7 @@ int main() //int argc, char** argv
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 		
 	//telemetry file names
-	std::string pathName = string("/root/log/pat/"); //save path
+	std::string pathName = getExperimentFolder(true); //save path, get experiment id, update exp id csv file, make experiment folder
 	std::string textFileName = pathName + timeStamp() + string("_pat_logs.txt"); //used for text telemetry
 	std::string dataFileName = pathName + timeStamp() + string("_pat_data.csv"); //used by csv data file generation
 
@@ -274,7 +274,7 @@ int main() //int argc, char** argv
 	
 	FSM fsm(textFileOut, pat_health_port, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
-	Tracking track(camera, calibration, textFileOut, pat_health_port, pat_control_port, poll_pat_control);
+	Tracking track(camera, calibration, textFileOut, pat_status_port, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// CSV data saving for main PAT loop
@@ -514,12 +514,22 @@ int main() //int argc, char** argv
 					case CMD_TX_ALIGN:
 						if(haveCalibKnowledge){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Executing CMD_TX_ALIGN command.");
-							calib.x = (CAMERA_WIDTH/2) + 2*calibration.centerOffsetX + tx_offset_x;
-							calib.y = (CAMERA_HEIGHT/2) + 2*calibration.centerOffsetY + tx_offset_y;
+							calib.x = (CAMERA_WIDTH/2) + tx_offset_x;
+							calib.y = (CAMERA_HEIGHT/2) + tx_offset_y;
 							track.controlOpenLoop(fsm, calib.x, calib.y);
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - Do not have calibration knowledge. Run CMD_CALIB_TEST first.");
 						}
+						break;
+
+					case CMD_UPDATE_TX_OFFSET_X:
+						tx_offset_x = atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_X - Updating Tx Offset X to ", tx_offset_x);
+						break;
+
+					case CMD_UPDATE_TX_OFFSET_Y:
+						tx_offset_y = atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", tx_offset_y);
 						break;
 
 					case CMD_UPDATE_FSM_X:
@@ -569,24 +579,30 @@ int main() //int argc, char** argv
 						//Laser Test:
 						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
 							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
-							calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
-							camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
-							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
+							if(calibration.findExposureRange(true)){
+								calibExposure = calibration.preferredExpo;
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Using auto-tuned exposure = ", calibExposure, " us.");
+							} else{
+								calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
+							}
 							camera.config->expose_us.write(calibExposure); //set calib exposure
+							camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
 							int laser_tests_passed = 0;
 							for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
 								if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 									if(calibration.checkLaserOn(calib)){
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check passed.");
-										logImage(string("CMD_SELF_TEST_LASER_ON"), camera, textFileOut, pat_health_port); //save image
+										logImage(string("CMD_SELF_TEST_LASER_ON_") + to_string(i), camera, textFileOut, pat_health_port); //save image
 										if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 											if(calibration.checkLaserOff()){
 												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check passed.");
-												logImage(string("CMD_SELF_TEST_LASER_OFF"), camera, textFileOut, pat_health_port);
+												logImage(string("CMD_SELF_TEST_LASER_OFF_") + to_string(i), camera, textFileOut, pat_health_port);
 												laser_tests_passed++;
 											} else{
 												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check failed!");
 												self_test_stream << "(Laser Test) laserOff check failed!\n";
+												logImage(string("CMD_SELF_TEST_LASER_OFF_") + to_string(i), camera, textFileOut, pat_health_port);
 											}
 										} else{
 											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff FPGA command failed!");
@@ -595,6 +611,7 @@ int main() //int argc, char** argv
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check failed!");
 										self_test_stream << "(Laser Test) laserOn check failed!\n";
+										logImage(string("CMD_SELF_TEST_LASER_ON_") + to_string(i), camera, textFileOut, pat_health_port); //save image
 									}
 								} else{
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
@@ -805,8 +822,8 @@ int main() //int argc, char** argv
 							logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 							if(!bcnAlignment){
 								// Set initial pointing in open-loop
-								calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x;
-								calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y;
+								calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
+								calib.y = CAMERA_HEIGHT - beacon.y + tx_offset_y;
 								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain); //, ", smoothing: ", calibration.smoothing ",  smoothing: ", track.beaconSmoothing
 								track.controlOpenLoop(fsm, calib.x, calib.y);
 							}
@@ -1062,9 +1079,10 @@ int main() //int argc, char** argv
 												calib.valueSum = spot.valueSum;
 												calib.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, calibWindow);
+												
 												// Control in closed loop!
-												double setPointX = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
-												double setPointY = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
+												double setPointX = CAMERA_WIDTH - beacon.x + tx_offset_x;
+												double setPointY = CAMERA_HEIGHT - beacon.y + tx_offset_y;
 												track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 
 												check_csv_write = steady_clock::now(); // Record current time
@@ -1197,8 +1215,8 @@ int main() //int argc, char** argv
 												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
 												if(!bcnAlignment){
 													// Control pointing in open-loop
-													calib.x = 2*((CAMERA_WIDTH/2) + calibration.centerOffsetX) - beacon.x + tx_offset_x;
-													calib.y = 2*((CAMERA_HEIGHT/2) + calibration.centerOffsetY) - beacon.y + tx_offset_y;
+													calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
+													calib.y = CAMERA_HEIGHT - beacon.y + tx_offset_y;
 													track.controlOpenLoop(fsm, calib.x, calib.y);
 												}
 												check_csv_write = steady_clock::now(); // Record current time
@@ -1367,7 +1385,8 @@ int main() //int argc, char** argv
 	if(!laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off
 		log(pat_health_port, textFileOut,  "In main.cpp - End of PAT process laserOff FPGA command failed!");
 	}
-	fsm.setNormalizedAngles(0, 0); //reset to zero before FSM object destruction
+	//reset FSM before ending PAT process
+	fsm.resetFSM();
 
 	if(haveCsvData){
 		log(pat_health_port, textFileOut,  "In main.cpp - Saving csv file.");
