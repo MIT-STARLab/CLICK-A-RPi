@@ -35,6 +35,8 @@
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
+#define BCN_X_REL_GUESS -13 //estimate of beacon x position on acquisition rel to center
+#define BCN_Y_REL_GUESS 14 //estimate of beacon y position on acquisition rel to center
 
 using namespace std;
 using namespace std::chrono;
@@ -206,7 +208,7 @@ int main() //int argc, char** argv
 	int beaconWindowSize = CAMERA_HEIGHT;
 	beaconWindow.w = beaconWindowSize;
 	beaconWindow.h = beaconWindow.w;
-	int beacon_x_rel = 0, beacon_y_rel = 0;
+	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
 	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	
