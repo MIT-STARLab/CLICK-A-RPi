@@ -157,6 +157,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 	double fullX = frame.groups[0].x * 2 + beaconWindow.x;
 	double fullY = frame.groups[0].y * 2 + beaconWindow.y;
 	int maxValue = frame.groups[0].valueMax;
+	double fullX_test, fullY_test;
 
 	for(int8_t i = 0; i < TRACK_TUNING_MAX_ATTEMPTS; i++)
 	{
@@ -176,7 +177,6 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow)
 		camera.config->binningMode.write(cbmBinningHV);
 		camera.setWindow(beaconWindow); //camera.setFullWindow();
 		camera.requestFrame();
-
 		// If passed, verify if we are on the right spot in initial frame
 		if(success)
 		{
