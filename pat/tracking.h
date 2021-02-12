@@ -8,14 +8,14 @@
 #include "calibration.h"
 #include "log.h"
 
-#define TRACK_GUESS_EXPOSURE 100 //guess at beacon exposure
+#define TRACK_GUESS_EXPOSURE 10000 //guess at beacon exposure
 #define TRACK_MIN_EXPOSURE 10 //minimum exposure limit, pg-comment
-#define TRACK_MAX_EXPOSURE 50000 //maximum exposure limit, pg
+#define TRACK_MAX_EXPOSURE 100000 //maximum exposure limit, pg
 #define TRACK_ACQUISITION_EXP_INCREMENT 300 //exposure increment during acquisition, pg
 #define TRACK_MAX_GAIN 0 //maximum gain limit
 
 #define TRACK_ACQUISITION_BRIGHTNESS 200		// Minimum spot brightness to work with for acquisition
-#define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared
+#define TRACK_ACQUISITION_WINDOW 30			// Initial camera window size after acquisition is declared
 #define TRACK_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
 
@@ -54,8 +54,8 @@ class Tracking
 	zmq::socket_t &pat_control_port;
 	std::vector<zmq::pollitem_t>& poll_pat_control; 
 	bool verifyFrame(Image& frame);
-	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow);
-	bool autoTuneExposure(Group& beacon);
+	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int maxBcnExposure = TRACK_MAX_EXPOSURE);
+	bool autoTuneExposure(Group& beacon, int maxExposure = TRACK_MAX_EXPOSURE);
 public:
 	//int beaconSmoothing = 0;
 	double actionX, actionY;

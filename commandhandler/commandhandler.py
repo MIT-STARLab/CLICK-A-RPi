@@ -325,15 +325,25 @@ while True:
             print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
 
+        elif(CMD_ID == CMD_PL_AUTO_DOWNLINK_FILE):
+            auto_downlink_file(ipc_rxcompacket, socket_tx_packets)
+            log_to_hk('ACK CMD PL_AUTO_DOWNLINK_FILE')
+            ack_to_hk(CMD_PL_AUTO_DOWNLINK_FILE, CMD_ACK)
+
+        elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
+            disassemble_file(ipc_rxcompacket, socket_tx_packets)
+            log_to_hk('ACK CMD PL_DISASSEMBLE_FILE')
+            ack_to_hk(CMD_PL_DISASSEMBLE_FILE, CMD_ACK)
+
         elif(CMD_ID == CMD_PL_REQUEST_FILE):
-            send_file_chunks(ipc_rxcompacket, socket_tx_packets)
+            request_file(ipc_rxcompacket, socket_tx_packets)
             log_to_hk('ACK CMD PL_REQUEST_FILE')
             ack_to_hk(CMD_PL_REQUEST_FILE, CMD_ACK)
 
-        elif(CMD_ID == CMD_PL_UPLOAD_FILE):
-            receive_file_chunk(ipc_rxcompacket)
-            log_to_hk('ACK CMD PL_UPLOAD_FILE')
-            ack_to_hk(CMD_PL_UPLOAD_FILE, CMD_ACK)
+        elif(CMD_ID == CMD_PL_UPLINK_FILE):
+            uplink_file(ipc_rxcompacket, socket_tx_packets)
+            log_to_hk('ACK CMD PL_UPLINK_FILE')
+            ack_to_hk(CMD_PL_UPLINK_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_ASSEMBLE_FILE):
             assemble_file(ipc_rxcompacket, socket_tx_packets)
@@ -341,19 +351,24 @@ while True:
             ack_to_hk(CMD_PL_ASSEMBLE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_VALIDATE_FILE):
-            validate_file(ipc_rxcompacket)
+            validate_file(ipc_rxcompacket, socket_tx_packets)
             log_to_hk('ACK CMD PL_VALIDATE_FILE')
             ack_to_hk(CMD_PL_VALIDATE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_MOVE_FILE):
-            move_file(ipc_rxcompacket)
+            move_file(ipc_rxcompacket, socket_tx_packets)
             log_to_hk('ACK CMD PL_MOVE_FILE')
             ack_to_hk(CMD_PL_MOVE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_DELETE_FILE):
-            del_file(ipc_rxcompacket)
+            del_file(ipc_rxcompacket, socket_tx_packets)
             log_to_hk('ACK CMD PL_DELETE_FILE')
             ack_to_hk(CMD_PL_DELETE_FILE, CMD_ACK)
+
+        elif(CMD_ID == CMD_PL_AUTO_ASSEMBLE_FILE):
+            auto_assemble_file(ipc_rxcompacket, socket_tx_packets)
+            log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')
+            ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
