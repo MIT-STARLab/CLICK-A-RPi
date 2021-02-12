@@ -204,6 +204,8 @@ int main() //int argc, char** argv
 	int main_entry_flag;
 	bool initBeaconWindow = false;
 	int beaconWindowSize = CAMERA_HEIGHT;
+	beaconWindow.w = beaconWindowSize;
+	beaconWindow.h = beaconWindow.w;
 	int beacon_x_rel = 0, beacon_y_rel = 0;
 	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
