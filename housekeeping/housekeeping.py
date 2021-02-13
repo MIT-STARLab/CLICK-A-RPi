@@ -189,6 +189,7 @@ class Housekeeping:
     def fpga_read(self):
         try:
             read = self.fpga_interface.read_reg(FPGA_TELEM_TYPE)
+            print(read)
             self.fpga_queue.put(read)
         except:
             print("Message missing fpga")
