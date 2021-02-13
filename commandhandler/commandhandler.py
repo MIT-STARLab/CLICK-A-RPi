@@ -21,6 +21,7 @@ from zmqTxRx import recv_zmq, separate
 import ipc_helper
 import fpga_map as mmap
 from filehandling import *
+import tx_packet
 
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
@@ -592,7 +593,7 @@ while True:
                     #Execute general self test script
                     run_test_script = 'python /root/test/general_functionality_test.py'
                     try:
-                        os.system(run_test_script + ' > /root/log/' + str(file_out_num) + '.log') #TBR output file
+                        os.system(run_test_script) #TBR output file
                         #file management...
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
@@ -620,9 +621,125 @@ while True:
                         log_to_hk('ERROR CMD PL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
 
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
+            print("Received command")
             start_time = time.time()
-            CH_MODE_ID = CH_MODE_DOWNLINK
-            log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + start_time)
+            # CH_MODE_ID = CH_MODE_DOWNLINK
+            log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
+            temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6 < 0
+            print([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])
+            if temps:
+                fpga.write_reg(mmap.PO3, 85)
+                fpga.write_reg(mmap.HE1, 85)
+                fpga.write_reg(mmap.HE2, 85)
+            else:
+                print("Avg payload temperature is above 0C")
+
+            #Poll temps once per 5 seconds, hang until the average is above 0C stop
+            while(temps):
+                temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6 < 0
+                time.sleep(5)
+
+            fpga.write_reg(mmap.PO3, 15)
+            fpga.write_reg(mmap.HE1, 15)
+            fpga.write_reg(mmap.HE1, 15)
+
+            #os.system('python ~/test/general_functionality_test.py') #starts self test script
+            
+            if(pat_status_is(PAT_STATUS_STANDBY)):
+                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
+                #execute PAT self test
+                send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                print("Waiting for pat test to finish")
+                time.sleep(60) #TODO Update this with a ZMQ response instead of a static wait
+            else: 
+                print("Pat was not in standby mode, pat self test will not run")
+
+            end_time = time.time()
+            print("Pretransmit Time: %s" %(end_time - start_time))
+            
+            #log transmit start time
+            start_time = time.time()
+
+            ppm_order = 16
+            data = "Hi I'm Mr.Meeseeks!"
+            tx_pkt = tx_packet.txPacket(ppm_order, data)
+            tx_pkt.pack()
+
+            control = fpga.read_reg(mmap.CTL)
+            if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+            tx_pkt.set_PPM(fpga)
+
+            transmit_time = 100 #seconds
+
+            #turn on laser
+            seed_setting = 1
+            power.edfa_on()
+            power.bias_on()
+            power.tec_on()
+            time.sleep(2)
+            print("turned edfa on")
+
+
+            fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+            time.sleep(0.1)
+            fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
+            time.sleep(0.1)
+            # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+            time.sleep(2)
+
+            #set points are dependent on temperature
+            payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
+            flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+            # seed = payload_seed
+            ppm_codes = [4,8,16,32,64,128]
+            ppm4_input = PPM4_THRESHOLDS
+            ppm = ppm_codes[2]
+
+            if(seed_setting): 
+                seed = payload_seed 
+                ppm_input = [ppm4_input[0], ppm4_input[1]]
+            else: 
+                seed = flat_sat_seed
+                ppm_input = [ppm4_input[2], ppm4_input[3]]
+
+            for x in range(1,5):
+                fpga.write_reg(x, seed[x-1])
+
+            ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
+            fpga.write_reg(mmap.DATA, ppm_order) 
+            print("PPM: ", ppm_order, fpga.read_reg(34))
+
+            while(abs(end_time - start_time) < transmit_time):
+                print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
+                #Stall Fifo
+                # fpga.write_reg(mmap.CTL, control | 0x8)
+
+                # #Write to FIFO
+                # tx_pkt.transmit(fpga)
+
+                # fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                #     # success = False
+                #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
+                #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
+
+                # if(fifo_len < 100): time.sleep(.005)
+
+                # #Release FIFO
+                # fpga.write_reg(mmap.CTL, 0x7)
+                time.sleep(1)
+                end_time = time.time()
+
+            print("Transmit Session Complete")
+
+            power.edfa_off()
+            power.bias_off()
+            power.tec_off()
+
+            
+
+
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
