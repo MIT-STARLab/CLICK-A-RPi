@@ -11,7 +11,7 @@
 #include <thread>
 
 #define FRC_CH 0x35 //test channel to check fpga comms (FRC is free running counter, which is the number of clock cycles since last reset)
-#define MAX_FPGA_RESPONSE_ATTEMPTS 10 //number of messages to look through on the FPGA answer port when checking a sent message
+#define MAX_FPGA_RESPONSE_ATTEMPTS 100 //number of messages to look through on the FPGA answer port when checking a sent message
 #define POLL_TIME_FPGA_RESPONSE 10 //milliseconds, time to wait between each poll of the FPGA answer port
 #define TX_ADCS_APID 0x250 //(CLICK-A CPU Software Architecture on Google Drive)
 #define TX_SELF_TEST_APID 0x3D2 //(CLICK-A CPU Software Architecture on Google Drive)

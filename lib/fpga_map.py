@@ -9,7 +9,7 @@ Human readable value block starts at reg 200;
 
 '''
 import math
-import collections 
+import collections
 import options
 
 
@@ -95,14 +95,14 @@ BYTE_2 = {}
 BYTE_3 = {}
 BYTE_4 = {}
 
-# ----------------- Base registers ----------------- 
+# ----------------- Base registers -----------------
 for reg in range(  0, 128):
     REGISTER_TYPE[reg] = 'xxxB'
-    
+
 class Power:
     def __init__(self, handler):
         self.handler = handler
-        
+
     def calib_diode_on(self):  self.handler.write_reg(CAL, 85)
     def calib_diode_off(self): self.handler.write_reg(CAL, 15)
     def bias_on(self):         self.handler.write_reg(PO1, 85)
@@ -117,7 +117,7 @@ class Power:
     def heater_1_off(self):    self.handler.write_reg(HE1, 15)
     def heater_2_on(self):     self.handler.write_reg(HE2, 85)
     def heater_2_off(self):    self.handler.write_reg(HE2, 15)
-    
+
 # ----------------- Temperatures --------------------
 
 
@@ -125,36 +125,36 @@ TEMPERATURE_BLOCK = list(range(200, 206))
 PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
 for reg in TEMPERATURE_BLOCK:
     REGISTER_TYPE[reg] = 'f'
-    BYTE_1[reg] = 2*reg - 302    
+    BYTE_1[reg] = 2*reg - 302
     BYTE_2[reg] = 2*reg - 301
-    
+
 def decode_temperature(msb, lsb):
     # 12 bit ADC
     val = msb*256 + lsb # complete value
     Vadc = val*2.5/2**12 # volatge as a float
-    
+
     # # Wheatstone bridge
     R = 920.0
     Vs = 3.3
     amp_gain = 8.5
     #Rrtd = (R*Vs - 2*R*Vadc) / (R*Vs + 2*R*Vadc) * R
-    Rrtd = (-Vs*R/((Vadc/amp_gain) -Vs/2)) - R 
+    Rrtd = (-Vs*R/((Vadc/amp_gain) -Vs/2)) - R
     # # RTD probe
     A =  3.81e-3
     B = -6.02e-7
     R0 = 1000.0
     temp = (-A + math.sqrt(A**2 - 4*B*(1-Rrtd/R0))) / (2*B)
-    
+
     return temp
-    
-# ----------------- Current consumption ----------------- 
+
+# ----------------- Current consumption -----------------
 
 
 CURRENT_BLOCK = list(range(300, 304))
 TEC_CURRENT, HEATER_CURRENT, EDFA_CURRENT, LD_CURRENT = CURRENT_BLOCK[0:4]
 for reg in CURRENT_BLOCK:
     REGISTER_TYPE[reg] = 'f'
-    BYTE_3[reg] = 2*reg - 488    
+    BYTE_3[reg] = 2*reg - 488
     BYTE_4[reg] = 2*reg - 487
 
 #Converts adc value to amps according to CLICK-A FPGA current sensor schematic
@@ -165,13 +165,13 @@ def decode_current(msb, lsb):
 
     return current
 
-# ----------------- Seed Set Point ----------------- 
+# ----------------- Seed Set Point -----------------
 REGISTER_TYPE[400] = 'I'
 
-# ----------------- Bias Current ----------------- 
+# ----------------- Bias Current -----------------
 REGISTER_TYPE[401] = 'I'
 
-# ----------------- DACs ----------------- 
+# ----------------- DACs -----------------
 DAC_SETUP  = 499
 DAC_ENABLE = 500
 DAC_RESET  = 501
@@ -194,30 +194,30 @@ REGISTER_TYPE[DAC_RESET] = 'xxxB'
 
 DAC_BLOCK = list(range(502, 510))
 DAC_1_A, DAC_1_B, DAC_1_C, DAC_1_D = DAC_BLOCK[0:4]
-DAC_2_A, DAC_2_B, DAC_2_C, DAC_2_D = DAC_BLOCK[0:4]
+DAC_2_A, DAC_2_B, DAC_2_C, DAC_2_D = DAC_BLOCK[4:8]
 for reg in DAC_BLOCK:
     REGISTER_TYPE[reg] = 'xxH'
-    
+
 class DAC:
     def __init__(self, handler):
         self.handler = handler
-        
+
     def reset_bist(self,is_por=1,ref_en=1):
         if is_por: is_por = 0b0100
         if ref_en: ref_en = 0b1000
         self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
-    
+
     def reset_fsm(self):
         if is_por: is_por = 0b0100
         if ref_en: ref_en = 0b1000
         self.handler.write_reg(DAC_RESET, ref_en | is_por | 0b0001)
-    
+
     def enable_output(self,mask):
         self.handler.write_reg(DAC_ENABLE, DAC_OEN | mask)
-        
+
     def disable_output(self,mask):
         self.handler.write_reg(DAC_ENABLE, DAC_HIGHZ | mask)
-    
+
 # ----------------- EDFA -----------------
 EDFA_IN_STR    = 600
 EDFA_OUT_STR   = 601
@@ -249,47 +249,47 @@ REGISTER_TYPE[EDFA_PUMP_CURRENT] = 'I'
 EDFA_CASE_TEMP = 611
 REGISTER_TYPE[EDFA_CASE_TEMP] = 'f'
 
-   
+
 class EDFA:
     def __init__(self, handler):
         self.handler = handler
-        
+
     def write_string(self,tx_str):
         return self.handler.write_reg(EDFA_IN_STR,tx_str)
-        
+
     def read_string(self):
         return self.handler.read_reg(EDFA_OUT_STR)
-        
+
     def send_command(self,tx_str):
         self.handler.write_reg(EDFA_IN_STR,tx_str)
         res_str = self.handler.read_reg(EDFA_OUT_STR)
         if res_str[1] == 'S': return True
         else: return False
-        
+
     def turn_on(self):
         return self.send_command('edfa on\n')
-        
+
     def turn_off(self):
         return self.send_command('edfa off\n')
-        
+
     def mode_aopc(self):
         return self.send_command('mode aopc\n')
-        
+
     def mode_acc(self):
         return self.send_command('mode acc\n')
-        
+
     def set_pump_current(self, current_mA):
         return self.send_command('ldc ba %d\n' % current_mA)
-        
+
     def is_pin_high(self):
         return self.handler.read_reg(EDFA_EN_PIN)
-        
+
     def get_mode(self):
         return self.handler.read_reg(EDFA_MODE)
-        
+
     def is_pump_on(self):
         return self.handler.read_reg(EDFA_DIODE_ON)
-        
+
     def get_mystery_temp(self):
         return self.handler.read_reg(EDFA_MYSTERY_TEMP)
 
@@ -301,13 +301,13 @@ class EDFA:
 
     def get_preamp_current(self):
         return self.handler.read_reg(EDFA_PRE_CURRENT)
- 
+
     def get_preamp_power(self):
         return self.handler.read_reg(EDFA_PRE_POWER)
- 
+
     def get_pump_current(self):
         return self.handler.read_reg(EDFA_PUMP_CURRENT)
- 
+
     def get_case_temp(self):
         return self.handler.read_reg(EDFA_CASE_TEMP)
 

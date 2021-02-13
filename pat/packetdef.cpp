@@ -276,15 +276,15 @@ bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::poll
 			// received something on the first (only) socket
 			fpga_answer_struct read_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, READ);
 			//make sure message is for PAT process:
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << unsigned(request_number) << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << channel << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << 0 << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << FRC_CH << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
 			
 			if((((uint32_t) getpid()) == read_ans_struct.return_address) &&
 				(0 == read_ans_struct.request_number) && 
@@ -293,7 +293,7 @@ bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::poll
 			} 
 		}
 	}
-	// std::cout << "In packetdef.cpp - check_fpga_map_write_request: FPGA MAP Check Timeout!" << std::endl; 
+	std::cout << "In packetdef.cpp - check_fpga_comms: FPGA MAP Check Timeout!" << std::endl; 
 	return false; //timeout
 }
 

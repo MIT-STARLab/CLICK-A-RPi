@@ -116,6 +116,13 @@ def ack_to_hk(cmd_id, status):
     socket_hk_control.send(raw)
 
 def initialize_cal_laser():
+    #Make sure heaters are on
+    if(fpga.read_reg(mmap.PO3) != 85):
+        power.heaters_on()
+    #Make sure cal laser diode is on
+    if(fpga.read_reg(mmap.CAL) != 85):
+        power.calib_diode_on()   
+    log_to_hk('CALIBRATION LASER ON')    
     #Set DAC
     fpga.write_reg(mmap.DAC_SETUP,1)
     fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
