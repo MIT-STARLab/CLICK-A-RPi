@@ -124,7 +124,7 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
 
             # Send telemetry
             txpacket = TxPacket()
-            raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('H', seq_num))
+            raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!H', seq_num))
             socket_tx_packets.send(raw_packet)
 
     except:
@@ -271,18 +271,18 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
 
 def format_err_response(transfer_id, file_error, missing_chunks):
     pkt = ''
-    pkt += struct.pack('H', transfer_id)
+    pkt += struct.pack('!H', transfer_id)
     pkt += struct.pack('B', file_error.flag)
-    pkt += struct.pack('H', len(missing_chunks))
+    pkt += struct.pack('!H', len(missing_chunks))
     for chunk_id in missing_chunks:
-        pkt += struct.pack('H', chunk_id)
+        pkt += struct.pack('!H', chunk_id)
     return pkt
 
 def format_success_response(transfer_id):
     pkt = ''
-    pkt += struct.pack('H', transfer_id)
+    pkt += struct.pack('!H', transfer_id)
     pkt += struct.pack('B', FL_SUCCESS)
-    pkt += struct.pack('H', 0)
+    pkt += struct.pack('!H', 0)
     return pkt
 
 def validate_file(ipc_rxcompacket, socket_tx_packets):
