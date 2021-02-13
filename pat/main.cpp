@@ -610,6 +610,7 @@ int main() //int argc, char** argv
 						}						
 						
 						//Laser Test:
+						int laser_tests_passed = 0;
 						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
 							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
 							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, 0)){
@@ -621,8 +622,7 @@ int main() //int argc, char** argv
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
 								}
 								camera.config->expose_us.write(calibExposure); //set calib exposure
-								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
-								int laser_tests_passed = 0;
+								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							 
 								for(int i = 1; i < 3; i++){ //run twice to make sure on/off switching is working
 									if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 										if(calibration.checkLaserOn(calib)){
