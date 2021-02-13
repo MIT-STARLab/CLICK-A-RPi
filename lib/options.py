@@ -168,7 +168,7 @@ FL_SUCCESS = 0xFF
 # Set Time Flag
 TIME_SET_ENABLE = 0
 
-FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,1010), range(112,120), range(602,612), range(502,511)],[])
+FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,110), range(112,120), range(602,612), range(502,510)],[])
 
 # For housekeeping/commandhandler interface
 CMD_ACK = 0x0F

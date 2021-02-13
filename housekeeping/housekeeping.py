@@ -10,6 +10,7 @@ import zmq
 import psutil
 import binascii
 import struct
+import subprocess
 import Queue
 
 sys.path.append('/root/lib/')
@@ -18,6 +19,7 @@ sys.path.append('../lib/')
 import ipc_helper
 from ipc_packets import TxPacket, CHHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HKControlPacket, PATControlPacket, PATHealthPacket
 from options import *
+from fpga_map import FPGA_TELEM, FPGA_TELEM_TYPE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 HK_PAT_ID = 0xA0
@@ -180,25 +182,29 @@ class Housekeeping:
 
     def init_fpga_read(self):
         if (self.fpga_req_enable):
-            fpga_thread = threading.Thread(target=self.fpga_read, args=(self.fpga_queue,), daemon=True)
+            fpga_thread = threading.Thread(target=self.fpga_read)
+            fpga_thread.setDaemon(True)
             fpga_thread.start()
 
     def fpga_read(self):
-        # TODO: Update this with whatever the actual fpga telemetry should be
         try:
-            read = self.fpga_interface.read_reg(200, 4)
+            read = self.fpga_interface.read_reg(FPGA_TELEM_TYPE)
             self.fpga_queue.put(read)
-        except error as e:
+        except:
+            print("Message missing fpga")
             self.alert_missing_fpga()
 
     def check_fpga(self, answer_pkt):
-        pkt = []
+        pkt = ''
 
         # 0: HK counter
-        pkt.extend(struct.pack('B', self.fpga_hk_count % 256))
-        # 1-N:
-        # TODO: Format packet properly if necessary
-        pkt.extend(answer_pkt)
+        pkt += struct.pack('B', self.fpga_hk_count % 256)
+
+        # 1-244: FPGA Telemetry Packet
+        # Handle FPGA packet format
+        for i in range(0, len(answer_pkt)):
+            pkt += struct.pack(FPGA_TELEM_TYPE[i], answer_pkt[i])
+        return pkt
 
     def check_sys(self):
         pkt = ''
@@ -227,8 +233,6 @@ class Housekeeping:
         pkt += struct.pack('B', self.ch_heartbeat_period)
         # 5: PAT health period
         pkt += struct.pack('B', self.pat_health_period)
-        # 6: FPGA response period
-        pkt += struct.pack('B', self.fpga_ans_period)
 
         # 7: Acknowledged command count
         pkt += struct.pack('B', self.ack_cmd_count)
@@ -273,6 +277,7 @@ class Housekeeping:
                 pkt += struct.pack('B', self.procs[p_name])
                 pkt += struct.pack('B', (p.cpu_percent() % 256))
                 pkt += struct.pack('B', (p.memory_percent('rss') % 256))
+        return pkt
 
 
     def handle_hk_pkt(self, data, process_id):
@@ -287,7 +292,7 @@ class Housekeeping:
 
         elif (process_id == HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
-            payload = struct.pack('B', data) #TBR if the data is already a packed byte string or not. FPGA packet definition beyond 1 byte HK counter is TBD
+            payload = struct.pack('B', data)
             print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == HK_SYS_ID):
@@ -309,20 +314,23 @@ class Housekeeping:
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id):
-
-        if (process_id == HK_CH_ID & self.ch_restart_enable):
+        print("Restart process")
+        if (process_id == HK_CH_ID and self.ch_restart_enable):
+            print("Restart ch")
             subprocess.call("systemctl --user restart commandhandler.service", shell = True)
-        if (process_id == HK_PAT_ID & self.pat_restart_enable):
+        if (process_id == HK_PAT_ID and self.pat_restart_enable):
+            print("Restart pat")
             subprocess.call("systemctl --user restart pat.service", shell = True)
-        if (process_id == HK_FPGA_ID & self.fpga_restart_enable):
+        if (process_id == HK_FPGA_ID and self.fpga_restart_enable):
+            print("Restart fpga")
             status = subprocess.call("systemctl --user restart fpga.service", shell = True)
 
         err_pkt = TxPacket()
-        raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, process_id)
-        self.packet_buf.append(raw_pkt)
+        raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('B', process_id))
+        self.packet_buf.append(raw_err_pkt)
 
     def handle_hk_command(self, command):
-        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!%BBBBB', command)
+        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!BBBBB', command)
 
         self.all_pkts_send_enable = (flags >> 7) & 1
         self.fpga_req_enable = (flags >> 6) & 1
