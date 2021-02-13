@@ -211,6 +211,7 @@ int main() //int argc, char** argv
 	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
 	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
+	int laser_tests_passed = 0;
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -610,7 +611,6 @@ int main() //int argc, char** argv
 						}						
 						
 						//Laser Test:
-						int laser_tests_passed = 0;
 						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
 							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
 							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, 0)){
@@ -623,6 +623,7 @@ int main() //int argc, char** argv
 								}
 								camera.config->expose_us.write(calibExposure); //set calib exposure
 								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							 
+								laser_tests_passed = 0;
 								for(int i = 1; i < 3; i++){ //run twice to make sure on/off switching is working
 									if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
 										if(calibration.checkLaserOn(calib)){
