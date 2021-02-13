@@ -89,6 +89,7 @@ CMD_PL_ECHO = 0x3D
 CMD_PL_NOOP = 0x5B
 CMD_PL_SELF_TEST = 0x80 #Change
 CMD_PL_UPDATE_SEED_PARAMS = 0x16
+CMD_PL_AUTO_DOWNLINK_FILE = 0xAB
 CMD_PL_DWNLINK_MODE = 0xE0 #Do not change - BCT
 CMD_PL_DEBUG_MODE = 0xD0 #Do not change - BCT
 
@@ -168,7 +169,7 @@ FL_SUCCESS = 0xFF
 # Set Time Flag
 TIME_SET_ENABLE = 0
 
-FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,1010), range(112,120), range(602,612), range(502,511)],[])
+FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,110), range(112,120), range(602,612), range(502,511)],[])
 
 # For housekeeping/commandhandler interface
 CMD_ACK = 0x0F
