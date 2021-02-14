@@ -684,7 +684,7 @@ while True:
                         log_to_hk("Pat self test passed")
                         #execute pointing
                         send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
-                        break;
+                        break
                     elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         log_to_hk("Pat self test failed")
                         break;
