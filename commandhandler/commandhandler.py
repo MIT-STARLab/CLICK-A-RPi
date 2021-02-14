@@ -186,9 +186,9 @@ if(not pat_received_status):
 def pat_status_is(pat_status_check):
     if(pat_status_flag in pat_status_list):
         log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
-        print('status_flag: ', pat_status_flag)
-        print('pat_status_check: ', pat_status_check)
-        print('bool: ', (pat_status_flag == pat_status_check))
+        #print('status_flag: ', pat_status_flag)
+        #print('pat_status_check: ', pat_status_check)
+        #print('bool: ', (pat_status_flag == pat_status_check))
         return (pat_status_flag == pat_status_check)
     else:
         log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
@@ -677,7 +677,7 @@ while True:
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                for i in range(300): #TBR
+                for i in range(60): #max test time is about 60 sec
                     print("Waiting for pat self test to finish")
                     pat_status_flag = update_pat_status(pat_status_flag)
                     if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
@@ -688,7 +688,9 @@ while True:
                     elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         log_to_hk("Pat self test failed")
                         break;
-                #time.sleep(60) #TODO Update this with a ZMQ response instead of a static wait
+                    time.sleep(1)
+            elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                log_to_hk("Camera is off - pat self test failed.")
             else: 
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
 
