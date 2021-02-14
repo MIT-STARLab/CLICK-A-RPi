@@ -70,12 +70,12 @@ def parse(regs,flist):
     try:    regs[mmap.EDFA_MYSTERY_TEMP] = float(flist[3])
     except: regs[mmap.EDFA_MYSTERY_TEMP] = -1000.0
     
-    if flist[3] == 'IPA': regs[ mmap.EDFA_POWER_IN] = -100.0
+    if flist[4] == 'IPA': regs[ mmap.EDFA_POWER_IN] = -100.0
     else:
         try:              regs[ mmap.EDFA_POWER_IN] = float(flist[4])
         except:           regs[ mmap.EDFA_POWER_IN] = -1000.0
         
-    if flist[5] == 'IPA': regs[mmap.EDFA_POWER_OUT] = -100.0
+    if flist[5] == 'OPA': regs[mmap.EDFA_POWER_OUT] = -100.0
     else:
         try:              regs[mmap.EDFA_POWER_OUT] = float(flist[5])
         except:           regs[mmap.EDFA_POWER_OUT] = -1000.0
