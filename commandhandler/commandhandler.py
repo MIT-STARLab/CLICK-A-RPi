@@ -693,7 +693,7 @@ while True:
                         break
                     elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         log_to_hk("Pat self test failed")
-                        break;
+                        break
                     time.sleep(1)
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                 log_to_hk("Camera is off - pat self test failed.")
@@ -757,24 +757,24 @@ while True:
                 log_to_hk("PPM: ", ppm_order, fpga.read_reg(34))
 
                 while(abs(end_time - start_time) < transmit_time):
-                    print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
+                    # print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
                     #Stall Fifo
-                    # fpga.write_reg(mmap.CTL, control | 0x8)
+                    pga.write_reg(mmap.CTL, control | 0x8)
 
                     # #Write to FIFO
-                    # tx_pkt.transmit(fpga)
+                    tx_pkt.transmit(fpga, .1)
 
-                    # fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                    # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                    #     # success = False
-                    #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                    #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
-                    #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
+                    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                    if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                        # success = False
+                        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                        # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
+                        # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
 
-                    # if(fifo_len < 100): time.sleep(.005)
+                    if(fifo_len < 100): time.sleep(.005)
 
                     # #Release FIFO
-                    # fpga.write_reg(mmap.CTL, 0x7)
+                    fpga.write_reg(mmap.CTL, 0x7)
                     time.sleep(1)
                     end_time = time.time()
 
