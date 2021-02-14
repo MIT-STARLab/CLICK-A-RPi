@@ -188,9 +188,7 @@ class Housekeeping:
 
     def fpga_read(self):
         try:
-            print("1")
             read = self.fpga_interface.read_reg(FPGA_TELEM)
-            print(read)
             self.fpga_queue.put(read)
         except:
             print("Message missing fpga")
@@ -205,7 +203,7 @@ class Housekeeping:
         # 1-244: FPGA Telemetry Packet
         # Handle FPGA packet format
         for i in range(0, len(answer_pkt)):
-            pkt += struct.pack(FPGA_TELEM_TYPE[i], answer_pkt[i])
+            pkt += struct.pack('!'+FPGA_TELEM_TYPE[i], answer_pkt[i])
         return pkt
 
     def check_sys(self):
@@ -294,7 +292,7 @@ class Housekeeping:
 
         elif (process_id == HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
-            payload = struct.pack('!46I3f3If8I', *data)
+            payload = data
             print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == HK_SYS_ID):

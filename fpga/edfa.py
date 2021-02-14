@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import sys
 sys.path.append('/root/lib/')
 import options
@@ -52,7 +51,7 @@ def fline(fpgabus):
         reply = reply[1]
         return reply
     else:
-        return ''
+        return '0 '*len(mmap.EDFA_PARSED_BLOCK)
         
 def parse(regs,flist):
     if   flist[0] == 'EL': regs[mmap.EDFA_EN_PIN] = 0
@@ -87,8 +86,10 @@ def parse(regs,flist):
     try:    regs[mmap.EDFA_PRE_POWER] = int(flist[7])
     except: regs[mmap.EDFA_PRE_POWER] = 0xFFFFFFFF
     
-    try:    regs[mmap.EDFA_PUMP_CURRENT] = int(flist[8])
-    except: regs[mmap.EDFA_PUMP_CURRENT] = 0xFFFFFFFF
+    if flist[8] == 'LOW': regs[mmap.EDFA_PUMP_CURRENT] = 0
+    else:
+        try:    regs[mmap.EDFA_PUMP_CURRENT] = int(flist[8])
+        except: regs[mmap.EDFA_PUMP_CURRENT] = 0xFFFFFFFF
     
     if flist[9] == 'CTA': regs[mmap.EDFA_CASE_TEMP] = 60.0
     else:

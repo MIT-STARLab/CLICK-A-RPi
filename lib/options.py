@@ -50,7 +50,7 @@ FPGA_SHELL_USES_SPI = 1
 SPI_FREQ = 1000000
 USB_DEVICE_ID = "1d50:602b:0002"
 
-EDFA_READ_WRITE_DELAY = 0.05
+EDFA_READ_WRITE_DELAY = 0.1
 EDFA_TIMOUT = 1.0
 EDFA_VIRTUAL_REGS_GOOD_FOR = 0.5
 
@@ -170,7 +170,7 @@ FL_SUCCESS = 0xFF
 TIME_SET_ENABLE = 0
 
 FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,110), range(112,120), range(602,612), range(502,510)],[])
-
+#FPGA_TELEM_REGS = sum([range(602,612)],[])
 # For housekeeping/commandhandler interface
 CMD_ACK = 0x0F
 CMD_ERR = 0xF0

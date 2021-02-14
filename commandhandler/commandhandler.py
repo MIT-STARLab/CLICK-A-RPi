@@ -650,7 +650,7 @@ while True:
             fpga.write_reg(mmap.HE1, 15)
             fpga.write_reg(mmap.HE1, 15)
 
-            #os.system('python ~/test/general_functionality_test.py') #starts self test script
+            os.system('python ~/test/general_functionality_test.py') #starts self test script
             
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
@@ -691,7 +691,7 @@ while True:
             time.sleep(0.1)
             fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
             time.sleep(0.1)
-            # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+            fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
             time.sleep(2)
 
             #set points are dependent on temperature
@@ -716,6 +716,8 @@ while True:
             fpga.write_reg(mmap.DATA, ppm_order) 
             print("PPM: ", ppm_order, fpga.read_reg(34))
 
+            #Wait for TEC to settle
+            time.sleep(2)
             while(abs(end_time - start_time) < transmit_time):
                 print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
                 #Stall Fifo

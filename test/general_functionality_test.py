@@ -330,7 +330,8 @@ def test_EDFA_IF(fo):
     
     power.edfa_on()
     time.sleep(2)
-    #fpga.read_reg(34)
+    print(fpga.read_reg(34))
+    
     edfa_temp = fpga.read_reg(mmap.EDFA_CASE_TEMP)
     power_in = fpga.read_reg(mmap.EDFA_POWER_IN)
     power_out = fpga.read_reg(mmap.EDFA_POWER_OUT)
@@ -441,8 +442,8 @@ def test_tec_driver(fo):
 
         if(on_curr > 200e-3):
             success = False
-            fo.write("TEC on current is higher than 100mA: %s" % on_curr )
-            print("TEC on current is higher than 100mA: %s" % on_curr )
+            fo.write("TEC on current is higher than 200mA: %s" % on_curr )
+            print("TEC on current is higher than 200mA: %s" % on_curr )
 
         #check TEC linearity
         tec_readback = []
@@ -451,8 +452,8 @@ def test_tec_driver(fo):
         error = .05
         if (abs(val -tec_readback) > val*error):
             success = False
-            fo.write("TEC Readback is more than 5% from TEC value: %s Readback: %s \n" %(val, tec_readback))
-            print("TEC Readback is more than 5% from TEC value: %s Readback: %s \n" %(val, tec_readback))
+            fo.write("TEC Readback is more than 5" + '%'+" from TEC value: %s Readback: %s \n" %(val, tec_readback))
+            print("TEC Readback is more than 5"+'%'+"from TEC value: %s Readback: %s \n" %(val, tec_readback))
 
     power.tec_off()
     fpga.write_reg(mmap.LTSa, 0)
@@ -482,7 +483,7 @@ def test_bias_driver(fo):
     off_curr = fpga.read_reg(mmap.LD_CURRENT)
 
     power.bias_on()
-    time.sleep(.1)
+    time.sleep(.25)
     fpga.write_reg(mmap.LBCa, 14)
     fpga.write_reg(mmap.LBCb, 33)
     
@@ -497,12 +498,12 @@ def test_bias_driver(fo):
     
         if(off_curr > 100e-2):
             success = False
-            fo.write("LD off current is greater than %sA: %s" % str(100e-2), str(off_curr))
+            fo.write("LD off current is greater than %sA: %s" % (str(100e-2), str(off_curr)))
             break
 
         if(avg_on_curr > 500e-3):
             success = False
-            fo.write("LD on current is greater than %sA: %s A" % str(400e-3), str(round(avg_on_curr,3)))
+            fo.write("LD on current is greater than %sA: %s A" % (str(500e-3), str(round(avg_on_curr,3))))
             break
 
     power.bias_off()
@@ -693,7 +694,6 @@ def test_mod_FIFO(fo):
     
     # #Release FIFO
     fpga.write_reg(mmap.CTL, 0x7) 
-    fpga.write_reg(mmap.DATA, 0)
 
     #EMPTY FIFO
     ppm_order = 16
@@ -730,6 +730,7 @@ def test_mod_FIFO(fo):
     tx_pkt.pack()
 
     control = fpga.read_reg(mmap.CTL)
+
     if(control & 0x8): fpga.write_reg(mmap.DATA, 0x17) #Turn stall off
     tx_pkt.set_PPM(fpga)
     
