@@ -131,24 +131,24 @@ def initialize_cal_laser():
     power.calib_diode_off()
     log_to_hk('CALIBRATION LASER OFF')
 
-def start_camera():
-    os.system('systemctl --user start camera') #calls camera.service to turn on camera
-    log_to_hk('CAMERA ON')
+# def start_camera():
+#     os.system('systemctl --user start camera') #calls camera.service to turn on camera
+#     log_to_hk('CAMERA ON')
 
-def stop_camera():
-    os.system('systemctl --user stop camera') #calls camera.service to turn off camera
-    log_to_hk('CAMERA OFF')
+# def stop_camera():
+#     os.system('systemctl --user stop camera') #calls camera.service to turn off camera
+#     log_to_hk('CAMERA OFF')
 
 def stop_pat():
     send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS) #this isn't necessary if PAT is running as a service
     os.system("systemctl --user stop pat") #stop the pat service
     log_to_hk('PAT STOPPED')
 
-def restart_pat():
-    stop_pat()
-    time.sleep(1)
-    os.system("systemctl --user restart pat") #restart the pat service
-    log_to_hk('PAT RESTARTED')
+# def restart_pat():
+#     stop_pat()
+#     time.sleep(1)
+#     os.system("systemctl --user restart pat") #restart the pat service
+#     log_to_hk('PAT RESTARTED')
 
 def get_pat_status():
     #get pat status
@@ -285,7 +285,13 @@ while True:
             log_to_hk('ACK CMD PL_REBOOT')
             ack_to_hk(CMD_PL_REBOOT, CMD_ACK)
             time.sleep(1)
-            os.system("shutdown -r now") #reboot the RPi (TODO: Add other shutdown actions if needed)
+            os.system("shutdown -r now") #reboot the RPi
+        
+        elif(CMD_ID == CMD_PL_SHUTDOWN):
+            log_to_hk('ACK CMD PL_SHUTDOWN')
+            ack_to_hk(CMD_PL_SHUTDOWN, CMD_ACK)
+            time.sleep(1)
+            os.system("shutdown now") #reboot the RPi
 
         elif(CMD_ID == CMD_PL_ENABLE_TIME):
             TIME_SET_ENABLE = 1
