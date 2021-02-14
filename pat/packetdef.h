@@ -46,14 +46,17 @@
 //status flags:
 #define STATUS_CAMERA_INIT 0x00
 #define STATUS_STANDBY 0x01
-#define STATUS_MAIN 0x02
+#define STATUS_STANDBY_CALIBRATED 0x02
+#define STATUS_STANDBY_SELF_TEST_PASSED 0x03
+#define STATUS_STANDBY_SELF_TEST_FAILED 0x04
+#define STATUS_MAIN 0x05
 //self test flags:
 #define PASS_SELF_TEST 0xFF
 #define FAIL_SELF_TEST 0x0F
 #define NULL_SELF_TEST 0x00
 //pat test flag: 
-#define TEST_FLAG 0xFFFF
-#define FLIGHT_FLAG 0xAAAA
+#define SKIP_CALIB_FLAG 0xFFFF
+#define DO_CALIB_FLAG 0xAAAA
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{

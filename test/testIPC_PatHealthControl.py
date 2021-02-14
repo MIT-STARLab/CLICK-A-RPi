@@ -17,7 +17,8 @@ fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga)
 
 #PAT Status Flag List
-status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_MAIN]
+status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_STANDBY_CALIBRATED, PAT_STATUS_STANDBY_SELF_TEST_PASSED, PAT_STATUS_STANDBY_SELF_TEST_FAILED, PAT_STATUS_MAIN]
+status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SELF_TEST_PASSED', 'STANDBY_SELF_TEST_FAILED', 'MAIN'] 
 
 #PAT Command List
 cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS, PAT_CMD_SET_BEACON_X, PAT_CMD_SET_BEACON_Y, PAT_CMD_SET_BEACON_WINDOW_SIZE, PAT_CMD_SET_BEACON_MAX_EXP]
@@ -119,70 +120,32 @@ while True:
         #Send commands if no incoming telemetry (standby) or after command_period timeout (allow exiting main pat loop while running)
         if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
 		if(status_flag in status_list):
-			if(status_flag == PAT_STATUS_CAMERA_INIT):
-				print ('PAT Process (PID: ' + str(return_addr) + ') Status: In Camera Initialization Loop')
-                                print "Available Commands are: "
-                                print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
-                                print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER                              
-                                print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
-                                print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST
-                                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS
-
-			elif(status_flag == PAT_STATUS_STANDBY):
-				print ('PAT Process (PID: ' + str(return_addr) + ') Status: In Standby Loop')
-                                print "Commands are: "
-                                print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
-                                print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
-                                print "CMD_START_PAT = ", PAT_CMD_START_PAT
-                                print "CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
-                                print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
-                                print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
-                                print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
-                                print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
-                                print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
-                                print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
-                                print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
-                                print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
-                                print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
-                                print "CMD_SET_BEACON_X = ", PAT_CMD_SET_BEACON_X
-                                print "CMD_SET_BEACON_Y = ", PAT_CMD_SET_BEACON_Y
-                                print "CMD_SET_BEACON_WINDOW_SIZE = ", PAT_CMD_SET_BEACON_WINDOW_SIZE
-                                print "CMD_SET_BEACON_MAX_EXP = ", PAT_CMD_SET_BEACON_MAX_EXP
-                                print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
-                                print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
-                                print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
-                                print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
-                                print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
-                                print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
-                                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS
-
-			elif(status_flag == PAT_STATUS_MAIN):
-				print ('PAT Process (PID: ' + str(return_addr) + ') Status: In Main Loop')
-                                print "Commands are: "
-                                print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
-                                print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
-                                print "CMD_START_PAT = ", PAT_CMD_START_PAT
-                                print "CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
-                                print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
-                                print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
-                                print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
-                                print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
-                                print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
-                                print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
-                                print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
-                                print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
-                                print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
-                                print "CMD_SET_BEACON_X = ", PAT_CMD_SET_BEACON_X
-                                print "CMD_SET_BEACON_Y = ", PAT_CMD_SET_BEACON_Y
-                                print "CMD_SET_BEACON_WINDOW_SIZE = ", PAT_CMD_SET_BEACON_WINDOW_SIZE
-                                print "CMD_SET_BEACON_MAX_EXP = ", PAT_CMD_SET_BEACON_MAX_EXP
-                                print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
-                                print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
-                                print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
-                                print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
-                                print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
-                                print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
-                                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS                      
+                        print ('PAT Process (PID: ' + str(return_addr) + ') Status: ' + status_names[status_list.index(status_flag)])
+                        print "Commands are: "
+                        print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
+                        print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
+                        print "CMD_START_PAT = ", PAT_CMD_START_PAT
+                        print "CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
+                        print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
+                        print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
+                        print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
+                        print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
+                        print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
+                        print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
+                        print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
+                        print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
+                        print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
+                        print "CMD_SET_BEACON_X = ", PAT_CMD_SET_BEACON_X
+                        print "CMD_SET_BEACON_Y = ", PAT_CMD_SET_BEACON_Y
+                        print "CMD_SET_BEACON_WINDOW_SIZE = ", PAT_CMD_SET_BEACON_WINDOW_SIZE
+                        print "CMD_SET_BEACON_MAX_EXP = ", PAT_CMD_SET_BEACON_MAX_EXP
+                        print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
+                        print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
+                        print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
+                        print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
+                        print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
+                        print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
+                        print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS                      
 		else:
 			print ('Unrecognized PAT Status Flag: ' + status_flag)
 

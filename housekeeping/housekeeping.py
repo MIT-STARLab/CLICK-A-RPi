@@ -292,7 +292,7 @@ class Housekeeping:
 
         elif (process_id == HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
-            payload = data
+            payload = data #data is already a packed byte string
             print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == HK_SYS_ID):
