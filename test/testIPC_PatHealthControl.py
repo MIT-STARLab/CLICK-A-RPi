@@ -149,7 +149,7 @@ while True:
 		else:
 			print ('Unrecognized PAT Status Flag: ' + status_flag)
 
-                user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
+                user_cmd = int(input("Please enter a command number (enter -1 to skip command entry): ")) 
                 if(user_cmd in cmd_list):
                         if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
                                 exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))

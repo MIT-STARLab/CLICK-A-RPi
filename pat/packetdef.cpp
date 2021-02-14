@@ -270,7 +270,7 @@ bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::poll
 {
 	send_packet_fpga_map_request(fpga_map_request_port, READ, 0, FRC_CH);
 	// Listen for FPGA answer:
-	for(int i = 0; i < 10000; i++){		
+	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
 		zmq::poll(poll_fpga_answer.data(), 1, POLL_TIME_FPGA_RESPONSE); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
 			// received something on the first (only) socket

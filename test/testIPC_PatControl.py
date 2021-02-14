@@ -17,8 +17,8 @@ fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga)
 
 #PAT Status Flag List
-status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_STANDBY_CALIBRATED, PAT_STATUS_STANDBY_SELF_TEST_PASSED, PAT_STATUS_STANDBY_SELF_TEST_FAILED, PAT_STATUS_MAIN]
-status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SELF_TEST_PASSED', 'STANDBY_SELF_TEST_FAILED', 'MAIN'] 
+# pat_status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_STANDBY_CALIBRATED, PAT_STATUS_STANDBY_SELF_TEST_PASSED, PAT_STATUS_STANDBY_SELF_TEST_FAILED, PAT_STATUS_MAIN]
+# pat_status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SELF_TEST_PASSED', 'STANDBY_SELF_TEST_FAILED', 'MAIN'] 
 
 #PAT Command List
 cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS, PAT_CMD_SET_BEACON_X, PAT_CMD_SET_BEACON_Y, PAT_CMD_SET_BEACON_WINDOW_SIZE, PAT_CMD_SET_BEACON_MAX_EXP]
@@ -32,19 +32,19 @@ return_address = str(pid)
 
 context = zmq.Context()
 
-socket_PAT_status = context.socket(zmq.SUB)
-socket_PAT_status.connect("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
-socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
-poller_PAT_status = zmq.Poller()
-poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
+# socket_PAT_status = context.socket(zmq.SUB)
+# socket_PAT_status.bind("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
+# socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
+# poller_PAT_status = zmq.Poller()
+# poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 socket_PAT_control = context.socket(zmq.PUB)
-socket_PAT_control.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
+socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
 
-print("\n")
+#print("\n")
 
 def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
         # ~ #Define Command Header
@@ -81,104 +81,105 @@ def initialize_cal_laser():
         fpga.write_reg(mmap.DAC_SETUP,1)
         fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
 
-def get_pat_status():
-    #get pat status
-    socks_status = dict(poller_PAT_status.poll(250)) #poll for 250 ms
-    if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
-        #print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
-        message = recv_zmq(socket_PAT_status)
-        ipc_patStatusPacket = PATStatusPacket()
-        return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
-        received_status = True
-    else:
-        return_addr = -1
-        status_flag = -1
-        received_status = False
+# def get_pat_status():
+#     #get pat status
+#     socks_status = dict(poller_PAT_status.poll(250)) #poll for 250 ms
+#     if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
+#         #print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+#         message = recv_zmq(socket_PAT_status)
+#         ipc_patStatusPacket = PATStatusPacket()
+#         pat_return_addr, pat_status_flag = ipc_patStatusPacket.decode(message) #decode the package
+#         received_status = True
+#     else:
+#         pat_return_addr = -1
+#         pat_status_flag = -1
+#         received_status = False
 
-    return received_status, status_flag, return_addr
+#     return received_status, pat_status_flag, pat_return_addr
 
-def update_pat_status(status_flag):
-    #get pat status
-    received_status, new_status_flag, _ = get_pat_status()
-    if(received_status):
-        status_flag = new_status_flag
+# def update_pat_status(pat_status_flag):
+#     #get pat status
+#     received_status, new_status_flag, _ = get_pat_status()
+#     if(received_status):
+#         pat_status_flag = new_status_flag
 
-    return status_flag
+#     return pat_status_flag
 
-#intialize PAT status
-for i in range(10):
-    pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
-    if(pat_received_status):
-        log_to_hk('Connected to PAT process at PID = ' + str(pid))
-        break
-if(not pat_received_status):
-    log_to_hk('WARNING: PAT process unresponsive at test script (PID = ' + str(pid) + ') startup.')
+# #intialize PAT status
+# for i in range(100):
+#    pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
+#    if(pat_received_status):
+#        print('Connected to PAT process at PID = ' + str(pid))
+#        break
+# if(not pat_received_status):
+#    print('WARNING: PAT process unresponsive at test script (PID = ' + str(pid) + ') startup.')
 
-def pat_status_is(pat_status_check):
-    if(pat_status_flag in pat_status_list):
-        log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
-        #print('status_flag: ', pat_status_flag)
-        #print('pat_status_check: ', pat_status_check)
-        #print('bool: ', (pat_status_flag == pat_status_check))
-        return (pat_status_flag == pat_status_check)
-    else:
-        log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
-        return False
+# def pat_status_is(pat_status_check):
+#     if(pat_status_flag in pat_status_list):
+#         print('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+#         #print('pat_status_flag: ', pat_status_flag)
+#         #print('pat_status_check: ', pat_status_check)
+#         #print('bool: ', (pat_status_flag == pat_status_check))
+#         return (pat_status_flag == pat_status_check)
+#     else:
+#         print('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
+#         return False
 
 # Wait for a ping from the PAT process
 #Read telemetry if available
-print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
-message = recv_zmq(socket_PAT_status)
-ipc_patStatusPacket = PATStatusPacket()
-return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
-print(telemetry_string)
-time.sleep(1)
+# print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+# message = recv_zmq(socket_PAT_status)
+# ipc_patStatusPacket = PATStatusPacket()
+# pat_return_addr, pat_status_flag = ipc_patStatusPacket.decode(message) #decode the package
+# #print(telemetry_string)
+# time.sleep(1)
 
 counter = 0
 command_period_sec = 10
 poll_timeout_msec = 25
 cal_laser_init = False
 while True:    
-        socks_status = dict(poller_PAT_status.poll(poll_timeout_msec))
-        if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
-                print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
-                message = recv_zmq(socket_PAT_status)
-                ipc_patStatusPacket = PATStatusPacket()
-                return_addr, status_flag = ipc_patStatusPacket.decode(message) #decode the package
+        # pat_status_flag = update_pat_status(pat_status_flag)
+        # socks_status = dict(poller_PAT_status.poll(poll_timeout_msec))
+        # if socket_PAT_status in socks_status and socks_status[socket_PAT_status] == zmq.POLLIN:
+        #         print('RECEIVING on %s' % socket_PAT_status.get_string(zmq.LAST_ENDPOINT))
+        #         message = recv_zmq(socket_PAT_status)
+        #         ipc_patStatusPacket = PATStatusPacket()
+        #         pat_return_addr, pat_status_flag = ipc_patStatusPacket.decode(message) #decode the package
 
         #Send commands if no incoming telemetry (standby) or after command_period timeout (allow exiting main pat loop while running)
         if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
-            if(status_flag in status_list):
-                print ('PAT Process (PID: ' + str(return_addr) + ') Status: ' + status_names[status_list.index(status_flag)])
-                print "Commands are: "
-                print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
-                print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
-                print "CMD_START_PAT = ", PAT_CMD_START_PAT
-                print "CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
-                print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
-                print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
-                print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
-                print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
-                print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
-                print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
-                print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
-                print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
-                print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
-                print "CMD_SET_BEACON_X = ", PAT_CMD_SET_BEACON_X
-                print "CMD_SET_BEACON_Y = ", PAT_CMD_SET_BEACON_Y
-                print "CMD_SET_BEACON_WINDOW_SIZE = ", PAT_CMD_SET_BEACON_WINDOW_SIZE
-                print "CMD_SET_BEACON_MAX_EXP = ", PAT_CMD_SET_BEACON_MAX_EXP
-                print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
-                print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
-                print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
-                print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
-                print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
-                print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
-                print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS                      
-            else:
-                print ('Unrecognized PAT Status Flag: ' + status_flag)
+            #if(pat_status_flag in pat_status_list):
+            #print ('PAT Process (PID: ' + str(pat_return_addr) + ') Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+            print "Commands are: "
+            print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
+            print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
+            print "CMD_START_PAT = ", PAT_CMD_START_PAT
+            print "CMD_START_PAT_OPEN_LOOP = ", PAT_CMD_START_PAT_OPEN_LOOP
+            print "CMD_START_PAT_STATIC_POINT = ", PAT_CMD_START_PAT_STATIC_POINT
+            print "CMD_START_PAT_BUS_FEEDBACK = ", PAT_CMD_START_PAT_BUS_FEEDBACK
+            print "CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK = ", PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK
+            print "CMD_END_PAT (Return to Standby) = ", PAT_CMD_END_PAT
+            print "CMD_GET_IMAGE = ", PAT_CMD_GET_IMAGE
+            print "CMD_CALIB_TEST = ", PAT_CMD_CALIB_TEST
+            print "CMD_CALIB_LASER_TEST = ", PAT_CMD_CALIB_LASER_TEST
+            print "CMD_FSM_TEST = ", PAT_CMD_FSM_TEST
+            print "CMD_BCN_ALIGN = ", PAT_CMD_BCN_ALIGN
+            print "CMD_SET_BEACON_X = ", PAT_CMD_SET_BEACON_X
+            print "CMD_SET_BEACON_Y = ", PAT_CMD_SET_BEACON_Y
+            print "CMD_SET_BEACON_WINDOW_SIZE = ", PAT_CMD_SET_BEACON_WINDOW_SIZE
+            print "CMD_SET_BEACON_MAX_EXP = ", PAT_CMD_SET_BEACON_MAX_EXP
+            print "CMD_TX_ALIGN = ", PAT_CMD_TX_ALIGN
+            print "CMD_UPDATE_TX_OFFSET_X = ", PAT_CMD_UPDATE_TX_OFFSET_X
+            print "CMD_UPDATE_TX_OFFSET_Y = ", PAT_CMD_UPDATE_TX_OFFSET_Y
+            print "CMD_UPDATE_FSM_X = ", PAT_CMD_UPDATE_FSM_X
+            print "CMD_UPDATE_FSM_Y = ", PAT_CMD_UPDATE_FSM_Y
+            print "CMD_SELF_TEST = ", PAT_CMD_SELF_TEST 
+            print "CMD_END_PROCESS (End PAT Binary Execution) = ", PAT_CMD_END_PROCESS                      
+            #else:
+            #    print ('Unrecognized PAT Status Flag: ' + pat_status_flag)
 
-            user_cmd = int(input("Please enter a command number (enter 0 to skip command entry): ")) 
+            user_cmd = int(input("Please enter a command number (enter -1 to skip command entry): ")) 
             if(user_cmd in cmd_list):
                     if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
                             exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))

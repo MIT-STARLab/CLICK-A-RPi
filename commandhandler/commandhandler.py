@@ -178,7 +178,7 @@ def update_pat_status(status_flag):
 for i in range(10):
     pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
     if(pat_received_status):
-        log_to_hk('Connected to PAT process at PID = ' + str(pid))
+        log_to_hk('Connected to PAT process at PID = ' + str(pat_return_addr))
         break
 if(not pat_received_status):
     log_to_hk('WARNING: PAT process unresponsive at CH (PID = ' + str(pid) + ') startup.')
@@ -683,24 +683,21 @@ while True:
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                for i in range(60): #max test time is about 60 sec
-                    print("Waiting for pat self test to finish")
-                    pat_status_flag = update_pat_status(pat_status_flag)
-                    if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
-                        log_to_hk("Pat self test passed")
-                        #execute pointing
-                        send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
-                        break
-                    elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                        log_to_hk("Pat self test failed")
-                        break
-                    time.sleep(1)
-            elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
-                log_to_hk("Camera is off - pat self test failed.")
-            else: 
-                log_to_hk("Pat was not in standby mode, pat self test will not run")
+                time.sleep(60)
+                # for i in range(60): #max test time is about 60 sec
+                #     print("Waiting for pat self test to finish")
+                #     pat_status_flag = update_pat_status(pat_status_flag)
+                #     if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
+                #         log_to_hk("Pat self test passed")
+                #         #execute pointing
+                #         send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
+                #         break
+                #     elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                #         log_to_hk("Pat self test failed")
+                #         break;
+                #     time.sleep(1)
 
-            if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
+                #if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 end_time = time.time()
                 log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
                 
@@ -785,9 +782,15 @@ while True:
                 power.tec_off()
 
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
-            else:
-                log_to_hk('Transmit did not run b/c pat self test did not succeed.')
+            elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+            else: 
+                log_to_hk("Pat was not in standby mode, pat self test will not run")
+                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+            #else:
+            #    log_to_hk('Transmit did not run b/c pat self test did not succeed.')
+            #    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
