@@ -684,6 +684,8 @@ while True:
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                 time.sleep(60)
+                log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
+                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
                 # for i in range(60): #max test time is about 60 sec
                 #     print("Waiting for pat self test to finish")
                 #     pat_status_flag = update_pat_status(pat_status_flag)
@@ -781,7 +783,10 @@ while True:
                 power.bias_off()
                 power.tec_off()
 
+                log_to_hk('Commanding PAT to return to STANDBY mode.')
+                send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
+                
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                 log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
