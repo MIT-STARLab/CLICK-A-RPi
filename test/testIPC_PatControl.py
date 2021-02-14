@@ -30,6 +30,22 @@ topic = str(os.getpid())
 pid = os.getpid()
 return_address = str(pid)
 
+context = zmq.Context()
+
+socket_PAT_status = context.socket(zmq.SUB)
+socket_PAT_status.connect("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
+socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
+poller_PAT_status = zmq.Poller()
+poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
+
+socket_PAT_control = context.socket(zmq.PUB)
+socket_PAT_control.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
+
+# socket needs some time to set up. give it a second - else the first message will be lost
+time.sleep(1)
+
+print("\n")
+
 def send_pat_command(socket_PAT_control, return_address, command, payload = ''):
         # ~ #Define Command Header
         # ~ PAT_CMD_HEADER = return_address + '\0' #PID Header
@@ -108,22 +124,6 @@ def pat_status_is(pat_status_check):
     else:
         log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
         return False
-        
-context = zmq.Context()
-
-socket_PAT_status = context.socket(zmq.SUB)
-socket_PAT_status.connect("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
-socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
-poller_PAT_status = zmq.Poller()
-poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
-
-socket_PAT_control = context.socket(zmq.PUB)
-socket_PAT_control.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
-
-# socket needs some time to set up. give it a second - else the first message will be lost
-time.sleep(1)
-
-print("\n")
 
 # Wait for a ping from the PAT process
 #Read telemetry if available
