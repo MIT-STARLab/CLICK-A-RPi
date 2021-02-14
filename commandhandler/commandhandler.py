@@ -514,7 +514,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
             if(pat_status_is(PAT_STATUS_STANDBY)):
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_TEST_FLAG))
+                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
@@ -768,7 +768,7 @@ while True:
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #Start Main PAT Loop:
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_FLIGHT_FLAG))
+                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
             else:
                 log_to_hk('ERROR CMD PL_DWNLINK_MODE: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_DWNLINK_MOD, CMD_ERR)

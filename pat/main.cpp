@@ -344,12 +344,12 @@ int main() //int argc, char** argv
 				{
 					case CMD_START_PAT:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command with skip calibration flag. Proceeding to ACQUISITION...");
 							phase = ACQUISITION;
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command with do calibration flag. Proceeding to CALIBRATION...");
 							phase = CALIBRATION;
 							STANDBY = false;
 						} else{
@@ -359,13 +359,13 @@ int main() //int argc, char** argv
 						
 					case CMD_START_PAT_OPEN_LOOP:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command with skip calibration flag. Proceeding to ACQUISITION...");
 							openLoop = true;
 							phase = ACQUISITION;
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command with do calibration flag. Proceeding to CALIBRATION...");
 							openLoop = true;
 							phase = CALIBRATION;
 							STANDBY = false;
@@ -382,13 +382,13 @@ int main() //int argc, char** argv
 						
 					case CMD_START_PAT_BUS_FEEDBACK:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command with skip calibration flag. Proceeding to ACQUISITION...");
 							sendBusFeedback = true;
 							phase = ACQUISITION;
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command with do calibration flag Proceeding to CALIBRATION...");
 							sendBusFeedback = true;
 							phase = CALIBRATION;
 							STANDBY = false;
@@ -399,14 +399,14 @@ int main() //int argc, char** argv
 
 					case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command with skip calibration flag. Proceeding to ACQUISITION...");
 							openLoop = true; 
 							sendBusFeedback = true;
 							phase = ACQUISITION;
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command with do calibration flag. Proceeding to CALIBRATION...");
 							openLoop = true; 
 							sendBusFeedback = true;
 							phase = CALIBRATION;
