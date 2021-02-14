@@ -675,7 +675,7 @@ while True:
                 time.sleep(5)
                 print(temps)
                 if ((time.time() - begin.time()) > 900):
-                    print("Heater time reched 15 minutes and avg temps: %s" % temps)
+                    print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
                 
 
             fpga.write_reg(mmap.PO3, 15)
