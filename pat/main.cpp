@@ -330,9 +330,9 @@ int main() //int argc, char** argv
 			}
 			if(self_test_passed){
 				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
-			} else if{self_test_failed}{
+			} else if(self_test_failed){
 				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
-			} else if{haveCalibKnowledge){
+			} else if(haveCalibKnowledge){
 				send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
 			} else {
 				send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message

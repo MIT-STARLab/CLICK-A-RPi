@@ -120,7 +120,7 @@ while True:
         #Send commands if no incoming telemetry (standby) or after command_period timeout (allow exiting main pat loop while running)
         if((counter*poll_timeout_msec/1000) % command_period_sec == 0):
 		if(status_flag in status_list):
-                        print ('PAT Process (PID: ' + str(return_addr) + ') Status: ' + status_names[status_list.index(status_flag))
+                        print ('PAT Process (PID: ' + str(return_addr) + ') Status: ' + status_names[status_list.index(status_flag)])
                         print "Commands are: "
                         print "TURN_ON_CAL_LASER = ", TURN_ON_CAL_LASER
                         print "TURN_OFF_CAL_LASER = ", TURN_OFF_CAL_LASER 
