@@ -178,7 +178,7 @@ def update_pat_status(status_flag):
 for i in range(10):
     pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
     if(pat_received_status):
-        log_to_hk('Connected to PAT process at PID = ' + str(pid))
+        log_to_hk('Connected to PAT process at PID = ' + str(pat_return_addr))
         break
 if(not pat_received_status):
     log_to_hk('WARNING: PAT process unresponsive at CH (PID = ' + str(pid) + ') startup.')
