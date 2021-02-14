@@ -396,12 +396,12 @@ while True:
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
             exp_cmd = exp_cmd_tuple[0]
-            if(exp_cmd < 10):
+            if(exp_cmd < CAMERA_MIN_EXP):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
-                    exp_cmd = 10
-            elif(exp_cmd > 10000000):
+                    exp_cmd = CAMERA_MIN_EXP
+            elif(exp_cmd > CAMERA_MAX_EXP):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = 10000000
+                    exp_cmd = CAMERA_MAX_EXP
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
                 log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
@@ -414,12 +414,12 @@ while True:
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
             exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
             exp_cmd = exp_cmd_tuple[0]
-            if(exp_cmd < 10):
+            if(exp_cmd < CAMERA_MIN_EXP):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
-                    exp_cmd = 10
-            elif(exp_cmd > 10000000):
+                    exp_cmd = CAMERA_MIN_EXP
+            elif(exp_cmd > CAMERA_MAX_EXP):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = 10000000
+                    exp_cmd = CAMERA_MAX_EXP
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
@@ -433,12 +433,12 @@ while True:
         elif(CMD_ID == CMD_PL_FSM_TEST):
             exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
             exp_cmd = exp_cmd_tuple[0]
-            if(exp_cmd < 10):
+            if(exp_cmd < CAMERA_MIN_EXP):
                     log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
-                    exp_cmd = 10
-            elif(exp_cmd > 10000000):
+                    exp_cmd = CAMERA_MIN_EXP
+            elif(exp_cmd > CAMERA_MAX_EXP):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = 10000000
+                    exp_cmd = CAMERA_MAX_EXP
             if(pat_status_is(PAT_STATUS_STANDBY)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
@@ -459,6 +459,23 @@ while True:
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ERR)
+        
+        elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
+            bcn_rel_x, bcn_rel_y, bcn_window_size, bcn_max_exp = struct.unpack('!hhHI', ipc_rxcompacket.payload)
+            if(pat_status_is(PAT_STATUS_STANDBY)):
+                if((abs(bcn_rel_x) < CAMERA_WIDTH/2) and (abs(bcn_rel_y) < CAMERA_HEIGHT/2) and (bcn_window_size <= CAMERA_HEIGHT) and (bcn_max_exp > CAMERA_MIN_EXP) and (bcn_max_exp < CAMERA_MAX_EXP)):
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_BEACON_X, str(bcn_rel_x))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_BEACON_Y, str(bcn_rel_y))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_BEACON_WINDOW_SIZE, str(bcn_window_size))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_BEACON_MAX_EXP, str(bcn_max_exp))
+                    log_to_hk('ACK CMD PL_UPDATE_ACQUISITION_PARAMS')
+                    ack_to_hk(CMD_PL_UPDATE_ACQUISITION_PARAMS, CMD_ACK)
+                else:
+                    log_to_hk('ERROR CMD PL_UPDATE_ACQUISITION_PARAMS: Parameters out of bounds')
+
+            else:
+                log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
+                ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_TX_ALIGN):
             if(pat_status_is(PAT_STATUS_STANDBY)):
@@ -472,9 +489,9 @@ while True:
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
             tx_update_x, tx_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_MAIN)):
-                if(abs(tx_update_x) < 1000):
+                if(abs(tx_update_x) < CAMERA_WIDTH/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
-                if(abs(tx_update_y) < 1000):
+                if(abs(tx_update_y) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_Y, str(tx_update_y))
                 log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
@@ -485,9 +502,9 @@ while True:
         elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
             fsm_update_x, fsm_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY)):
-                if(abs(fsm_update_x) < 1000):
+                if(abs(fsm_update_x) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_X, str(fsm_update_x))
-                if(abs(fsm_update_y) < 1000):
+                if(abs(fsm_update_y) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_Y, str(fsm_update_y))
                 log_to_hk('ACK CMD PL_UPDATE_FSM_ANGLES')
                 ack_to_hk(CMD_PL_UPDATE_FSM_ANGLES, CMD_ACK)
