@@ -669,9 +669,14 @@ while True:
                 print("Avg payload temperature is above 0C")
 
             #Poll temps once per 5 seconds, hang until the average is above 0C stop
+            begin_time = time.time()
             while(temps):
                 temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6 < 0
                 time.sleep(5)
+                print(temps)
+                if ((time.time() - begin.time()) > 900):
+                    print("Heater time reched 15 minutes and avg temps: %s" % temps)
+                
 
             fpga.write_reg(mmap.PO3, 15)
             fpga.write_reg(mmap.HE1, 15)
