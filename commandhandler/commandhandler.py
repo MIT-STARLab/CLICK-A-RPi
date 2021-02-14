@@ -735,7 +735,7 @@ while True:
                 time.sleep(0.1)
                 fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
                 time.sleep(0.1)
-                # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
                 time.sleep(2)
 
                 #set points are dependent on temperature
