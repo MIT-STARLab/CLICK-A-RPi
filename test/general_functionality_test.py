@@ -330,7 +330,6 @@ def test_EDFA_IF(fo):
     
     power.edfa_on()
     time.sleep(2)
-    print(fpga.read_reg(34))
     
     edfa_temp = fpga.read_reg(mmap.EDFA_CASE_TEMP)
     power_in = fpga.read_reg(mmap.EDFA_POWER_IN)
@@ -349,11 +348,11 @@ def test_EDFA_IF(fo):
         fo.write('EDFA Case temp is outside range 0-40C: %s \n' % edfa_temp)
 
 
-    if(power_in != -1000.0):
+    if(power_in != -100.0):
         success = False
         fo.write("Seed power is nonzero and shouldn't be: %s \n" % power_in)
 
-    if(power_out != -1000.0):
+    if(power_out != -100.0):
         success = False
         fo.write("EDFA output power is nonzero and shouldn't be: %s \n" % power_out) 
 
@@ -483,7 +482,7 @@ def test_bias_driver(fo):
     off_curr = fpga.read_reg(mmap.LD_CURRENT)
 
     power.bias_on()
-    time.sleep(.25)
+    time.sleep(.5)
     fpga.write_reg(mmap.LBCa, 14)
     fpga.write_reg(mmap.LBCb, 33)
     
@@ -501,9 +500,9 @@ def test_bias_driver(fo):
             fo.write("LD off current is greater than %sA: %s" % (str(100e-2), str(off_curr)))
             break
 
-        if(avg_on_curr > 500e-3):
+        if(avg_on_curr > 500e-3 or avg_on_curr < 100e-3):
             success = False
-            fo.write("LD on current is greater than %sA: %s A" % (str(500e-3), str(round(avg_on_curr,3))))
+            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
             break
 
     power.bias_off()
@@ -545,12 +544,14 @@ def test_scan_PPM(fo):
 
     for x in range(1,5):
         fpga.write_reg(x, seed[x-1])
+        time.sleep(.1)
 
     time.sleep(5)
     success = True
     baseline_input = 0
     edfa_inputs =[]        
     for ppm in ppm_codes:
+        
         ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
         fpga.write_reg(mmap.DATA, ppm_order) 
         time.sleep(1)
@@ -563,12 +564,18 @@ def test_scan_PPM(fo):
                 baseline_input = edfa_input
             else:
                 success = False
-                fo.write("PPM%s input power to the edfa is outside of nominal range: %s" % (ppm, edfa_input))
+                fo.write("PPM%s input power to the edfa is outside of nominal range: %s \n" % (ppm, edfa_input))
+                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s, PPM_ORDER: %s" % \
+                (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
+                fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), ppm_order))
         else:
             expected_input = baseline_input - 3.0
             if (abs(edfa_input-expected_input)) > .5:
                 success = False
-                fo.write("PPM%s was outside of the acceptable range of input power to the EDFA: %s" % (ppm, edfa_input))
+                fo.write("PPM%s was outside of the acceptable range of input power to the EDFA: %s \n" % (ppm, edfa_input))
+                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s" % \
+                (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
+                fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
             baseline_input = edfa_input
 
     power.edfa_off()
@@ -580,7 +587,7 @@ def test_scan_PPM(fo):
         pass_test(fo)
     else:
         fail_test(fo)
-        fo.write("EDFA input not nominal across PPM orders. Powers: %s" % str(edfa_inputs))
+        fo.write("EDFA input not nominal across PPM orders. Powers: %s \n" % str(edfa_inputs))
         print("EDFA input not nominal across PPM orders. Powers: ", edfa_inputs)
 
     return success
@@ -597,8 +604,8 @@ def check_CW_power(fo):
     power.tec_on()
     time.sleep(2)
 
-    payload_seed = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
-    flat_sat_seed = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
+    payload_seed = [options.DEFAULT_CW_TEC_MSB, options.DEFAULT_CW_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
+    flat_sat_seed = [options.DEFAULT_CW_FTEC_MSB, options.DEFAULT_CW_FTEC_LSB, options.DEFAULT_FLD_MSB, options.DEFAULT_FLD_LSB]
     # seed = payload_seed
     ppm4_input = options.CW_THRESHOLDS
 
@@ -612,11 +619,12 @@ def check_CW_power(fo):
     for x in range(1,5):
         fpga.write_reg(x, seed[x-1])
 
+    fpga.write_reg(mmap.DATA, 0)
     #wait for TEC to tune
     time.sleep(5)
 
+
     input_power = fpga.read_reg(mmap.EDFA_POWER_IN)
-    print(fpga.edfa.get_input_power_dBm())
     success = True
     if (input_power < ppm_input[1] or input_power > ppm_input[0]):
         success = False
@@ -630,6 +638,9 @@ def check_CW_power(fo):
     else:
         fail_test(fo)
         fo.write("EDFA Input Power outside of expected range: "+str(input_power)+" dbm \n")
+        fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s" % \
+        (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
+        fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
         print("EDFA Input Power outside of expected range: "+str(input_power)+" dbm \n")
 
     return success
@@ -673,7 +684,7 @@ def test_mod_FIFO(fo):
     tx_pkt.pack()
 
     control = fpga.read_reg(mmap.CTL)
-    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x17) #Turn stall off
+    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
     tx_pkt.set_PPM(fpga)
     
     #Stall Fifo
@@ -686,9 +697,9 @@ def test_mod_FIFO(fo):
     success = True
     if(len(tx_pkt.symbols) != fifo_len):
         success = False
-        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-        fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt.symbols)) 
-        fo.write("Packet PPM: %s and Data: %s " % (tx_pkt.ppm_order, tx_pkt.data))   
+        print("Fifo length %s does not match packet symbol length %s \n" % (fifo_len, len(tx_pkt.symbols)))
+        fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt.symbols)) 
+        fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt.ppm_order, tx_pkt.data))   
     
     if(fifo_len < 100): time.sleep(.005)
     
@@ -702,7 +713,7 @@ def test_mod_FIFO(fo):
     tx_pkt1.pack()
 
     control = fpga.read_reg(mmap.CTL)
-    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x17) #Turn stall off
+    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
     tx_pkt1.set_PPM(fpga)
     
     #Stall Fifo
@@ -715,8 +726,8 @@ def test_mod_FIFO(fo):
     if(len(tx_pkt1.symbols)+2 != fifo_len): #Why is the empty fifo length 2
         success = False
         print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt1.symbols)))
-        fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
-        fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
+        fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt1.symbols)) 
+        fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt1.ppm_order, tx_pkt1.data))   
     
     if(fifo_len < 100): time.sleep(.005)
 
@@ -724,14 +735,14 @@ def test_mod_FIFO(fo):
     fpga.write_reg(mmap.CTL, 0x7) 
 
     #LONG FIFO
-    data = '1'*10000
+    data = '1'*1000
     ppm_order = 128
     tx_pkt = tx_packet.txPacket(ppm_order, data)
     tx_pkt.pack()
 
     control = fpga.read_reg(mmap.CTL)
 
-    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x17) #Turn stall off
+    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
     tx_pkt.set_PPM(fpga)
     
     #Stall Fifo

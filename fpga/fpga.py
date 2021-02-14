@@ -87,7 +87,7 @@ def loop():
                 if time.time() - last_edfa_update > options.EDFA_VIRTUAL_REGS_GOOD_FOR:
                     fline = edfa.fline(fpgabus)
                     flist = fline.split()
-                    reg_buffer = edfa.parse(reg_buffer, fline)
+                    reg_buffer = edfa.parse(reg_buffer, flist)
 
             # -----------------------------------------
             
