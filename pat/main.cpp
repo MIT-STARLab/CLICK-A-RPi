@@ -212,6 +212,7 @@ int main() //int argc, char** argv
 	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
+	bool self_test_passed = false, self_test_failed = false;
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -254,7 +255,6 @@ int main() //int argc, char** argv
 				laser_test_result = NULL_SELF_TEST;
 				fsm_test_result = NULL_SELF_TEST;
 				calibration_test_result = NULL_SELF_TEST;			
-
 				//send self test results
 				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 				
@@ -328,7 +328,15 @@ int main() //int argc, char** argv
 				OPERATIONAL = false;
 				break;
 			}
-			send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+			if(self_test_passed){
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
+			} else if{self_test_failed}{
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
+			} else if{haveCalibKnowledge){
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
+			} else {
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+			}
 			if(haveCalibKnowledge){
 				log(pat_health_port, textFileOut, "In main.cpp - Standby - Calib is at [", calib.x, ",", calib.y, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
 			}
@@ -683,12 +691,13 @@ int main() //int argc, char** argv
 									{
 										calibExposure = camera.config->expose_us.read(); //save calib exposure
 										log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test). Calib Exposure = ", calibExposure, " us.");
-										
+										haveCalibKnowledge = true; 
 										//Check offset
 										if(abs(calibration.centerOffsetX) <= CALIB_OFFSET_TOLERANCE){
 											if(abs(calibration.centerOffsetY) <= CALIB_OFFSET_TOLERANCE){
 												if(calibration.s00/calibration.s11 - 1/sqrt(2) <= CALIB_SENSITIVITY_RATIO_TOL){
 													calibration_test_result = PASS_SELF_TEST;
+													self_test_passed = true;
 													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Calibration Test passed.");
 													self_test_stream << "None";
 												} else{
@@ -723,7 +732,7 @@ int main() //int argc, char** argv
 							fsm_test_result = NULL_SELF_TEST;
 							calibration_test_result = NULL_SELF_TEST;
 						}
-
+						if(!self_test_passed){self_test_failed = true;}
 						//send self test results
 						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 						break;

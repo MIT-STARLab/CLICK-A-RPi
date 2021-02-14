@@ -49,8 +49,8 @@ UPDATE_PD_DEBUG = 10 #seconds, time period for any repeated process commands nee
 UPDATE_PD_DOWNLINK = 10 #seconds, time period for any repeated process commands needed during this mode
 
 #PAT Status Flag List
-pat_status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_MAIN]
-pat_status_names = ['CAMERA INIT', 'STANDBY', 'MAIN']
+pat_status_list = [PAT_STATUS_CAMERA_INIT, PAT_STATUS_STANDBY, PAT_STATUS_STANDBY_CALIBRATED, PAT_STATUS_STANDBY_SELF_TEST_PASSED, PAT_STATUS_STANDBY_SELF_TEST_FAILED, PAT_STATUS_MAIN]
+pat_status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SELF_TEST_PASSED', 'STANDBY_SELF_TEST_FAILED', 'MAIN']
 
 # ZeroMQ inter process communication
 context = zmq.Context()
@@ -381,7 +381,7 @@ while True:
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             pat_mode_cmd = pat_mode_cmd_tuple[0]
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 if(pat_mode_cmd in pat_mode_list):
                     PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
                     log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list.index(PAT_MODE_ID)])
@@ -402,7 +402,7 @@ while True:
             elif(exp_cmd > CAMERA_MAX_EXP):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = CAMERA_MAX_EXP
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
                 log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ACK)
@@ -420,7 +420,7 @@ while True:
             elif(exp_cmd > CAMERA_MAX_EXP):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = CAMERA_MAX_EXP
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
@@ -439,7 +439,7 @@ while True:
             elif(exp_cmd > CAMERA_MAX_EXP):
                     log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
                     exp_cmd = CAMERA_MAX_EXP
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_FSM_TEST')
@@ -450,7 +450,7 @@ while True:
                 ack_to_hk(CMD_PL_FSM_TEST, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
                 log_to_hk('ACK CMD PL_RUN_CALIBRATION')
@@ -462,7 +462,7 @@ while True:
         
         elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
             bcn_rel_x, bcn_rel_y, bcn_window_size, bcn_max_exp = struct.unpack('!hhHI', ipc_rxcompacket.payload)
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 if((abs(bcn_rel_x) < CAMERA_WIDTH/2) and (abs(bcn_rel_y) < CAMERA_HEIGHT/2) and (bcn_window_size <= CAMERA_HEIGHT) and (bcn_max_exp > CAMERA_MIN_EXP) and (bcn_max_exp < CAMERA_MAX_EXP)):
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_BEACON_X, str(bcn_rel_x))
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_BEACON_Y, str(bcn_rel_y))
@@ -478,7 +478,7 @@ while True:
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_TX_ALIGN):
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 send_pat_command(socket_PAT_control, PAT_CMD_TX_ALIGN)
                 log_to_hk('ACK CMD PL_TX_ALIGN')
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ACK)
@@ -488,7 +488,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
             tx_update_x, tx_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
-            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_MAIN)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED) or pat_status_is(PAT_STATUS_MAIN)):
                 if(abs(tx_update_x) < CAMERA_WIDTH/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
                 if(abs(tx_update_y) < CAMERA_HEIGHT/2):
@@ -496,12 +496,12 @@ while True:
                 log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
             else:
-                log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in MAIN.')
+                log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in STANDBY or MAIN.')
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
             fsm_update_x, fsm_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 if(abs(fsm_update_x) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_FSM_X, str(fsm_update_x))
                 if(abs(fsm_update_y) < CAMERA_HEIGHT/2):
@@ -513,8 +513,12 @@ while True:
                 ack_to_hk(CMD_PL_UPDATE_FSM_ANGLES, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
+                log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
+                ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
+            elif(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_DO_CALIB_FLAG))
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
@@ -634,7 +638,7 @@ while True:
 
                 elif(test_id == PAT_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
-                    if(pat_status_is(PAT_STATUS_STANDBY)):
+                    if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                         #execute PAT self test
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
@@ -669,111 +673,113 @@ while True:
 
             #os.system('python ~/test/general_functionality_test.py') #starts self test script
             
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                print("Waiting for pat test to finish")
-                time.sleep(60) #TODO Update this with a ZMQ response instead of a static wait
+                for i in range(300): #TBR
+                    print("Waiting for pat self test to finish")
+                    pat_status_flag = update_pat_status(pat_status_flag)
+                    if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
+                        log_to_hk("Pat self test passed")
+                        #execute pointing
+                        send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
+                        break;
+                    elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                        log_to_hk("Pat self test failed")
+                        break;
+                #time.sleep(60) #TODO Update this with a ZMQ response instead of a static wait
             else: 
-                print("Pat was not in standby mode, pat self test will not run")
+                log_to_hk("Pat was not in standby mode, pat self test will not run")
 
-            end_time = time.time()
-            print("Pretransmit Time: %s" %(end_time - start_time))
-            
-            #log transmit start time
-            start_time = time.time()
-
-            ppm_order = 16
-            data = "Hi I'm Mr.Meeseeks!"
-            tx_pkt = tx_packet.txPacket(ppm_order, data)
-            tx_pkt.pack()
-
-            control = fpga.read_reg(mmap.CTL)
-            if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-            tx_pkt.set_PPM(fpga)
-
-            transmit_time = 100 #seconds
-
-            #turn on laser
-            seed_setting = 1
-            power.edfa_on()
-            power.bias_on()
-            power.tec_on()
-            time.sleep(2)
-            print("turned edfa on")
-
-
-            fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
-            time.sleep(0.1)
-            fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
-            time.sleep(0.1)
-            # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
-            time.sleep(2)
-
-            #set points are dependent on temperature
-            payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
-            flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
-            # seed = payload_seed
-            ppm_codes = [4,8,16,32,64,128]
-            ppm4_input = PPM4_THRESHOLDS
-            ppm = ppm_codes[2]
-
-            if(seed_setting): 
-                seed = payload_seed 
-                ppm_input = [ppm4_input[0], ppm4_input[1]]
-            else: 
-                seed = flat_sat_seed
-                ppm_input = [ppm4_input[2], ppm4_input[3]]
-
-            for x in range(1,5):
-                fpga.write_reg(x, seed[x-1])
-
-            ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
-            fpga.write_reg(mmap.DATA, ppm_order) 
-            print("PPM: ", ppm_order, fpga.read_reg(34))
-
-            while(abs(end_time - start_time) < transmit_time):
-                print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
-                #Stall Fifo
-                # fpga.write_reg(mmap.CTL, control | 0x8)
-
-                # #Write to FIFO
-                # tx_pkt.transmit(fpga)
-
-                # fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                #     # success = False
-                #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
-                #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
-
-                # if(fifo_len < 100): time.sleep(.005)
-
-                # #Release FIFO
-                # fpga.write_reg(mmap.CTL, 0x7)
-                time.sleep(1)
+            if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 end_time = time.time()
+                log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
+                
+                #log transmit start time
+                start_time = time.time()
 
-            print("Transmit Session Complete")
+                ppm_order = 16
+                data = "Hi I'm Mr.Meeseeks!"
+                tx_pkt = tx_packet.txPacket(ppm_order, data)
+                tx_pkt.pack()
 
-            power.edfa_off()
-            power.bias_off()
-            power.tec_off()
+                control = fpga.read_reg(mmap.CTL)
+                if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+                tx_pkt.set_PPM(fpga)
 
-            
+                transmit_time = 100 #seconds
+
+                #turn on laser
+                seed_setting = 1
+                power.edfa_on()
+                power.bias_on()
+                power.tec_on()
+                time.sleep(2)
+                log_to_hk("turned edfa on")
 
 
-            if(pat_status_is(PAT_STATUS_STANDBY)):
+                fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
+                time.sleep(0.1)
+                # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                time.sleep(2)
+
+                #set points are dependent on temperature
+                payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
+                flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+                # seed = payload_seed
+                ppm_codes = [4,8,16,32,64,128]
+                ppm4_input = PPM4_THRESHOLDS
+                ppm = ppm_codes[2]
+
+                if(seed_setting): 
+                    seed = payload_seed 
+                    ppm_input = [ppm4_input[0], ppm4_input[1]]
+                else: 
+                    seed = flat_sat_seed
+                    ppm_input = [ppm4_input[2], ppm4_input[3]]
+
+                for x in range(1,5):
+                    fpga.write_reg(x, seed[x-1])
+
+                ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
+                fpga.write_reg(mmap.DATA, ppm_order) 
+                log_to_hk("PPM: ", ppm_order, fpga.read_reg(34))
+
+                while(abs(end_time - start_time) < transmit_time):
+                    print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
+                    #Stall Fifo
+                    # fpga.write_reg(mmap.CTL, control | 0x8)
+
+                    # #Write to FIFO
+                    # tx_pkt.transmit(fpga)
+
+                    # fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                    # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                    #     # success = False
+                    #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                    #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
+                    #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
+
+                    # if(fifo_len < 100): time.sleep(.005)
+
+                    # #Release FIFO
+                    # fpga.write_reg(mmap.CTL, 0x7)
+                    time.sleep(1)
+                    end_time = time.time()
+
+                log_to_hk("Transmit Session Complete")
+
+                power.edfa_off()
+                power.bias_off()
+                power.tec_off()
+
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
-                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
-                #Start Main PAT Loop:
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
             else:
-                log_to_hk('ERROR CMD PL_DWNLINK_MODE: PAT process not in STANDBY.')
-                ack_to_hk(CMD_PL_DWNLINK_MOD, CMD_ERR)
-
-            ###TODO: variable delay until lasercom tx script execution
+                log_to_hk('Transmit did not run b/c pat self test did not succeed.')
+                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
