@@ -753,12 +753,12 @@ while True:
 
                 ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
                 fpga.write_reg(mmap.DATA, ppm_order) 
-                log_to_hk("PPM: ", ppm_order, fpga.read_reg(34))
+                log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
 
                 while(abs(end_time - start_time) < transmit_time):
                     # print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
                     #Stall Fifo
-                    pga.write_reg(mmap.CTL, control | 0x8)
+                    fpga.write_reg(mmap.CTL, control | 0x8)
 
                     # #Write to FIFO
                     tx_pkt.transmit(fpga, .1)

@@ -329,17 +329,17 @@ def test_EDFA_IF(fo):
     off_current = fpga.read_reg(mmap.EDFA_CURRENT)
     
     power.edfa_on()
-    time.sleep(2)
+    time.sleep(5)
     
     edfa_temp = fpga.read_reg(mmap.EDFA_CASE_TEMP)
     power_in = fpga.read_reg(mmap.EDFA_POWER_IN)
     power_out = fpga.read_reg(mmap.EDFA_POWER_OUT)
-    on_current = fpga.read_reg(mmap.EDFA_CURRENT)
+    on_current = sum([fpga.read_reg(mmap.EDFA_CURRENT) for x in range(10)])/10
+    time.sleep(.2)
     power.edfa_off()
-    time.sleep(.1)
 
     success = True
-    if(off_current > 10e-2 or on_current < 10e-2 or on_current > .6):
+    if(off_current > 10e-3 or on_current < 10e-3 or on_current > .2):
         success = False
         fo.write('EDFA current is more than 10mA when off: %s or less than 100mA or greater than 600mA when on: %s \n' % (off_current, on_current))
 
@@ -437,9 +437,8 @@ def test_tec_driver(fo):
         for y in range(10):
             avg_len = 10
             on_curr = sum([fpga.read_reg(mmap.TEC_CURRENT) for x in range(avg_len)])/avg_len
-            time.sleep(.1)
 
-        if(on_curr > 200e-3):
+        if(on_curr > 250e-3):
             success = False
             fo.write("TEC on current is higher than 200mA: %s" % on_curr )
             print("TEC on current is higher than 200mA: %s" % on_curr )
@@ -482,11 +481,16 @@ def test_bias_driver(fo):
     off_curr = fpga.read_reg(mmap.LD_CURRENT)
 
     power.bias_on()
-    time.sleep(.5)
+    time.sleep(.2)
+
+    fpga.write_reg(mmap.DAC_SETUP,2)
+    for i in range(506,510):
+        fpga.write_reg(i,0)
+
     fpga.write_reg(mmap.LBCa, 14)
     fpga.write_reg(mmap.LBCb, 33)
     
-    time.sleep(.5)
+    time.sleep(2)
 
     success = True
     for i in range(10):
@@ -546,7 +550,7 @@ def test_scan_PPM(fo):
         fpga.write_reg(x, seed[x-1])
         time.sleep(.1)
 
-    time.sleep(5)
+    time.sleep(3)
     success = True
     baseline_input = 0
     edfa_inputs =[]        
@@ -554,9 +558,9 @@ def test_scan_PPM(fo):
         
         ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
         fpga.write_reg(mmap.DATA, ppm_order) 
-        time.sleep(1)
+        time.sleep(.5)
 
-        avg_len = 10
+        avg_len = 3
         edfa_input = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for i in range(avg_len)])/avg_len
         edfa_inputs.append(edfa_input)
         if(ppm == 4):
@@ -622,7 +626,6 @@ def check_CW_power(fo):
     fpga.write_reg(mmap.DATA, 0)
     #wait for TEC to tune
     time.sleep(5)
-
 
     input_power = fpga.read_reg(mmap.EDFA_POWER_IN)
     success = True
@@ -771,6 +774,48 @@ def test_mod_FIFO(fo):
     return success
 
 
+def seed_align(default_settings):
+
+    tec_msb, tec_lsb, ld_msb, ld_lsb = default_settings
+    total_tec = tec_msb*256 + tec_lsb
+
+    power.edfa_on()
+    power.tec_on()
+    power.bias_on()
+
+    time.sleep(2)
+
+    for i in range(1,5):
+        fpga.write_reg(i, default_settings[i-1])
+    
+    fpga.write_reg(mmap.DATA, 131)
+    
+    time.sleep(.1)
+    power_inputs = []
+    window = 15
+    for i in range(total_tec-window, total_tec+window):
+        tec_msb = i//256
+        tec_lsb = i%256
+        fpga.write_reg(mmap.LTSa, tec_msb)
+        fpga.write_reg(mmap.LTSb, tec_lsb)
+        time.sleep(.1)
+        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(5)])/5
+        power_inputs.append(avg_input_power)
+
+    new_tec = total_tec+power_inputs.index(max(power_inputs))-window
+    tec_msb = new_tec//256
+    tec_lsb = new_tec%256
+    fpga.write_reg(mmap.LTSa, tec_msb)
+    fpga.write_reg(mmap.LTSb, tec_lsb)
+
+    # print(new_tec, power_inputs, power_inputs[power_inputs.index(max(power_inputs))], fpga.read_reg(mmap.TOSA_TEMP))
+
+    power.edfa_off()
+    power.tec_off()
+    power.bias_on()
+
+
+
 if __name__ == '__main__':
     
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
@@ -787,6 +832,7 @@ if __name__ == '__main__':
         test_EDFA_IF(f)
         test_tec_driver(f)
         test_bias_driver(f)
+        seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
         test_scan_PPM(f)
         check_CW_power(f)
         test_heaters(f)
