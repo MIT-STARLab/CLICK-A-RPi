@@ -157,7 +157,7 @@ int main() //int argc, char** argv
 	uint32_t pat_pid = getpid();
 	char subscription[sizeof(pat_pid)];
 	memcpy(subscription, &pat_pid, sizeof(subscription));	
-	std::cout << "PAT PID: " << subscription << std::endl;
+	//std::cout << "PAT PID: " << subscription << std::endl;
     fpga_map_answer_port.set(zmq::sockopt::subscribe, subscription); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	//std::cout << "rc (fpga_map_answer_port): " << rc << std::endl;
 
@@ -232,6 +232,7 @@ int main() //int argc, char** argv
 	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
 	signal(SIGINT, [](int signum) { stop = true; });
 
+	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid);
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -286,8 +287,16 @@ int main() //int argc, char** argv
 
 		// Allow graceful exit with Ctrl-C (not for flight)
 		if(stop){
-			OPERATIONAL = false;
-			break;
+			log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Saving text file and ending process.");
+			textFileOut.close(); //close telemetry text file
+			pat_status_port.close();
+			pat_health_port.close();
+			pat_control_port.close();
+			fpga_map_request_port.close();
+			fpga_map_answer_port.close();
+			tx_packets_port.close();
+			context.close();
+			exit(0); 
 		}
 	}
 	if(camera_initialized){log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");}
