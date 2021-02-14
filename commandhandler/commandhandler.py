@@ -684,10 +684,10 @@ while True:
                         log_to_hk("Pat self test passed")
                         #execute pointing
                         send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
-                        break;
+                        break
                     elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         log_to_hk("Pat self test failed")
-                        break;
+                        break
                 #time.sleep(60) #TODO Update this with a ZMQ response instead of a static wait
             else: 
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
