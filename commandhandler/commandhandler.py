@@ -638,7 +638,7 @@ while True:
 
                 elif(test_id == PAT_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
-                    if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                    if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                         #execute PAT self test
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
