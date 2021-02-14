@@ -154,7 +154,11 @@ int main() //int argc, char** argv
     zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
 	//rc = zmq_setsockopt(fpga_map_answer_port, ZMQ_LINGER, &linger, sizeof(linger));
     fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
-    fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+	uint32_t pat_pid = getpid();
+	char subscription[5];
+    sprintf(subscription, "%03d", pat_pid);
+	std::cout << "filter: " << subscription << std::endl;
+    fpga_map_answer_port.set(zmq::sockopt::subscribe, subscription); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	//std::cout << "rc (fpga_map_answer_port): " << rc << std::endl;
 
     // create the TX_PACKETS_PORT PUB socket
