@@ -756,7 +756,7 @@ while True:
                 while(abs(end_time - start_time) < transmit_time):
                     # print((end_time - start_time), fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
                     #Stall Fifo
-                    pga.write_reg(mmap.CTL, control | 0x8)
+                    fpga.write_reg(mmap.CTL, control | 0x8)
 
                     # #Write to FIFO
                     tx_pkt.transmit(fpga, .1)
