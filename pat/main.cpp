@@ -111,7 +111,7 @@ error_angles centroid2angles(double centroid_x, double centroid_y){
 struct tx_offsets{
 	int x;
 	int y;
-}
+};
 tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
 	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
 	get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0);
