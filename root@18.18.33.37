@@ -17,7 +17,7 @@ import math
 fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga)
 edfa = mmap.EDFA(fpga)
-seed_setting = 1 #0 for flat_sat 1 for payload
+ = 1 #0 for flat_sat 1 for payload
 
 
 len_pass_string = 100
