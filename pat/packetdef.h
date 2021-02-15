@@ -132,7 +132,7 @@ struct fpga_answer_temperature_struct{
 	uint16_t start_address;
 	uint32_t data_size;
 	float temperature;
-}
+};
 
 struct pat_self_test_packet_struct{
 	uint16_t apid;
@@ -166,6 +166,8 @@ bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::
 bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port);
 
 void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, uint8_t calibration_test_result, char* error);
+
+get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, fpga_answer_temperature_struct& packet_struct, uint16_t channel, uint8_t request_number);
 
 // Optional: receive_packet_pat_rx (commands from bus)
 
