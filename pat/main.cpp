@@ -19,6 +19,7 @@
 #define HEATER_CH 0x23 //heater fpga channel (Notated_memory_map on Google Drive)
 #define HEATER_ON 0x55 //heater ON code (Notated_memory_map on Google Drive)
 #define HEATER_OFF 0x0F //heater OFF code (Notated_memory_map on Google Drive)
+#define TEMPERATURE_CH 201 //EDFA Temperature (TBR, maybe pick one of the other ones, test and see)
 #define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
@@ -32,11 +33,15 @@
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X -23 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
 #define TX_OFFSET_Y 125 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
-#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
+#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -13 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 14 //estimate of beacon y position on acquisition rel to center
+#define TX_OFFSET_SLOPE_X 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X 0 //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 0 //TBD, pxls - linear model of tx offset as a function of temperature
 
 using namespace std;
 using namespace std::chrono;
@@ -97,9 +102,25 @@ struct error_angles{
 };
 error_angles centroid2angles(double centroid_x, double centroid_y){
 	error_angles angles = error_angles();
-	angles.angle_x_radians = (float) CENTROID2ANGLE_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
+	angles.angle_x_radians = (float) TX_OFFSET_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
 	angles.angle_y_radians = (float) CENTROID2ANGLE_SLOPE_Y*centroid_y + CENTROID2ANGLE_BIAS_Y;
 	return angles;
+}
+
+//Get payload temperature and compute Tx offsets
+struct tx_offsets{
+	int x;
+	int y;
+}
+tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
+	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
+	get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0);
+
+	tx_offsets offsets = tx_offsets();
+	offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
+	offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+	log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", tx_offset_x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
+	return offsets;
 }
 
 atomic<bool> stop(false); //not for flight

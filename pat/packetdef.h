@@ -125,6 +125,15 @@ struct fpga_answer_struct{
 	uint8_t data_to_read;
 };
 
+struct fpga_answer_temperature_struct{
+	uint32_t return_address;
+	uint8_t request_number;
+	bool combined_flag;
+	uint16_t start_address;
+	uint32_t data_size;
+	float temperature;
+}
+
 struct pat_self_test_packet_struct{
 	uint16_t apid;
 	uint16_t data_size;
