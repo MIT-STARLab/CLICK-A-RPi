@@ -112,14 +112,18 @@ struct tx_offsets{
 	int x;
 	int y;
 };
-tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
+ tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
 	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
-	get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0);
-
 	tx_offsets offsets = tx_offsets();
-	offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
-	offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
-	log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", tx_offset_x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
+	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
+		offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
+		offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", tx_offset_x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
+	} else{
+		offsets.x = (int) TX_OFFSET_X;
+		offsets.y = (int) TX_OFFSET_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: get_temperature failed! Using default offsets: ", TX_OFFSET_X, TX_OFFSET_Y);
+	}
 	return offsets;
 }
 
@@ -244,6 +248,7 @@ int main() //int argc, char** argv
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
+	tx_offsets offsets = calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
