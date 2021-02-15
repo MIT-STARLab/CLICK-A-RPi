@@ -336,7 +336,6 @@ def test_EDFA_IF(fo):
     power_out = fpga.read_reg(mmap.EDFA_POWER_OUT)
     on_current = sum([fpga.read_reg(mmap.EDFA_CURRENT) for x in range(10)])/10
     time.sleep(.2)
-    power.edfa_off()
 
     success = True
     if(off_current > 10e-3 or on_current < 10e-3 or on_current > .2):
@@ -356,6 +355,7 @@ def test_EDFA_IF(fo):
         success = False
         fo.write("EDFA output power is nonzero and shouldn't be: %s \n" % power_out) 
 
+    power.edfa_off()
     if success:
         pass_test(fo)
     else:
