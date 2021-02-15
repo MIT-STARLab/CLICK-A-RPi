@@ -23,8 +23,8 @@
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
-#define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
-#define MAX_ACQUISITION_ATTEMPTS 100 //number of times to attempt beacon acquisition
+#define MAX_CALIBRATION_ATTEMPTS 2 //number of times to attempt calibration
+#define MAX_ACQUISITION_ATTEMPTS 250 //number of times to attempt beacon acquisition
 #define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
@@ -373,7 +373,11 @@ int main() //int argc, char** argv
 						main_entry_flag = atoi(command_data); 
 						if(main_entry_flag == SKIP_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command with skip calibration flag. Proceeding to ACQUISITION...");
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
 						} else if(main_entry_flag == DO_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command with do calibration flag. Proceeding to CALIBRATION...");
@@ -389,7 +393,11 @@ int main() //int argc, char** argv
 						if(main_entry_flag == SKIP_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command with skip calibration flag. Proceeding to ACQUISITION...");
 							openLoop = true;
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
 						} else if(main_entry_flag == DO_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command with do calibration flag. Proceeding to CALIBRATION...");
@@ -412,7 +420,11 @@ int main() //int argc, char** argv
 						if(main_entry_flag == SKIP_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command with skip calibration flag. Proceeding to ACQUISITION...");
 							sendBusFeedback = true;
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
 						} else if(main_entry_flag == DO_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command with do calibration flag Proceeding to CALIBRATION...");
@@ -430,7 +442,11 @@ int main() //int argc, char** argv
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command with skip calibration flag. Proceeding to ACQUISITION...");
 							openLoop = true; 
 							sendBusFeedback = true;
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
 						} else if(main_entry_flag == DO_CALIB_FLAG){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command with do calibration flag. Proceeding to CALIBRATION...");
