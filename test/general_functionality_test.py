@@ -12,6 +12,7 @@ import options
 sys.path.append('/root/fpga/')
 import dac
 import math
+import hashlib
 
 
 fpga = ipc_helper.FPGAClientInterface()
@@ -37,10 +38,10 @@ def error_to_file(func):
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             fo.write(repr(e)+'\n')
-            print(repr(e))
             traceback.print_tb(exc_traceback,file=fo)
-            traceback.print_tb(exc_traceback)
             fail_test(fo)
+            traceback.print_tb(exc_traceback)
+            print(repr(e))
             return 0
     return e_to_f
 
@@ -268,7 +269,7 @@ def check_temperature_init(fo):
         
         temps.append(sum(samples)/sample_num)
 
-    if((max(temps) - min(temps)) > 5 or min(temps) < 0 or max(temps) > 40 ):
+    if((max(temps) - min(temps)) > 15 or min(temps) < -20 or max(temps) > 60 ):
         success = False
         fail_text.append('Expected Max vs. Min < 5C and 0C<Temp<40C')
         fail_text.append('Max: %s, Min: %s' % (max(temps), min(temps)))
@@ -340,13 +341,13 @@ def test_EDFA_IF(fo):
     time.sleep(.2)
 
     success = True
-    if(off_current > 10e-3 or on_current < 10e-3 or on_current > .2):
+    if(off_current > 0.010 or on_current < 0.100 or on_current > 0.600):
         success = False
         fo.write('EDFA current is more than 10mA when off: %s or less than 100mA or greater than 600mA when on: %s \n' % (off_current, on_current))
 
-    if(edfa_temp < 0 and edfa_temp >40):
+    if(edfa_temp < -20 and edfa_temp > 60):
         success = False
-        fo.write('EDFA Case temp is outside range 0-40C: %s \n' % edfa_temp)
+        fo.write('EDFA Case temp is outside range -20-60C: %s \n' % edfa_temp)
 
 
     if(power_in != -100.0):
@@ -377,38 +378,50 @@ def test_heaters(fo):
     power.heater_2_off
     time.sleep(.1)
     heater_off_curr = fpga.read_reg(mmap.HEATER_CURRENT)
+    fo.write('OFF: %f A\n' % heater_off_curr)
     
     power.heaters_on()
     time.sleep(.1)
+    
     power.heater_1_on()
     time.sleep(.1)
     heater_one_curr = fpga.read_reg(mmap.HEATER_CURRENT)
-    power.heater_1_off()
+    fo.write('Heater 1: %f A\n' % heater_one_curr)
     power.heater_2_on()
     time.sleep(.1)
+    heater_both_curr = fpga.read_reg(mmap.HEATER_CURRENT)
+    fo.write('Both: %f A\n' % heater_both_curr)
+    power.heater_1_off()
+    time.sleep(.1)
     heater_two_curr = fpga.read_reg(mmap.HEATER_CURRENT)
-
-    power.heaters_off()
+    fo.write('Heater 1: %f A\n' % heater_two_curr)
     power.heater_2_off()
+        
+    power.heaters_off()
+
 
     success = True
-    if(heater_off_curr > 10e-2):
+    if(heater_off_curr > 0.010):
         success = False
-        fo.write("Heater off current is larger than 10mA: " + str(heater_off_curr) + "\n")
+        fo.write("Heater off current is larger than 10mA\n")
     
-    if(heater_one_curr > 100):
+    if(0.8 < heater_one_curr < 1.2):
         success = False
-        fo.write("Heater one current is larger than normal: " + str(heater_one_curr) +"\n")
+        fo.write("Heater one current is larger than TBD\n")
 
-    if(heater_two_curr > 100):
+    if(0.8 < heater_two_curr < 1.2):
         success = False
-        fo.write("Heater two current is larger than normal: " + str(heater_two_curr) +"\n")
+        fo.write("Heater two current is larger than TBD\n")
+        
+    if(1.6 < heater_both_curr < 2.4):
+        success = False
+        fo.write("Both heater current is larger than TBD\n")
 
     if success:
         pass_test(fo)
     else:
         fail_test(fo)
-        print("Heater off: "+str(heater_off_curr) + " Heater 1: " + str(heater_one_curr) + " Heater 2: " + str(heater_two_curr))
+    print("OFF: %.03f A, Heater 1: %.03f A, Heater 2: %.03f A, Both: %.03f A" % (heater_off_curr, heater_one_curr, heater_two_curr, heater_both_curr))
 
 
 """
@@ -485,9 +498,9 @@ def test_bias_driver(fo):
     power.bias_on()
     time.sleep(.2)
 
-    fpga.write_reg(mmap.DAC_SETUP,2)
-    for i in range(506,510):
-        fpga.write_reg(i,0)
+    #fpga.write_reg(mmap.DAC_SETUP,2)
+    #for i in range(506,510):
+    #    fpga.write_reg(i,0)
 
     fpga.write_reg(mmap.LBCa, 14)
     fpga.write_reg(mmap.LBCb, 33)
@@ -501,9 +514,9 @@ def test_bias_driver(fo):
         time.sleep(1)
 
     
-        if(off_curr > 100e-2):
+        if(off_curr > 10e-3):
             success = False
-            fo.write("LD off current is greater than %sA: %s" % (str(100e-2), str(off_curr)))
+            fo.write("LD off current is greater than %sA: %s" % (str(10e-3), str(off_curr)))
             break
 
         if(avg_on_curr > 500e-3 or avg_on_curr < 100e-3):
@@ -594,7 +607,9 @@ def test_scan_PPM(fo):
     else:
         fail_test(fo)
         fo.write("EDFA input not nominal across PPM orders. Powers: %s \n" % str(edfa_inputs))
-        print("EDFA input not nominal across PPM orders. Powers: ", edfa_inputs)
+        print("EDFA input not nominal across PPM orders.")
+    for ppm_set, power_v in zip(ppm_codes,edfa_inputs): print('PPM%03d: %.02f dBm' % (ppm_set, power_v))
+    for ppm_set, power_v in zip(ppm_codes,edfa_inputs): fo.write('PPM%03d: %f dBm\n' % (ppm_set, power_v))
 
     return success
 
@@ -641,12 +656,12 @@ def check_CW_power(fo):
     if success:
         pass_test(fo)
     else:
-        fail_test(fo)
         fo.write("EDFA Input Power outside of expected range: "+str(input_power)+" dbm \n")
         fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s" % \
         (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
         fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
-        print("EDFA Input Power outside of expected range: "+str(input_power)+" dbm \n")
+        fail_test(fo)
+        print("EDFA Input Power outside of expected range: "+str(input_power)+" dbm")
 
     return success
 
@@ -817,14 +832,27 @@ def seed_align(default_settings):
     power.bias_on()
 
 
+def run_all(origin):
 
-if __name__ == '__main__':
-    
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
+    
     with file_manager.ManagedFileOpen('/root/log/self_test_data/%s.gz' % t_str,'w') as (f, tags):
     
-        tags['origin'] = 'command line'
+        tags['origin'] = origin
+        f.write('Self-test, %s' % t_str)
+        print('   CLICK-A Self-Test Script')
+        try:
+            def file_as_bytes(file):
+                with file:
+                    return file.read()
 
+            hash_v =  hashlib.md5(file_as_bytes(open('/root/test/general_functionality_test.py', 'rb'))).hexdigest()
+            f.write('MD5: %s\n' % str(hash_v))
+            print('MD5: %s' % str(hash_v))
+        except:
+            f.write('Hash failure, check script path\n')
+            print('Hash failure, check script path')
+        
         reflash_fpga(f)
         test_basic_fpga_if(f)
         test_fpga_if_performance(f)
@@ -834,10 +862,15 @@ if __name__ == '__main__':
         test_EDFA_IF(f)
         test_tec_driver(f)
         test_bias_driver(f)
-        seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
+        #seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
         test_scan_PPM(f)
         check_CW_power(f)
         test_heaters(f)
+
+
+if __name__ == '__main__':
+    run_all(origin='command line')
+
         
         
         
