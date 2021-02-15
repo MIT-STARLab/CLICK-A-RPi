@@ -22,12 +22,12 @@ from options import *
 from fpga_map import FPGA_TELEM, FPGA_TELEM_TYPE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
-HK_PAT_ID = 0xA0
-HK_CH_ID = 0xA1
-HK_FPGA_ID = 0xA2
-HK_PKT_ID = 0xA3
-HK_DEPKT_ID = 0xA4
-HK_SYS_ID = 0xA5
+HK_PAT_ID = 0x01
+HK_FPGA_ID = 0x02
+HK_PKT_ID = 0x03
+HK_DEPKT_ID = 0x04
+HK_SYS_ID = 0x05
+HK_CH_ID = 0x80
 
 class ResetTimer:
     def __init__(self, interval, function, *args, **kwargs):
@@ -86,7 +86,12 @@ class Housekeeping:
              HK_PKT_ID:'/root/bus/packetizer.py',
              HK_DEPKT_ID:'/root/bus/depacketizer.py',
              HK_SYS_ID: '/root/housekeeping/housekeeping.py'}
-
+    # procs = {HK_PAT_ID:'pat.service',
+    #          HK_CH_ID:'commandhandler@%d',
+    #          HK_FPGA_ID:'fpga.service',
+    #          HK_PKT_ID:'packetizer.service',
+    #          HK_DEPKT_ID:'depacketizer.service',
+    #          HK_SYS_ID: 'housekeeping.service'}
     procs.update(dict(reversed(item) for item in procs.items()))
 
     def __init__(self):
@@ -108,31 +113,39 @@ class Housekeeping:
         self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD
         self.pat_health_period = HK_PAT_HEALTH_PD
 
+        self.ch_pids = range(COMMAND_HANDLERS_COUNT)
+        self.ch_heartbeat_wds = {}
+        for i in range(COMMAND_HANDLERS_COUNT):
+            ch_pid = self.get_service_pid('commandhandler@%d' % i)
+            if (ch_pid != 0):
+                self.ch_pids[i] = ch_pid
+                self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
+            else:
+                while (ch_pid == 0):
+                    ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                    ch_pid = int(p.read()[:-1])
+                self.ch_pids[i] = ch_pid
+                self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
+
+        self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
+
         self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
         self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
 
-        self.ch_heartbeat_wds = {}
-        self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
-
-        self.fpga_interface = ipc_helper.FPGAClientInterface()
-
-        self.fpga_queue = Queue.Queue()
-
         self.fpga_check_flag = threading.Event()
         self.sys_check_flag = threading.Event()
-        self.missing_ch_flag = threading.Event()
         self.missing_pat_flag = threading.Event()
         self.missing_fpga_flag = threading.Event()
 
         self.fpga_check_flag.clear()
         self.sys_check_flag.clear()
-        self.missing_ch_flag.clear()
         self.missing_pat_flag.clear()
         self.missing_fpga_flag.clear()
 
+        self.missing_ch_queue = Queue.Queue()
+
         # Initialize zmq-related variables
         # TODO: Update zmq connections, use library
-
         self.context = zmq.Context()
         self.pat_health_socket = self.context.socket(zmq.SUB)
         self.tx_socket = self.context.socket(zmq.PUB)
@@ -152,6 +165,9 @@ class Housekeeping:
         self.poller.register(self.hk_control_socket, zmq.POLLIN)
         self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
 
+        self.fpga_interface = ipc_helper.FPGAClientInterface(self.context)
+        self.fpga_queue = Queue.Queue()
+
         # Initialize packet buffer
         self.packet_buf = []
 
@@ -165,14 +181,19 @@ class Housekeeping:
         self.last_ack_cmd_id = 0
         self.last_err_cmd_id = 0
 
+    def get_service_pid(self, service):
+        p = os.popen('systemctl show --user --property MainPID --value '+service)
+        pid = int(p.read()[:-1])
+        return pid
+
     def alert_fpga_check(self):
         self.fpga_check_flag.set()
 
     def alert_sys_check(self):
         self.sys_check_flag.set()
 
-    def alert_missing_ch(self):
-        self.missing_ch_flag.set()
+    def alert_missing_ch(self, inst):
+        self.missing_ch_queue.put(inst)
 
     def alert_missing_pat(self):
         self.missing_pat_flag.set()
@@ -266,6 +287,7 @@ class Housekeeping:
         pkt += struct.pack('!L', (vmem.available % 2**32))
 
         # 25-N: Process info
+
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
             p_name = ''
             if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
@@ -313,20 +335,35 @@ class Housekeeping:
         raw_pkt = pkt.encode(apid, payload) #payload needs to be a single packed byte string e.g. '\x00\x01'
         self.packet_buf.append(raw_pkt)
 
-    def restart_process(self, process_id):
+    def restart_process(self, process_id, instance_num):
         print("Restart process")
         if (process_id == HK_CH_ID and self.ch_restart_enable):
             print("Restart ch")
-            subprocess.call("systemctl --user restart commandhandler.service", shell = True)
+
+            os.system("systemctl --user restart commandhandler@%d" % instance_num)
+            ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
+
+            old_ch_pid = self.ch_pids[instance_num]
+            self.ch_pids[instance_num] = ch_pid
+            removed = self.ch_heartbeat_wds.pop(old_ch_pid)
+            # TODO: if (removed is 'No Key found'): handle error
+            self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
+            self.ch_heartbeat_wds[ch_pid].start()
+
         if (process_id == HK_PAT_ID and self.pat_restart_enable):
             print("Restart pat")
-            subprocess.call("systemctl --user restart pat.service", shell = True)
+            os.system("systemctl --user restart pat.service")
+            self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
+            self.pat_health_wd.start()
+
         if (process_id == HK_FPGA_ID and self.fpga_restart_enable):
             print("Restart fpga")
-            status = subprocess.call("systemctl --user restart fpga.service", shell = True)
+            os.system("systemctl --user restart fpga.service")
+            self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
+            self.fpga_check_timer.start()
 
         err_pkt = TxPacket()
-        raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('B', process_id))
+        raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('!BB', process_id, instance_num))
         self.packet_buf.append(raw_err_pkt)
 
     def handle_hk_command(self, command):
@@ -351,6 +388,9 @@ class Housekeeping:
         self.sys_check_timer.start()
         self.pat_health_wd.start()
 
+        for i in self.ch_heartbeat_wds:
+            self.ch_heartbeat_wds[i].start()
+
         while True:
             # Periodically send FPGA request
             if (self.fpga_check_flag.is_set()):
@@ -363,16 +403,16 @@ class Housekeeping:
                 self.handle_hk_pkt(message, HK_SYS_ID)
                 self.sys_check_flag.clear()
 
-            if (self.missing_ch_flag.is_set()):
-                self.restart_process(HK_CH_ID)
-                self.missing_ch_flag.clear()
+            if (self.missing_ch_queue.qsize() > 0):
+                ch_inst = self.missing_ch_queue.get()
+                self.restart_process(HK_CH_ID, ch_inst)
 
             if (self.missing_pat_flag.is_set()):
-                self.restart_process(HK_PAT_ID)
+                self.restart_process(HK_PAT_ID, 0)
                 self.missing_pat_flag.clear()
 
             if (self.missing_fpga_flag.is_set()):
-                self.restart_process(HK_FPGA_ID)
+                self.restart_process(HK_FPGA_ID, 0)
                 self.missing_fpga_flag.clear()
 
             if(self.fpga_queue.qsize() > 0):
@@ -394,9 +434,8 @@ class Housekeeping:
                 if ch_packet.origin in self.ch_heartbeat_wds:
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
                 else:
-                    # TODO: restarting commandhandler needs to consider multiple commandhandlers
-                    self.ch_heartbeat_wds[ch_packet.origin] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch)
-                    self.ch_heartbeat_wds[ch_packet.origin].start()
+                    # TODO: error handling of unknown PID
+                    pass
 
             elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
