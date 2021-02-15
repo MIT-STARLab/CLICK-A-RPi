@@ -365,7 +365,7 @@ def test_EDFA_IF(fo):
         pass_test(fo)
     else:
         fail_test(fo)
-        print('EDFA Case temp: %s Off Current: %s On Current: %s Power In: %s Power Out: %s \n' % (edfa_temp, off_current, on_current, power_in, power_out))
+        print('EDFA Case temp: %s Off Current: %s On Current: %s Power In: %s Power Out: %s' % (edfa_temp, off_current, on_current, power_in, power_out))
 
     return success 
 
@@ -439,17 +439,18 @@ def test_tec_driver(fo):
         power.tec_on()
 
     time.sleep(.5)
+    to_print = []
 
     success = True
     #standard room temperature values
-    test_msb = [4,5,6]
-    test_lsb = [0,100,200]
-    for i in range(3):
+    test_msb = [4,4,5,5,6,6]
+    test_lsb = [0,128,0,128,0,128]
+    for i in range(len(test_msb)):
         fpga.write_reg(mmap.LTSa, test_msb[i])
         fpga.write_reg(mmap.LTSb, test_lsb[i])
         
         #Wait for TEC to settle
-        time.sleep(1.5)
+        time.sleep(10)
 
         for y in range(10):
             avg_len = 10
@@ -457,8 +458,10 @@ def test_tec_driver(fo):
 
         if(on_curr > 250e-3):
             success = False
-            fo.write("TEC on current is higher than 200mA: %s" % on_curr )
-            print("TEC on current is higher than 200mA: %s" % on_curr )
+            fo.write("TEC on current is higher than 200mA: %s\n" % on_curr )
+            to_print.append("TEC on current is higher than 200mA: %s" % on_curr )
+        
+        fo.write("Reg 1 at %d, reg 2 at %d: readback %f\n" % (test_msb[i], test_lsb[i], on_curr))
 
         #check TEC linearity
         tec_readback = []
@@ -468,7 +471,7 @@ def test_tec_driver(fo):
         if (abs(val -tec_readback) > val*error):
             success = False
             fo.write("TEC Readback is more than 5" + '%'+" from TEC value: %s Readback: %s \n" %(val, tec_readback))
-            print("TEC Readback is more than 5"+'%'+"from TEC value: %s Readback: %s \n" %(val, tec_readback))
+            to_print.append("TEC Readback is more than 5"+'%'+"from TEC value: %s Readback: %s" %(val, tec_readback))
 
     power.tec_off()
     fpga.write_reg(mmap.LTSa, 0)
@@ -478,6 +481,7 @@ def test_tec_driver(fo):
         pass_test(fo)
     else:
         fail_test(fo)
+    for t in to_print: print(t)
 
     return success
 
@@ -514,14 +518,13 @@ def test_bias_driver(fo):
         avg_len = 10
         avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
         time.sleep(1)
-
     
         if(off_curr > 10e-3):
             success = False
             fo.write("LD off current is greater than %sA: %s\n" % (str(10e-3), str(off_curr)))
             break
 
-        if(avg_on_curr > 500e-3 or avg_on_curr < 100e-3):
+        if(avg_on_curr > 600e-3 or avg_on_curr < 100e-3):
             success = False
             fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
             break
@@ -719,7 +722,7 @@ def test_mod_FIFO(fo):
     success = True
     if(len(tx_pkt.symbols) != fifo_len):
         success = False
-        print("Fifo length %s does not match packet symbol length %s \n" % (fifo_len, len(tx_pkt.symbols)))
+        print("Fifo length %s does not match packet symbol length %s" % (fifo_len, len(tx_pkt.symbols)))
         fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt.symbols)) 
         fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt.ppm_order, tx_pkt.data))   
     
@@ -747,7 +750,7 @@ def test_mod_FIFO(fo):
     fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
     if(len(tx_pkt1.symbols)+2 != fifo_len): #Why is the empty fifo length 2
         success = False
-        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt1.symbols)))
+        print("Fifo length %s does not match packet symbol length %s" % (fifo_len, len(tx_pkt1.symbols)))
         fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt1.symbols)) 
         fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt1.ppm_order, tx_pkt1.data))   
     
@@ -776,7 +779,7 @@ def test_mod_FIFO(fo):
     fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
     if(len(tx_pkt.symbols) != fifo_len):
         success = False
-        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+        print("Fifo length %s does not match packet symbol length %s" % (fifo_len, len(tx_pkt.symbols)))
         fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt.symbols)) 
         fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt.ppm_order, tx_pkt.data))   
     
