@@ -274,6 +274,8 @@ def check_temperature_init(fo):
         fail_text.append('Expected Max vs. Min < 5C and 0C<Temp<40C')
         fail_text.append('Max: %s, Min: %s' % (max(temps), min(temps)))
     
+    for nm,tp in zip(temp_name_list,temps): fo.write('%s%f\n' % (nm,tp))
+    
     if success:
         pass_test(fo)
     else:
@@ -394,7 +396,7 @@ def test_heaters(fo):
     power.heater_1_off()
     time.sleep(.1)
     heater_two_curr = fpga.read_reg(mmap.HEATER_CURRENT)
-    fo.write('Heater 1: %f A\n' % heater_two_curr)
+    fo.write('Heater 2: %f A\n' % heater_two_curr)
     power.heater_2_off()
         
     power.heaters_off()
@@ -405,15 +407,15 @@ def test_heaters(fo):
         success = False
         fo.write("Heater off current is larger than 10mA\n")
     
-    if(0.8 < heater_one_curr < 1.2):
+    if(0.7 < heater_one_curr < 0.9):
         success = False
         fo.write("Heater one current is larger than TBD\n")
 
-    if(0.8 < heater_two_curr < 1.2):
+    if(0.4 < heater_two_curr < 0.6):
         success = False
         fo.write("Heater two current is larger than TBD\n")
         
-    if(1.6 < heater_both_curr < 2.4):
+    if(1.1 < heater_both_curr < 1.5):
         success = False
         fo.write("Both heater current is larger than TBD\n")
 
@@ -516,12 +518,12 @@ def test_bias_driver(fo):
     
         if(off_curr > 10e-3):
             success = False
-            fo.write("LD off current is greater than %sA: %s" % (str(10e-3), str(off_curr)))
+            fo.write("LD off current is greater than %sA: %s\n" % (str(10e-3), str(off_curr)))
             break
 
         if(avg_on_curr > 500e-3 or avg_on_curr < 100e-3):
             success = False
-            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
+            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
             break
 
     power.bias_off()
@@ -584,7 +586,7 @@ def test_scan_PPM(fo):
             else:
                 success = False
                 fo.write("PPM%s input power to the edfa is outside of nominal range: %s \n" % (ppm, edfa_input))
-                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s, PPM_ORDER: %s" % \
+                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s, PPM_ORDER: %s\n" % \
                 (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
                 fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), ppm_order))
         else:
@@ -592,7 +594,7 @@ def test_scan_PPM(fo):
             if (abs(edfa_input-expected_input)) > .5:
                 success = False
                 fo.write("PPM%s was outside of the acceptable range of input power to the EDFA: %s \n" % (ppm, edfa_input))
-                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s" % \
+                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s\n" % \
                 (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
                 fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
             baseline_input = edfa_input
@@ -657,7 +659,7 @@ def check_CW_power(fo):
         pass_test(fo)
     else:
         fo.write("EDFA Input Power outside of expected range: "+str(input_power)+" dbm \n")
-        fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s" % \
+        fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s\n" % \
         (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
         fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
         fail_test(fo)
@@ -775,8 +777,8 @@ def test_mod_FIFO(fo):
     if(len(tx_pkt.symbols) != fifo_len):
         success = False
         print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-        fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt.symbols)) 
-        fo.write("Packet PPM: %s and Data: %s " % (tx_pkt.ppm_order, tx_pkt.data))   
+        fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt.symbols)) 
+        fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt.ppm_order, tx_pkt.data))   
     
     if(fifo_len < 100): time.sleep(.005)
 
@@ -839,7 +841,7 @@ def run_all(origin):
     with file_manager.ManagedFileOpen('/root/log/self_test_data/%s.gz' % t_str,'w') as (f, tags):
     
         tags['origin'] = origin
-        f.write('Self-test, %s' % t_str)
+        f.write('Self-test, %s\n' % t_str)
         print('   CLICK-A Self-Test Script')
         try:
             def file_as_bytes(file):
