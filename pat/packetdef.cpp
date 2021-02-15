@@ -340,7 +340,7 @@ bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::polli
 			char packet[sizeof(fpga_answer_temperature_struct)];
 			memcpy(packet, message.data(), message.size());
 			memcpy(&packet_struct, packet, sizeof(packet));		
-			error_flag = ((packet_struct.combined_flag & 0x02) >> 1;
+			error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 			//make sure message is for PAT process:
 			std::cout << "In packetdef.cpp - get_temperature: Response Attempt = " << i << std::endl;
 			std::cout << "In packetdef.cpp - get_temperature: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
@@ -354,7 +354,7 @@ bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::polli
 			
 			if((((uint32_t) getpid()) == packet_struct.return_address) &&
 				(request_number == packet_struct.request_number) && 
-				(channel == packet_struct.start_address){
+				(channel == packet_struct.start_address)){
 				return !error_flag;
 			} 
 		}
