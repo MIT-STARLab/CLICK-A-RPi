@@ -206,15 +206,15 @@ while True:
                                 window_height = int(input("Please enter window height: "))
                                 exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))
                                 if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
-                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
+                                        send_pat_command(socket_PAT_control, return_address, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
                                         time.sleep(0.25)
-                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT, str(window_height))
+                                        send_pat_command(socket_PAT_control, return_address, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT, str(window_height))
                                         time.sleep(0.25)
-                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_X, str(window_ctr_rel_x))
+                                        send_pat_command(socket_PAT_control, return_address, PAT_CMD_SET_GET_IMAGE_CENTER_X, str(window_ctr_rel_x))
                                         time.sleep(0.25)
-                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_Y, str(window_ctr_rel_y))
+                                        send_pat_command(socket_PAT_control, return_address, PAT_CMD_SET_GET_IMAGE_CENTER_Y, str(window_ctr_rel_y))
                                         time.sleep(0.25)
-                                        send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
+                                        send_pat_command(socket_PAT_control, return_address, PAT_CMD_GET_IMAGE, str(exp_cmd))
                                 else:
                                         print('Error: image parameters out of bounds')
 
