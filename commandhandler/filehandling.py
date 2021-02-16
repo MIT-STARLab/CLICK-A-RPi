@@ -66,8 +66,8 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
                 buf = source_file.read(1024)
         file_hash = hash_func.digest()
 
-        # hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
-        hash_file_name = 'test_file_staging/'+str(transfer_id)+'/'+'md5.hash'
+        hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
+        # hash_file_name = 'test_file_staging/'+str(transfer_id)+'/'+'md5.hash'
 
         with safe_open_w(hash_file_name) as hash_file:
             hash_file.write(file_hash)
@@ -80,8 +80,8 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
 
             while (seq_num*chunk_size) < file_len:
                 chunk_data = source_file.read(chunk_size)
-                # chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-                chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+                chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+                # chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
                 with safe_open_w(chunk_file_name) as chunk_file:
                     chunk_file.write(chunk_data)
                 seq_num += 1
@@ -89,8 +89,8 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
             if (((seq_num - 1) * chunk_size) < file_len):
                 chunk_data_len = file_len - ((seq_num - 1) * chunk_size)
                 chunk_data = source_file.read(chunk_data_len)
-                # chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-                chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+                chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+                # chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
                 with safe_open_w(chunk_file_name) as chunk_file:
                     chunk_file.write(chunk_data)
 
@@ -102,16 +102,13 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
     except:
         raise
         #TODO error handling telemetry
-        print('Unexpected error:', sys.exc_info()[0])
-        print('In filehandling - disassemble_file - Error - File Not Found: ', file_name)
-
 
 def request_file(ipc_rxcompacket, socket_tx_packets):
     transfer_id, all_flag, chunk_start_index, num_chunks = struct.unpack('!HBHH', ipc_rxcompacket.payload)
     try:
         # TODO: Error handling for file not found (send error packet)
-        # chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'))
-        chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
+        chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'))
+        # chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
 
         # Dir is empty -> error
         if not chunk_files:
@@ -132,12 +129,11 @@ def request_file(ipc_rxcompacket, socket_tx_packets):
 
         # Check that you're not requesting out of bounds
         if (chunk_start_index + num_chunks - 1 > seq_len):
-            print(chunk_start_index, num_chunks, seq_len)
             raise FileError(0x00) # TODO
 
         # Retrieve hash
-        # hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
-        hash_file_name = 'test_file_staging/'+str(transfer_id)+'/'+'md5.hash'
+        hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
+        # hash_file_name = 'test_file_staging/'+str(transfer_id)+'/'+'md5.hash'
 
         with open(hash_file_name, 'rb') as hash_file:
             file_hash = hash_file.read()
@@ -145,8 +141,8 @@ def request_file(ipc_rxcompacket, socket_tx_packets):
 
         for i in range(chunk_start_index, chunk_start_index + num_chunks):
             # FOR TEST:
-            # file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(i)+'_'+str(seq_len)+'.chunk'
-            file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(i)+'_'+str(seq_len)+'.chunk'
+            file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(i)+'_'+str(seq_len)+'.chunk'
+            # file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(i)+'_'+str(seq_len)+'.chunk'
             with open(file_name, 'rb') as chunk_file:
                 chunk_size = os.stat(file_name).st_size
                 packet_payload = chunk_file.read()
