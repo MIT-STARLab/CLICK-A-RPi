@@ -21,7 +21,7 @@ power = mmap.Power(fpga)
 # pat_status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SELF_TEST_PASSED', 'STANDBY_SELF_TEST_FAILED', 'MAIN'] 
 
 #PAT Command List
-cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS, PAT_CMD_SET_BEACON_X, PAT_CMD_SET_BEACON_Y, PAT_CMD_SET_BEACON_WINDOW_SIZE, PAT_CMD_SET_BEACON_MAX_EXP]
+cmd_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK,  PAT_CMD_UPDATE_TX_OFFSET_X, PAT_CMD_UPDATE_TX_OFFSET_Y, PAT_CMD_END_PAT, PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_TEST, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST, PAT_CMD_BCN_ALIGN, PAT_CMD_TX_ALIGN, PAT_CMD_UPDATE_FSM_X, PAT_CMD_UPDATE_FSM_Y, PAT_CMD_SELF_TEST, PAT_CMD_END_PROCESS, PAT_CMD_SET_BEACON_X, PAT_CMD_SET_BEACON_Y, PAT_CMD_SET_BEACON_WINDOW_SIZE, PAT_CMD_SET_BEACON_MAX_EXP, PAT_CMD_SET_GET_IMAGE_CENTER_X, PAT_CMD_SET_GET_IMAGE_CENTER_Y, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT]
 TURN_ON_CAL_LASER = cmd_list[len(cmd_list)-1] + 1
 TURN_OFF_CAL_LASER = TURN_ON_CAL_LASER + 1
 
@@ -181,7 +181,7 @@ while True:
 
             user_cmd = int(input("Please enter a command number (enter -1 to skip command entry): ")) 
             if(user_cmd in cmd_list):
-                    if(user_cmd in [PAT_CMD_GET_IMAGE, PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
+                    if(user_cmd in [PAT_CMD_CALIB_LASER_TEST, PAT_CMD_FSM_TEST]):
                             exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))
                             if(exp_cmd < 10):
                                     print "Exposure below minimum of 10 us entered. Using 10 us."
@@ -198,6 +198,25 @@ while True:
                             else:
                                     print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
                                     ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_FLIGHT_FLAG)) 
+
+                    elif(user_cmd == PAT_CMD_GET_IMAGE):
+                                window_ctr_rel_x = int(input("Please enter window center X relative to center: "))
+                                window_ctr_rel_y = int(input("Please enter window center Y relative to center: "))
+                                window_width = int(input("Please enter window width: "))
+                                window_height = int(input("Please enter window height: "))
+                                exp_cmd = int(input("Please enter an exposure in us (10 to 10000000): "))
+                                if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
+                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
+                                        time.sleep(0.25)
+                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT, str(window_height))
+                                        time.sleep(0.25)
+                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_X, str(window_ctr_rel_x))
+                                        time.sleep(0.25)
+                                        send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_Y, str(window_ctr_rel_y))
+                                        time.sleep(0.25)
+                                        send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
+                                else:
+                                        print('Error: image parameters out of bounds')
 
                     elif(user_cmd == PAT_CMD_UPDATE_TX_OFFSET_X):
                             tx_offset_x = int(input("Enter new Tx Offset in X (pixels): "))
