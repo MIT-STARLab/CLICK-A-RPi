@@ -1,5 +1,6 @@
 [Unit]
 Description=Packetizer
+Before=commandhandler.service
 
 [Service]
 Type=simple

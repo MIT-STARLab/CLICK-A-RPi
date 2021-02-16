@@ -138,6 +138,7 @@ void spi_xfer_complete(void *arg)
             }
             else dev_warn_once(&data->spi->dev, "rx fifo is full\n");
         }
+        else dev_notice_once(&data->spi->dev, "no-ops are being received\n");
     }
     else dev_warn_ratelimited(&data->spi->dev, "invalid packet received\n");
 

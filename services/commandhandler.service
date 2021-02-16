@@ -1,5 +1,7 @@
 [Unit]
 Description=Command Handler
+After=packetizer.service
+Before=default.target
 
 [Service]
 Type=simple

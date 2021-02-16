@@ -1,5 +1,7 @@
 [Unit]
 Description=Depacketizer
+After=spi-driver-load.service
+Before=default.target
 
 [Service]
 Type=simple
