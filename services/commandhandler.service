@@ -1,7 +1,6 @@
 [Unit]
 Description=Command Handler
-After=packetizer.service
-Before=default.target
+After=packetizer.service fpga.service
 
 [Service]
 Type=simple

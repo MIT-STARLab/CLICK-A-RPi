@@ -23,7 +23,7 @@
 /* High-level definitions */
 #define NAME "click_spi"
 #define DEVICE "bct"
-#define SPI_FREQ 8000000
+#define SPI_FREQ 5000000
 #define RX_FIFO_LEN (1 << 22)
 #define MAX_TX_QUEUE_LEN (1 << 26)
 #define PACKET_SYNC_MARKER 0x352EF853
