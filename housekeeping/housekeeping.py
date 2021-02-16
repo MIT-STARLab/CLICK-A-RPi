@@ -22,13 +22,6 @@ from options import *
 from fpga_map import FPGA_TELEM, FPGA_TELEM_TYPE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
-HK_PAT_ID = 0x01
-HK_FPGA_ID = 0x02
-HK_PKT_ID = 0x03
-HK_DEPKT_ID = 0x04
-HK_SYS_ID = 0x05
-HK_CH_ID = 0x80
-
 class ResetTimer:
     def __init__(self, interval, function, *args, **kwargs):
         self.interval = interval
@@ -80,24 +73,26 @@ class WatchdogTimer:
 
 class Housekeeping:
     # TODO: Update if necessary
+    HK_PAT_ID = 0x01
+    HK_FPGA_ID = 0x02
+    HK_PKT_ID = 0x03
+    HK_DEPKT_ID = 0x04
+    HK_SYS_ID = 0x05
+    HK_CH_ID = 0x80
+
     procs = {HK_PAT_ID:'/root/bin/pat',
              HK_CH_ID:'/root/commandhandler/commandhandler.py',
              HK_FPGA_ID:'/root/fpga/fpga.py',
              HK_PKT_ID:'/root/bus/packetizer.py',
              HK_DEPKT_ID:'/root/bus/depacketizer.py',
              HK_SYS_ID: '/root/housekeeping/housekeeping.py'}
-    # procs = {HK_PAT_ID:'pat.service',
-    #          HK_CH_ID:'commandhandler@%d',
-    #          HK_FPGA_ID:'fpga.service',
-    #          HK_PKT_ID:'packetizer.service',
-    #          HK_DEPKT_ID:'depacketizer.service',
-    #          HK_SYS_ID: 'housekeeping.service'}
+
     procs.update(dict(reversed(item) for item in procs.items()))
 
     def __init__(self):
         self.pid = os.getpid()
 
-        # Initialize enable
+        # Initialize enables
         self.all_pkts_send_enable = HK_ALLPKTS_SEND_ENABLE
         self.fpga_req_enable = HK_FPGA_REQ_ENABLE
         self.sys_hk_send_enable  = HK_SYS_HK_SEND_ENABLE
@@ -113,25 +108,26 @@ class Housekeeping:
         self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD
         self.pat_health_period = HK_PAT_HEALTH_PD
 
+        # Initialize structures to keep track of command handlers and their watchdogs
         self.ch_pids = range(COMMAND_HANDLERS_COUNT)
         self.ch_heartbeat_wds = {}
+
         for i in range(COMMAND_HANDLERS_COUNT):
-            ch_pid = self.get_service_pid('commandhandler@%d' % i)
-            if (ch_pid != 0):
-                self.ch_pids[i] = ch_pid
-                self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
-            else:
-                while (ch_pid == 0):
-                    ch_pid = self.get_service_pid('commandhandler@%d' % i)
-                    ch_pid = int(p.read()[:-1])
-                self.ch_pids[i] = ch_pid
-                self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
+            try:
+                ch_pid = self.get_service_pid('commandhandler@%d' % i)
+            except:
+                #TODO: handle error here
+                ch_pid = 0
 
+            self.ch_pids[i] = ch_pid
+            self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
+
+        # Initailize other watchdogs and timers
         self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
-
         self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
         self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
 
+        # Initialize objects for multithreading
         self.fpga_check_flag = threading.Event()
         self.sys_check_flag = threading.Event()
         self.missing_pat_flag = threading.Event()
@@ -143,8 +139,9 @@ class Housekeeping:
         self.missing_fpga_flag.clear()
 
         self.missing_ch_queue = Queue.Queue()
+        self.fpga_queue = Queue.Queue()
 
-        # Initialize zmq-related variables
+        # Initialize zmq-related objects and sockets
         # TODO: Update zmq connections, use library
         self.context = zmq.Context()
         self.pat_health_socket = self.context.socket(zmq.SUB)
@@ -165,8 +162,8 @@ class Housekeeping:
         self.poller.register(self.hk_control_socket, zmq.POLLIN)
         self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
 
+        # Initialize FPGA client
         self.fpga_interface = ipc_helper.FPGAClientInterface(self.context)
-        self.fpga_queue = Queue.Queue()
 
         # Initialize packet buffer
         self.packet_buf = []
@@ -184,6 +181,8 @@ class Housekeeping:
     def get_service_pid(self, service):
         p = os.popen('systemctl show --user --property MainPID --value '+service)
         pid = int(p.read()[:-1])
+        if (pid == 0):
+            raise ValueError
         return pid
 
     def alert_fpga_check(self):
