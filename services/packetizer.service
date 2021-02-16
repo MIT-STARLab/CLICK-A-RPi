@@ -1,6 +1,6 @@
 [Unit]
 Description=Packetizer
-Before=commandhandler.service
+Before=commandhandler.service housekeeping.service
 
 [Service]
 Type=simple
