@@ -11,7 +11,7 @@
 #include <thread>
 
 #define FRC_CH 0x35 //test channel to check fpga comms (FRC is free running counter, which is the number of clock cycles since last reset)
-#define MAX_FPGA_RESPONSE_ATTEMPTS 10 //number of messages to look through on the FPGA answer port when checking a sent message
+#define MAX_FPGA_RESPONSE_ATTEMPTS 100 //number of messages to look through on the FPGA answer port when checking a sent message
 #define POLL_TIME_FPGA_RESPONSE 10 //milliseconds, time to wait between each poll of the FPGA answer port
 #define TX_ADCS_APID 0x250 //(CLICK-A CPU Software Architecture on Google Drive)
 #define TX_SELF_TEST_APID 0x3D2 //(CLICK-A CPU Software Architecture on Google Drive)
@@ -39,17 +39,24 @@
 #define CMD_UPDATE_FSM_Y 0x0F
 #define CMD_SELF_TEST 0x10
 #define CMD_END_PROCESS 0x11
+#define CMD_SET_BEACON_X 0x12
+#define CMD_SET_BEACON_Y 0x13
+#define CMD_SET_BEACON_WINDOW_SIZE 0x14
+#define CMD_SET_BEACON_MAX_EXP 0x15 
 //status flags:
 #define STATUS_CAMERA_INIT 0x00
 #define STATUS_STANDBY 0x01
-#define STATUS_MAIN 0x02
+#define STATUS_STANDBY_CALIBRATED 0x02
+#define STATUS_STANDBY_SELF_TEST_PASSED 0x03
+#define STATUS_STANDBY_SELF_TEST_FAILED 0x04
+#define STATUS_MAIN 0x05
 //self test flags:
 #define PASS_SELF_TEST 0xFF
 #define FAIL_SELF_TEST 0x0F
 #define NULL_SELF_TEST 0x00
 //pat test flag: 
-#define TEST_FLAG 0xFFFF
-#define FLIGHT_FLAG 0xAAAA
+#define SKIP_CALIB_FLAG 0xFFFF
+#define DO_CALIB_FLAG 0xAAAA
 
 // Packet Definitions
 struct fpga_request_write_packet_struct{
@@ -118,6 +125,15 @@ struct fpga_answer_struct{
 	uint8_t data_to_read;
 };
 
+struct fpga_answer_temperature_struct{
+	uint32_t return_address;
+	uint8_t request_number;
+	bool combined_flag;
+	uint16_t start_address;
+	uint32_t data_size;
+	float temperature;
+};
+
 struct pat_self_test_packet_struct{
 	uint16_t apid;
 	uint16_t data_size;
@@ -150,6 +166,8 @@ bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::
 bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port);
 
 void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, uint8_t calibration_test_result, char* error);
+
+bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, fpga_answer_temperature_struct& packet_struct, uint16_t channel, uint8_t request_number);
 
 // Optional: receive_packet_pat_rx (commands from bus)
 

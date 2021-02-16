@@ -16,7 +16,7 @@
 
 #define CALIB_MIN_BRIGHTNESS 100	// Minimum brightness of calib laser spot to work with
 #define CALIB_MAX_EXPOSURE 500 	// Max exposure in us to check for range tuning
-#define CALIB_MIN_EXPOSURE 15 //minimum exposure in us to check for range tuning
+#define CALIB_MIN_EXPOSURE 10 //minimum exposure in us to check for range tuning
 #define CALIB_EXP_INCREMENT 50 //coarse exposure search increment
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow
 #define CALIB_EXP_DIVIDER 15		// Exposure tuning division factor, the higher the finer tuning, but slower; for range search
@@ -24,7 +24,7 @@
 #define CALIB_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
 #define CALIB_HAPPY_BRIGHTNESS 300				// Good brightness for auto exposure tuning
-#define CALIB_TUNING_TOLERANCE 50				// Brightness tolerance for auto exposure tuning
+#define CALIB_TUNING_TOLERANCE 200				// Brightness tolerance for auto exposure tuning
 #define CALIB_FSM_DISPLACEMENT_TOL 100 //tolerance for number of pixels to have moved when changing FSM between max settings (should actually be arround 200)
 
 
@@ -47,7 +47,7 @@ class Calibration
 	void calculateSensitivityMatrix(std::vector<Pair>& data);
 	void calculateAffineParameters(std::vector<Pair>& data);
 	bool verifyFrame(Image& frame);
-	bool windowAndTune(Image& frame);
+	bool windowAndTune(Image& frame, bool testLaser);
 public:
 	// Affine transform parameters
 	double a00, a01, a10, a11, t0, t1;
@@ -61,8 +61,8 @@ public:
 	double transformDy(double x, double y);
 	double affineTransformX(double x, double y);
 	double affineTransformY(double x, double y);
-	bool run(Group& calib, std::string filePath = std::string("/root/log/pat/"));
-	bool findExposureRange(std::string filePath = std::string("/root/log/pat/"));
+	bool run(Group& calib, std::string filePath = getExperimentFolder());
+	bool findExposureRange(bool testLaser = false, std::string filePath = getExperimentFolder());
 	bool checkLaserOn(Group& calib);
 	bool checkLaserOff();
 	bool testFSM(Group& calib);

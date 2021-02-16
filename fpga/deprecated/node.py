@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # NODE FPGA class
 import fl
 import time

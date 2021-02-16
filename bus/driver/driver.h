@@ -23,7 +23,7 @@
 /* High-level definitions */
 #define NAME "click_spi"
 #define DEVICE "bct"
-#define SPI_FREQ 8000000
+#define SPI_FREQ 5000000
 #define RX_FIFO_LEN (1 << 22)
 #define MAX_TX_QUEUE_LEN (1 << 26)
 #define PACKET_SYNC_MARKER 0x352EF853
@@ -36,6 +36,7 @@
 #define DEFAULT_READ_LEN 128
 #define SYNC_VALID(sync) (sync == PACKET_SYNC_MARKER)
 #define SYNC_UPDATE(sync, ptr) sync = ((sync << 8) | ((*(ptr)) & 0xFF))
+#define NOOP_APID 0x2FF
 
 /* CCSDS header in little endian */
 typedef struct {
@@ -72,6 +73,7 @@ typedef struct {
     uint32_t sync;
     uint16_t read_len;
     uint16_t payload_len;
+    uint16_t apid;
     uint8_t *read_ptr;
     packet_header_t *header;
     packet_t *tx;

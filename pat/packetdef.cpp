@@ -196,9 +196,6 @@ fpga_answer_struct receive_packet_fpga_map_answer(zmq::socket_t& fpga_map_answer
 		
 		return return_struct;
 	}
-	
-
-	
 }
 
 // TODO: parse_packet_rx_pat (shouldn't need to receive bus commands for basic operation...)
@@ -276,15 +273,15 @@ bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::poll
 			// received something on the first (only) socket
 			fpga_answer_struct read_ans_struct = receive_packet_fpga_map_answer(fpga_map_answer_port, READ);
 			//make sure message is for PAT process:
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << unsigned(request_number) << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << channel << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
-			// std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: Response Attempt = " << i << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: return_address (Rx) = " << read_ans_struct.return_address << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Tx) = " << 0 << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: request_number (Rx) = " << unsigned(read_ans_struct.request_number) << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Tx) = " << FRC_CH << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: start_address (Rx) = " << read_ans_struct.start_address << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: error_flag = " << read_ans_struct.error_flag << std::endl;
+			std::cout << "In packetdef.cpp - check_fpga_map_value: data_to_read = " << unsigned(read_ans_struct.data_to_read) << std::endl;
 			
 			if((((uint32_t) getpid()) == read_ans_struct.return_address) &&
 				(0 == read_ans_struct.request_number) && 
@@ -293,7 +290,7 @@ bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::poll
 			} 
 		}
 	}
-	// std::cout << "In packetdef.cpp - check_fpga_map_write_request: FPGA MAP Check Timeout!" << std::endl; 
+	std::cout << "In packetdef.cpp - check_fpga_comms: FPGA MAP Check Timeout!" << std::endl; 
 	return false; //timeout
 }
 
@@ -326,4 +323,42 @@ void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_r
 	memcpy(message.data(), packet, sizeof(packet));
 	
 	tx_packets_port.send(message);	
+}
+
+// Check FPGA map temperature value and return answer
+bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, fpga_answer_temperature_struct& packet_struct, uint16_t channel, uint8_t request_number)
+{
+	send_packet_fpga_map_request(fpga_map_request_port, READ, request_number, channel);
+	bool error_flag;
+	// Listen for FPGA answer:
+	for(int i = 0; i < MAX_FPGA_RESPONSE_ATTEMPTS; i++){		
+		zmq::poll(poll_fpga_answer.data(), 1, POLL_TIME_FPGA_RESPONSE); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
+		if(poll_fpga_answer[0].revents & ZMQ_POLLIN){
+			// received something on the first (only) socket
+			zmq::message_t message;
+			fpga_map_answer_port.recv(message, zmq::recv_flags::none);
+			char packet[sizeof(fpga_answer_temperature_struct)];
+			memcpy(packet, message.data(), message.size());
+			memcpy(&packet_struct, packet, sizeof(packet));		
+			error_flag = (packet_struct.combined_flag & 0x02) >> 1;
+			//make sure message is for PAT process:
+			// std::cout << "In packetdef.cpp - get_temperature: Response Attempt = " << i << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: return_address (Rx) = " << packet_struct.return_address << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: request_number (Tx) = " << unsigned(request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: request_number (Rx) = " << unsigned(packet_struct.request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: start_address (Tx) = " << channel << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: start_address (Rx) = " << packet_struct.start_address << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: error_flag = " << error_flag << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: temperature = " << packet_struct.temperature << std::endl;
+			
+			if((((uint32_t) getpid()) == packet_struct.return_address) &&
+				(request_number == packet_struct.request_number) && 
+				(channel == packet_struct.start_address)){
+				return !error_flag;
+			} 
+		}
+	}
+	// std::cout << "In packetdef.cpp - get_temperature: Get FPGA Map Timeout!" << std::endl; 
+	return false; //timeout
 }

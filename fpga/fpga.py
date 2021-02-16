@@ -46,7 +46,6 @@ def loop():
             if options.CHECK_ASSERTS: assert req.size >= (len_str+4)
             
             values_in = req.write_data[4:4+len_str]
-            
             error_flag = edfa.write_string(fpgabus, values_in)
             req.answer('',error_flag)
             continue
@@ -87,8 +86,9 @@ def loop():
             if any([x in mmap.EDFA_PARSED_BLOCK for x in addresses]):
                 if time.time() - last_edfa_update > options.EDFA_VIRTUAL_REGS_GOOD_FOR:
                     fline = edfa.fline(fpgabus)
-                    flist = fline.split()          
+                    flist = fline.split()
                     reg_buffer = edfa.parse(reg_buffer, flist)
+
             # -----------------------------------------
             
             values_out = []
@@ -114,7 +114,7 @@ def loop():
                     
                 # ----------------- DACs ----------------- 
                 elif addr == mmap.DAC_SETUP:
-                    dac.init(fpgabus,value)
+                    dac.init(fpgabus, value)
 
                 elif addr == mmap.DAC_ENABLE:
                     dac.set_output_mode(fpgabus, value)
@@ -132,11 +132,26 @@ def loop():
                         target_chan = addr - mmap.DAC_BLOCK[0]
                         dac.write_and_update(fpgabus,target_chan,value)
                     values_out.append(value)
-                # ---------------------------------------- 
-               
+                # ----------Telemetry---------------------- 
+
+                elif addr == mmap.FPGA_TELEM:
+                    fline = edfa.fline(fpgabus)
+                    flist = fline.split()
+                    reg_buffer = edfa.parse(reg_buffer, flist)
+                    time.sleep(.5)
+                    addresses = options.FPGA_TELEM_REGS
+                    values_out = []
+                    for addr in addresses:
+                        if addr not in mmap.EDFA_PARSED_BLOCK:
+                            values_out.append(fpgabus.transfer([addr], [req.rw_flag], [0])[1][0])
+                        else:
+                            values_out.append(reg_buffer[addr])
+                    # print(values_out)   
+
                 else: req.answer('',error_flag=1)
+
                 
                 
-            req.answer(values_out,error_flag)
+            req.answer(values_out)
         
 loop()

@@ -48,12 +48,12 @@ public:
 	// Processing functions
 	void applyFastBlur(double radius, double passes = 2);
 	uint16_t autoThresholdPeakToMax(float fraction = 1.75);
-	int performPixelGrouping(uint16_t threshold = 0);
+	int performPixelGrouping(uint16_t threshold = 0, bool printStatus = true);
 	void saveBMP(const string& filename);
 	void savePNG(std::string fileName);
 };
 
 // Log camera images
-void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures = false, std::string fileType = std::string("png"), std::string filePath = std::string("/root/log/pat/"));
+void logImage(std::string nameTag, Camera& cameraObj, std::ofstream& textFileIn, zmq::socket_t& pat_health_port, bool save_extra_exposures = false, std::string fileType = std::string("png"), std::string filePath = getExperimentFolder());
 
 #endif

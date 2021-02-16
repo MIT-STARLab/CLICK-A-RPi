@@ -1,6 +1,10 @@
 [Unit]
 Description=Packetizer
+Before=commandhandler.service housekeeping.service
 
 [Service]
 Type=simple
 ExecStart=/bin/python -u /root/bus/packetizer.py
+
+[Install]
+WantedBy=default.target

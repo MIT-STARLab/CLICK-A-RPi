@@ -1,7 +1,7 @@
 [Unit]
 Description=FPGA Process
 After=flash-fpga.service
-Before=default.target
+Before=commandhandler.service housekeeping.service
 
 [Service]
 Type=simple

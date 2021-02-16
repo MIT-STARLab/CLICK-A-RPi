@@ -1,21 +1,21 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 import zmq
 import json
 import time
-
+import struct
 import sys #importing options and functions
-sys.path.append('../../lib/')
+sys.path.append('/root/lib/')
 from options import TX_PACKETS_PORT
 from ipc_packets import TxPacket
-from zmqTxRx import recv_zmq #send_zmq
+#from zmqTxRx import recv_zmq #send_zmq
         
 context = zmq.Context()
 
 socket_tx_packets = context.socket(zmq.SUB)
-socket_tx_packets.bind("tcp://*:%s" % TX_PACKETS_PORT)
-socket_tx_packets.setsockopt(zmq.SUBSCRIBE, b'')
+socket_tx_packets.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
+socket_tx_packets.subscribe("")
 # socket.setsockopt(zmq.SUBSCRIBE, topicfilter)
 # subscribe to ALL incoming FPGA_map_requests
 
@@ -30,9 +30,12 @@ print("\n")
 while True:
         #Continuously read telemetry
         print('RECEIVING on %s with TIMEOUT %d' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT), socket_tx_packets.get(zmq.RCVTIMEO)))
-        message = recv_zmq(socket_tx_packets)
+        message = socket_tx_packets.recv()
         ipc_txPacket = TxPacket()
         apid, payload = ipc_txPacket.decode(message) #decode the package
-        print(ipc_txPacket)
+        print(apid)
+	#print(payload)
+	data = struct.unpack('!3f', payload)
+	print(data)
         time.sleep(1)
 

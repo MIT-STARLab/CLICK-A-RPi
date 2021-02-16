@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from __future__ import print_function
 import sys
 sys.path.append('/root/lib/')
@@ -7,18 +7,24 @@ import fpga_map as mmap
 import time
 import file_manager
 import traceback
+import tx_packet
+import options
 sys.path.append('/root/fpga/')
 import dac
 import math
+import hashlib
+
 
 fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga)
 edfa = mmap.EDFA(fpga)
+seed_setting = 1 #0 for flat_sat 1 for payload
+
 
 len_pass_string = 100
 def print_test(fo,name): 
-    print(name + ' ' + '.'*(len_pass_string - len(name)) + ' \n', end='')
-    fo.write('--- Starting %s ---\n' % name)
+    print(name + ' ' + '.'*(len_pass_string - len(name)) + ' ', end='')
+    fo.write('\n--- Starting %s ---\n' % name)
 def pass_test(fo):
     print('Pass')
     fo.write('--- Pass ---\n')
@@ -32,10 +38,10 @@ def error_to_file(func):
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             fo.write(repr(e)+'\n')
-            print(repr(e))
             traceback.print_tb(exc_traceback,file=fo)
-            traceback.print_tb(exc_traceback)
             fail_test(fo)
+            traceback.print_tb(exc_traceback)
+            print(repr(e))
             return 0
     return e_to_f
 
@@ -141,13 +147,15 @@ def test_fpga_if_performance(fo):
     if time_block  > 3: success = False
     if time_async  > 3: success = False
 
-    print('1000 single reads: %f sec' % time_single)
-    print('1000 4-block reads: %f sec' % time_block)
-    print('1000 single async reads: %f sec' % time_async)
     if success:
         pass_test(fo)
     else: 
         fail_test(fo)
+        print("FPGA read/writes Failed")
+        
+    print('1000 single reads: %f sec' % time_single)
+    print('1000 4-block reads: %f sec' % time_block)
+    print('1000 single async reads: %f sec' % time_async)
 
     return success
     
@@ -206,16 +214,6 @@ def test_BIST(fo):
             print('Got %s' % str(BIST_all_low))
         return 0
         
-    
-@error_to_file        
-def test_mod_FIFO(fo):
-    
-    print_test(fo,'Modulator data FIFO')
-    
-    raise NotImplementedError
-
-
-
 """
 This test checks the temperature sensors are within
 an operating range of 20C-30C (room_temp)
@@ -256,6 +254,7 @@ def check_temperature_init(fo):
     print_test(fo, "Temperature Sensor Init Sequence Check")
     temp_name_list = ["PD: ", "EDFA: ", "Camera: ", "TOSA: ","Lens: ", "Raceway: "]
     temps = []
+    fail_text = []
     sample_num = 10
     success = True
     for temp in mmap.TEMPERATURE_BLOCK:
@@ -265,24 +264,25 @@ def check_temperature_init(fo):
 
         if((max(samples) - min(samples)) == 0):
             success = False
+            fail_text.append('Expected temperatures are not time varying.')
+            break
         
         temps.append(sum(samples)/sample_num)
 
-    if not success:
-        print('Expected temperatures are not time varying.')
-
-    if((max(temps) - min(temps)) > 5 or min(temps) < 0 or max(temps) > 40 ):
+    if((max(temps) - min(temps)) > 15 or min(temps) < -20 or max(temps) > 60 ):
         success = False
-        print('Expected Max vs. Min < 5C')
-        print('Max: %s, Min: %s' % (max(temps), min(temps)))
+        fail_text.append('Expected Max vs. Min < 5C and 0C<Temp<40C')
+        fail_text.append('Max: %s, Min: %s' % (max(temps), min(temps)))
+    
+    for nm,tp in zip(temp_name_list,temps): fo.write('%s%f\n' % (nm,tp))
     
     if success:
         pass_test(fo)
     else:
-        fail_test(fo)
         fo.write("Temperature Read out\n")
         fo.write(str(list(zip(temp_name_list,temps)))+'\n')
-        # print('Received temps: ' + str(list(zip(temp_name_list,temps))))
+        fail_test(fo)
+        for t in fail_text: print(t)
 
     return success
 
@@ -312,10 +312,10 @@ def reflash_fpga(fo):
     if success:
         pass_test(fo)
     else:
-        fail_test(fo)
         fo.write('Expected edfa and calibration laser registers to be zero after reprogramming \n')
         fo.write('Edfa power: ' + str(edfa_power) +  ' Calibration power: ' + str(calib_power) +"\n")
         fo.write('FPGA was not reprogrammed \n')
+        fail_test(fo)
         print('FPGA was not reprogrammed')
 
     return success
@@ -330,42 +330,42 @@ def test_EDFA_IF(fo):
 
     if(fpga.read_reg(mmap.PO2) == 85):
         power.edfa_off()
-        time.sleep(.1)
+        time.sleep(.5)
     off_current = fpga.read_reg(mmap.EDFA_CURRENT)
     
     power.edfa_on()
-    time.sleep(2)
-
+    time.sleep(5)
+    
     edfa_temp = fpga.read_reg(mmap.EDFA_CASE_TEMP)
     power_in = fpga.read_reg(mmap.EDFA_POWER_IN)
     power_out = fpga.read_reg(mmap.EDFA_POWER_OUT)
-    on_current = fpga.read_reg(mmap.EDFA_CURRENT)
-    power.edfa_off()
-    time.sleep(.1)
+    on_current = sum([fpga.read_reg(mmap.EDFA_CURRENT) for x in range(10)])/10
+    time.sleep(.2)
 
     success = True
-    if(off_current > 10e-2 or on_current < 10e-2 or on_current > .6):
+    if(off_current > 0.010 or on_current < 0.100 or on_current > 0.600):
         success = False
         fo.write('EDFA current is more than 10mA when off: %s or less than 100mA or greater than 600mA when on: %s \n' % (off_current, on_current))
 
-    if(edfa_temp < 0 and edfa_temp >40):
+    if(edfa_temp < -20 and edfa_temp > 60):
         success = False
-        fo.write('EDFA Case temp is outside range 0-40C: %s \n' % edfa_temp)
+        fo.write('EDFA Case temp is outside range -20-60C: %s \n' % edfa_temp)
 
 
-    if(power_in != -1000.0):
+    if(power_in != -100.0):
         success = False
         fo.write("Seed power is nonzero and shouldn't be: %s \n" % power_in)
 
-    if(power_out != -1000.0):
+    if(power_out != -100.0):
         success = False
         fo.write("EDFA output power is nonzero and shouldn't be: %s \n" % power_out) 
 
+    power.edfa_off()
     if success:
         pass_test(fo)
     else:
         fail_test(fo)
-        print('EDFA Case temp: %s Off Current: %s On Current: %s Power In: %s Power Out: %s \n' % (edfa_temp, off_current, on_current, power_in, power_out))
+        print('EDFA Case temp: %s Off Current: %s On Current: %s Power In: %s Power Out: %s' % (edfa_temp, off_current, on_current, power_in, power_out))
 
     return success 
 
@@ -380,38 +380,50 @@ def test_heaters(fo):
     power.heater_2_off
     time.sleep(.1)
     heater_off_curr = fpga.read_reg(mmap.HEATER_CURRENT)
+    fo.write('OFF: %f A\n' % heater_off_curr)
     
     power.heaters_on()
     time.sleep(.1)
+    
     power.heater_1_on()
     time.sleep(.1)
     heater_one_curr = fpga.read_reg(mmap.HEATER_CURRENT)
-    power.heater_1_off()
+    fo.write('Heater 1: %f A\n' % heater_one_curr)
     power.heater_2_on()
     time.sleep(.1)
+    heater_both_curr = fpga.read_reg(mmap.HEATER_CURRENT)
+    fo.write('Both: %f A\n' % heater_both_curr)
+    power.heater_1_off()
+    time.sleep(.1)
     heater_two_curr = fpga.read_reg(mmap.HEATER_CURRENT)
-
-    power.heaters_off()
+    fo.write('Heater 2: %f A\n' % heater_two_curr)
     power.heater_2_off()
+        
+    power.heaters_off()
+
 
     success = True
-    if(heater_off_curr > 10e-2):
+    if(heater_off_curr > 0.010):
         success = False
-        fo.write("Heater off current is larger than 10mA: " + str(heater_off_curr) + "\n")
+        fo.write("Heater off current is larger than 10mA\n")
     
-    if(heater_one_curr > 100):
+    if(0.7 < heater_one_curr < 0.9):
         success = False
-        fo.write("Heater one current is larger than normal: " + str(heater_one_curr) +"\n")
+        fo.write("Heater one current is larger than TBD\n")
 
-    if(heater_two_curr > 100):
+    if(0.4 < heater_two_curr < 0.6):
         success = False
-        fo.write("Heater two current is larger than normal: " + str(heater_two_curr) +"\n")
+        fo.write("Heater two current is larger than TBD\n")
+        
+    if(1.1 < heater_both_curr < 1.5):
+        success = False
+        fo.write("Both heater current is larger than TBD\n")
 
     if success:
         pass_test(fo)
     else:
         fail_test(fo)
-        print("Heater off: "+str(heater_off_curr) + " Heater 1: " + str(heater_one_curr) + " Heater 2: " + str(heater_two_curr))
+    print("OFF: %.03f A, Heater 1: %.03f A, Heater 2: %.03f A, Both: %.03f A" % (heater_off_curr, heater_one_curr, heater_two_curr, heater_both_curr))
 
 
 """
@@ -427,21 +439,30 @@ def test_tec_driver(fo):
         power.tec_on()
 
     time.sleep(.5)
+    to_print = []
 
     success = True
     #standard room temperature values
-    test_msb = [4,5,6]
-    test_lsb = [0,100,200]
-    for i in range(3):
+    test_msb = [4,4,5,5,6,6]
+    test_lsb = [0,128,0,128,0,128]
+    for i in range(len(test_msb)):
         fpga.write_reg(mmap.LTSa, test_msb[i])
         fpga.write_reg(mmap.LTSb, test_lsb[i])
         
         #Wait for TEC to settle
-        time.sleep(1.5)
+        time.sleep(10)
 
-        avg_len = 10
-        on_curr = sum([fpga.read_reg(mmap.TEC_CURRENT) for x in range(avg_len)])/avg_len
-    
+        for y in range(10):
+            avg_len = 10
+            on_curr = sum([fpga.read_reg(mmap.TEC_CURRENT) for x in range(avg_len)])/avg_len
+
+        if(on_curr > 250e-3):
+            success = False
+            fo.write("TEC on current is higher than 200mA: %s\n" % on_curr )
+            to_print.append("TEC on current is higher than 200mA: %s" % on_curr )
+        
+        fo.write("Reg 1 at %d, reg 2 at %d: readback %f\n" % (test_msb[i], test_lsb[i], on_curr))
+
         #check TEC linearity
         tec_readback = []
         val = test_msb[i]*256 + test_lsb[i]
@@ -449,20 +470,18 @@ def test_tec_driver(fo):
         error = .05
         if (abs(val -tec_readback) > val*error):
             success = False
-            fo.write("TEC Readback is more than 5% from TEC value: %s Readback: %s \n" %(val, tec_readback))
+            fo.write("TEC Readback is more than 5" + '%'+" from TEC value: %s Readback: %s \n" %(val, tec_readback))
+            to_print.append("TEC Readback is more than 5"+'%'+"from TEC value: %s Readback: %s" %(val, tec_readback))
 
     power.tec_off()
     fpga.write_reg(mmap.LTSa, 0)
     fpga.write_reg(mmap.LTSb, 0)
-
-    if(on_curr > 100e-3):
-        success = False
-        fo.write("TEC on current is higher than 100mA: %s" % on_curr )
     
     if success:
         pass_test(fo)
     else:
         fail_test(fo)
+    for t in to_print: print(t)
 
     return success
 
@@ -470,7 +489,7 @@ def test_tec_driver(fo):
 @error_to_file 
 def test_bias_driver(fo):
 
-    print_test(fo, "TEC driver test")
+    print_test(fo, "LD Bias test")
     power.edfa_off()
     power.bias_off()
     
@@ -483,23 +502,32 @@ def test_bias_driver(fo):
     off_curr = fpga.read_reg(mmap.LD_CURRENT)
 
     power.bias_on()
-    time.sleep(.1)
+    time.sleep(.2)
+
+    #fpga.write_reg(mmap.DAC_SETUP,2)
+    #for i in range(506,510):
+    #    fpga.write_reg(i,0)
+
     fpga.write_reg(mmap.LBCa, 14)
     fpga.write_reg(mmap.LBCb, 33)
     
-    time.sleep(.5)
+    time.sleep(2)
 
-    avg_len = 10
-    avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
-  
     success = True
-    if(off_curr > 100e-2):
-        success = False
-        fo.write("LD off current is greater than %sA: %s" % str(100e-2), str(off_curr))
+    for i in range(10):
+        avg_len = 10
+        avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+        time.sleep(1)
+    
+        if(off_curr > 10e-3):
+            success = False
+            fo.write("LD off current is greater than %sA: %s\n" % (str(10e-3), str(off_curr)))
+            break
 
-    if(avg_on_curr > 400e-3):
-        success = False
-        fo.write("LD on current is greater than %sA: %s A" % str(400e-3), str(round(avg_on_curr,3)))
+        if(avg_on_curr > 600e-3 or avg_on_curr < 100e-3):
+            success = False
+            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
+            break
 
     power.bias_off()
 
@@ -507,11 +535,13 @@ def test_bias_driver(fo):
         pass_test(fo)
     else:
         fail_test(fo)
-        print("TEC current is out of nominal bounds: %s" % round(avg_on_curr,3))
+        print("LD current is out of nominal bounds: %s" % round(avg_on_curr,3))
 
     return success
 
-
+"""
+Seed setting 0 for flatsat and 1 for payload
+"""
 @error_to_file
 def test_scan_PPM(fo):
 
@@ -522,12 +552,12 @@ def test_scan_PPM(fo):
     power.tec_on()
     time.sleep(2)
 
-    payload_seed = [5,107,14,33]
-    flat_sat_seed = [5,67,14,33]
+    #set points are dependent on temperature
+    payload_seed = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
+    flat_sat_seed = [options.DEFAULT_FTEC_MSB, options.DEFAULT_FTEC_LSB, options.DEFAULT_FLD_MSB, options.DEFAULT_FLD_LSB]
     # seed = payload_seed
     ppm_codes = [4,8,16,32,64,128]
-    ppm4_input = [-2.0, -2.9, -6.4,-7.3]
-    seed_setting = 0 #0 for flatsat 1 for payload
+    ppm4_input = options.PPM4_THRESHOLDS
 
     if(seed_setting): 
         seed = payload_seed 
@@ -538,17 +568,19 @@ def test_scan_PPM(fo):
 
     for x in range(1,5):
         fpga.write_reg(x, seed[x-1])
+        time.sleep(.1)
 
-    time.sleep(2)
+    time.sleep(3)
     success = True
     baseline_input = 0
     edfa_inputs =[]        
     for ppm in ppm_codes:
+        
         ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
         fpga.write_reg(mmap.DATA, ppm_order) 
-        time.sleep(1)
+        time.sleep(.5)
 
-        avg_len = 10
+        avg_len = 3
         edfa_input = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for i in range(avg_len)])/avg_len
         edfa_inputs.append(edfa_input)
         if(ppm == 4):
@@ -556,12 +588,18 @@ def test_scan_PPM(fo):
                 baseline_input = edfa_input
             else:
                 success = False
-                fo.write("PPM%s input power to the edfa is outside of nominal range: %s" % (ppm, edfa_input))
+                fo.write("PPM%s input power to the edfa is outside of nominal range: %s \n" % (ppm, edfa_input))
+                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s, PPM_ORDER: %s\n" % \
+                (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
+                fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), ppm_order))
         else:
             expected_input = baseline_input - 3.0
             if (abs(edfa_input-expected_input)) > .5:
                 success = False
-                fo.write("PPM%s was outside of the acceptable range of input power to the EDFA: %s" % (ppm, edfa_input))
+                fo.write("PPM%s was outside of the acceptable range of input power to the EDFA: %s \n" % (ppm, edfa_input))
+                fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s\n" % \
+                (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
+                fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
             baseline_input = edfa_input
 
     power.edfa_off()
@@ -573,11 +611,16 @@ def test_scan_PPM(fo):
         pass_test(fo)
     else:
         fail_test(fo)
-        fo.write("EDFA input not nominal across PPM orders. Powers: " + str(edfa_inputs))
-        print("EDFA input not nominal across PPM orders. Powers: ", edfa_inputs)
+        fo.write("EDFA input not nominal across PPM orders. Powers: %s \n" % str(edfa_inputs))
+        print("EDFA input not nominal across PPM orders.")
+    for ppm_set, power_v in zip(ppm_codes,edfa_inputs): print('PPM%03d: %.02f dBm' % (ppm_set, power_v))
+    for ppm_set, power_v in zip(ppm_codes,edfa_inputs): fo.write('PPM%03d: %f dBm\n' % (ppm_set, power_v))
 
     return success
 
+"""
+Seed setting 0 for flatsat and 1 for payload
+"""
 @error_to_file
 def check_CW_power(fo):
     print_test(fo, "CW Power test")
@@ -587,11 +630,10 @@ def check_CW_power(fo):
     power.tec_on()
     time.sleep(2)
 
-    payload_seed = [5,107,14,33]
-    flat_sat_seed = [5,107,14,33]
+    payload_seed = [options.DEFAULT_CW_TEC_MSB, options.DEFAULT_CW_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
+    flat_sat_seed = [options.DEFAULT_CW_FTEC_MSB, options.DEFAULT_CW_FTEC_LSB, options.DEFAULT_FLD_MSB, options.DEFAULT_FLD_LSB]
     # seed = payload_seed
-    ppm4_input = [-2.0, -2.9, -1,-2.3]
-    seed_setting = 0 #0 for flatsat 1 for payload
+    ppm4_input = options.CW_THRESHOLDS
 
     if(seed_setting): 
         seed = payload_seed 
@@ -603,17 +645,15 @@ def check_CW_power(fo):
     for x in range(1,5):
         fpga.write_reg(x, seed[x-1])
 
-    time.sleep(2)
+    fpga.write_reg(mmap.DATA, 0)
+    #wait for TEC to tune
+    time.sleep(5)
+
+    input_power = fpga.read_reg(mmap.EDFA_POWER_IN)
     success = True
-    fpga.write_reg(mmap.DAC_SETUP, 1)
-    fpga.write_reg(mmap.DAC_1_A, 65000)
-    
-    for i in range(50):
-        seed = fpga.read_reg(mmap.SCAa)*256+fpga.read_reg(mmap.SCAb)
-        seed1 = fpga.read_reg(mmap.SCBa)*256+fpga.read_reg(mmap.SCBb)
-        seed2 = fpga.read_reg(mmap.SCCa)*256+fpga.read_reg(mmap.SCCb)
-        fpga.write_reg(mmap.DAC_1_A, 65000-1000*i)
-    
+    if (input_power < ppm_input[1] or input_power > ppm_input[0]):
+        success = False
+
     power.edfa_off()
     power.bias_off()
     power.tec_off()
@@ -621,42 +661,221 @@ def check_CW_power(fo):
     if success:
         pass_test(fo)
     else:
+        fo.write("EDFA Input Power outside of expected range: "+str(input_power)+" dbm \n")
+        fo.write("Bias Curr: %s TEC Curr: %s TEC_ReadBack: %s REG 1-4 %s, %s, %s, %s\n" % \
+        (fpga.read_reg(mmap.LD_CURRENT), fpga.read_reg(mmap.TEC_CURRENT), fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb), \
+        fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
         fail_test(fo)
-        fo.write("EDFA input not nominal across PPM orders. Powers: ", edfa_inputs)
-        print("EDFA input not nominal across PPM orders. Powers: ", edfa_inputs)
+        print("EDFA Input Power outside of expected range: "+str(input_power)+" dbm")
 
     return success
 
+    #SCN Registers are quite noisy we need to take a look at this.
+    # success = True
+    # fpga.write_reg(mmap.DAC_SETUP, 1)
+    # fpga.write_reg(mmap.DAC_1_A, 45500) #Post EDFA
+    # fpga.write_reg(mmap.DAC_1_B, 45500) #Pre EDFA
+    # fpga.write_reg(mmap.DAC_1_C, 45500) #Seed
+    # fo.write("Post EDFA Pre EDFA SEED DAC EDFA POWER IN \n")
+    # for i in range(65):
+    #     for y in range(5):
+    #         fpga.write_reg(mmap.SCN, 0)
+    #         fpga.write_reg(mmap.SCN, mmap.SCN_RUN_CAPTURE)
+    #         if not(fpga.read_reg(mmap.SCF) & mmap.SCF_CAPTURE_DONE):
+    #             time.sleep(.5)
+    #             print("Waiting for FPGA to capture")
+    #         seed = fpga.read_reg(mmap.SCAa)*256+fpga.read_reg(mmap.SCAb)
+    #         seed1 = fpga.read_reg(mmap.SCBa)*256+fpga.read_reg(mmap.SCBb)
+    #         seed2 = fpga.read_reg(mmap.SCCa)*256+fpga.read_reg(mmap.SCCb)
+    #         fo.write(str(seed) + " "+ str(seed1) +" "+ str(seed2) + " " +str(65500-1000*i) + " "+ str(fpga.read_reg(mmap.EDFA_POWER_IN))+ '\n')
+    #         print(seed, seed1, seed2, 65500-1000*i, fpga.read_reg(mmap.EDFA_POWER_IN))
+
+    #     fpga.write_reg(mmap.DAC_1_A, 65500-1000*i)
+    #     fpga.write_reg(mmap.DAC_1_B, 65500-1000*i)
+    #     fpga.write_reg(mmap.DAC_1_C, 65500-1000*i)
+
     
-        
-if __name__ == '__main__':
+@error_to_file        
+def test_mod_FIFO(fo):
     
+    print_test(fo,'Modulator data FIFO')
+
+    #SHORT FIFO
+    #with open("transmit.txt") as file:
+    data = "Hi I'm Mr. Meseeks!"
+
+    ppm_order = 4
+    tx_pkt = tx_packet.txPacket(ppm_order, data)
+    tx_pkt.pack()
+
+    control = fpga.read_reg(mmap.CTL)
+    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+    tx_pkt.set_PPM(fpga)
+    
+    #Stall Fifo
+    fpga.write_reg(mmap.CTL, control | 0x8)
+
+    #Write to FIFO
+    tx_pkt.transmit(fpga)
+
+    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+    success = True
+    if(len(tx_pkt.symbols) != fifo_len):
+        success = False
+        print("Fifo length %s does not match packet symbol length %s" % (fifo_len, len(tx_pkt.symbols)))
+        fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt.symbols)) 
+        fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt.ppm_order, tx_pkt.data))   
+    
+    if(fifo_len < 100): time.sleep(.005)
+    
+    # #Release FIFO
+    fpga.write_reg(mmap.CTL, 0x7) 
+
+    #EMPTY FIFO
+    ppm_order = 16
+    data = ""
+    tx_pkt1 = tx_packet.txPacket(ppm_order, data)
+    tx_pkt1.pack()
+
+    control = fpga.read_reg(mmap.CTL)
+    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+    tx_pkt1.set_PPM(fpga)
+    
+    #Stall Fifo
+    fpga.write_reg(mmap.CTL, control | 0x8)
+
+    #Write to FIFO
+    tx_pkt1.transmit(fpga)
+
+    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+    if(len(tx_pkt1.symbols)+2 != fifo_len): #Why is the empty fifo length 2
+        success = False
+        print("Fifo length %s does not match packet symbol length %s" % (fifo_len, len(tx_pkt1.symbols)))
+        fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt1.symbols)) 
+        fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt1.ppm_order, tx_pkt1.data))   
+    
+    if(fifo_len < 100): time.sleep(.005)
+
+    #Release FIFO
+    fpga.write_reg(mmap.CTL, 0x7) 
+
+    #LONG FIFO
+    data = '1'*1000
+    ppm_order = 128
+    tx_pkt = tx_packet.txPacket(ppm_order, data)
+    tx_pkt.pack()
+
+    control = fpga.read_reg(mmap.CTL)
+
+    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+    tx_pkt.set_PPM(fpga)
+    
+    #Stall Fifo
+    fpga.write_reg(mmap.CTL, control | 0x8)
+
+    #Write to FIFO
+    tx_pkt.transmit(fpga)
+
+    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+    if(len(tx_pkt.symbols) != fifo_len):
+        success = False
+        print("Fifo length %s does not match packet symbol length %s" % (fifo_len, len(tx_pkt.symbols)))
+        fo.write("Fifo length %s does not match packet symbol legnth %s \n" % (fifo_len, tx_pkt.symbols)) 
+        fo.write("Packet PPM: %s and Data: %s \n" % (tx_pkt.ppm_order, tx_pkt.data))   
+    
+    if(fifo_len < 100): time.sleep(.005)
+
+    #Release FIFO
+    fpga.write_reg(mmap.CTL, 0x7) 
+
+    if success:
+        pass_test(fo)
+    else:
+        fail_test(fo)
+
+    return success
+
+
+def seed_align(default_settings):
+
+    tec_msb, tec_lsb, ld_msb, ld_lsb = default_settings
+    total_tec = tec_msb*256 + tec_lsb
+
+    power.edfa_on()
+    power.tec_on()
+    power.bias_on()
+
+    time.sleep(2)
+
+    for i in range(1,5):
+        fpga.write_reg(i, default_settings[i-1])
+    
+    fpga.write_reg(mmap.DATA, 131)
+    
+    time.sleep(.1)
+    power_inputs = []
+    window = 15
+    for i in range(total_tec-window, total_tec+window):
+        tec_msb = i//256
+        tec_lsb = i%256
+        fpga.write_reg(mmap.LTSa, tec_msb)
+        fpga.write_reg(mmap.LTSb, tec_lsb)
+        time.sleep(.1)
+        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(5)])/5
+        power_inputs.append(avg_input_power)
+
+    new_tec = total_tec+power_inputs.index(max(power_inputs))-window
+    tec_msb = new_tec//256
+    tec_lsb = new_tec%256
+    fpga.write_reg(mmap.LTSa, tec_msb)
+    fpga.write_reg(mmap.LTSb, tec_lsb)
+
+    # print(new_tec, power_inputs, power_inputs[power_inputs.index(max(power_inputs))], fpga.read_reg(mmap.TOSA_TEMP))
+
+    power.edfa_off()
+    power.tec_off()
+    power.bias_on()
+
+
+def run_all(origin):
+
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
-    with file_manager.ManagedFileOpen('/root/data/test/general/%s.gz' % t_str,'w') as (f, tags):
     
-        tags['origin'] = 'command line'
+    with file_manager.ManagedFileOpen('/root/log/self_test_data/%s.gz' % t_str,'w') as (f, tags):
+    
+        tags['origin'] = origin
+        f.write('Self-test, %s\n' % t_str)
+        print('   CLICK-A Self-Test Script')
+        try:
+            def file_as_bytes(file):
+                with file:
+                    return file.read()
+
+            hash_v =  hashlib.md5(file_as_bytes(open('/root/test/general_functionality_test.py', 'rb'))).hexdigest()
+            f.write('MD5: %s\n' % str(hash_v))
+            print('MD5: %s' % str(hash_v))
+        except:
+            f.write('Hash failure, check script path\n')
+            print('Hash failure, check script path')
         
         reflash_fpga(f)
-        
         test_basic_fpga_if(f)
         test_fpga_if_performance(f)
-
-        # TODO
-        # Check Tx FIFO is empty 
-        # Check CRC ok <- what CRC??
-
+        test_mod_FIFO(f)
         check_temperature_init(f)
         test_BIST(f)
-
-        test_mod_FIFO(f)        
         test_EDFA_IF(f)
-        
         test_tec_driver(f)
         test_bias_driver(f)
+        #seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
         test_scan_PPM(f)
-        #check_CW_power(f)
-
+        check_CW_power(f)
         test_heaters(f)
+
+
+if __name__ == '__main__':
+    run_all(origin='command line')
+
         
         
         

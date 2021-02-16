@@ -1,4 +1,4 @@
-# Joe Kusters
+#!/usr/bin/env python
 # optimizer.py
 # optimizer class for running the Laser Calibration optimization control loop based on Myron Lee's SM Thesis (2017)
 

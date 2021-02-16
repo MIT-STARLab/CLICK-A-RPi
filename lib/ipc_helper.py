@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import zmq
 import ipc_packets
 import options
@@ -34,7 +35,7 @@ class FPGAClientInterface:
         self.socket_answer.setsockopt(zmq.RCVTIMEO, 100) # Set timout
         while 1:
             try:
-                self.write_reg(0,'')
+                self.write_reg(127,'')
                 break
             except zmq.ZMQError as error:
                 tries -= 1
@@ -248,6 +249,7 @@ class FPGAServerInterface:
                 return struct.pack('I',lstr) + value
                 
             elif type(value) is list:
+                # print(value)
                 raw = [self._encode_reg(a,v) for a,v in zip(range(addr,addr+len(value)),value)]
                 return ''.join(raw)
             

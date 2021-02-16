@@ -19,22 +19,29 @@
 #define HEATER_CH 0x23 //heater fpga channel (Notated_memory_map on Google Drive)
 #define HEATER_ON 0x55 //heater ON code (Notated_memory_map on Google Drive)
 #define HEATER_OFF 0x0F //heater OFF code (Notated_memory_map on Google Drive)
+#define TEMPERATURE_CH 201 //EDFA Temperature (TBR, maybe pick one of the other ones, test and see)
 #define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
-#define MAX_CALIBRATION_ATTEMPTS 3 //number of times to attempt calibration
-#define MAX_ACQUISITION_ATTEMPTS 100 //number of times to attempt beacon acquisition
+#define MAX_CALIBRATION_ATTEMPTS 2 //number of times to attempt calibration
+#define MAX_ACQUISITION_ATTEMPTS 250 //number of times to attempt beacon acquisition
 #define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X -14 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
-#define TX_OFFSET_Y 112 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
-#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
+#define TX_OFFSET_X -23 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y 125 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
+#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
+#define BCN_X_REL_GUESS -13 //estimate of beacon x position on acquisition rel to center
+#define BCN_Y_REL_GUESS 14 //estimate of beacon y position on acquisition rel to center
+#define TX_OFFSET_SLOPE_X 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X 0 //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 0 //TBD, pxls - linear model of tx offset as a function of temperature
 
 using namespace std;
 using namespace std::chrono;
@@ -95,9 +102,29 @@ struct error_angles{
 };
 error_angles centroid2angles(double centroid_x, double centroid_y){
 	error_angles angles = error_angles();
-	angles.angle_x_radians = (float) CENTROID2ANGLE_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
+	angles.angle_x_radians = (float) TX_OFFSET_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
 	angles.angle_y_radians = (float) CENTROID2ANGLE_SLOPE_Y*centroid_y + CENTROID2ANGLE_BIAS_Y;
 	return angles;
+}
+
+//Get payload temperature and compute Tx offsets
+struct tx_offsets{
+	int x;
+	int y;
+};
+ tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
+	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
+	tx_offsets offsets = tx_offsets();
+	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
+		offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
+		offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", tx_offset_x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
+	} else{
+		offsets.x = (int) TX_OFFSET_X;
+		offsets.y = (int) TX_OFFSET_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: get_temperature failed! Using default offsets: ", TX_OFFSET_X, TX_OFFSET_Y);
+	}
+	return offsets;
 }
 
 atomic<bool> stop(false); //not for flight
@@ -120,40 +147,50 @@ int main() //int argc, char** argv
     zmq::context_t context{1}; 
     
     // Create the PUB/SUB Sockets: 
-	int linger = 0; // Configure sockets to not wait at close time
-	int rc;
+	//int linger = 0; // Configure sockets to not wait at close time
+	//int rc;
 	
 	// create the PAT_STATUS_PORT PUB socket
 	zmq::socket_t pat_status_port(context, ZMQ_PUB); 
-	rc = zmq_setsockopt(pat_status_port, ZMQ_LINGER, &linger, sizeof(linger));
+	//rc = zmq_setsockopt(pat_status_port, ZMQ_LINGER, &linger, sizeof(linger));
     pat_status_port.connect(PAT_STATUS_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+	//std::cout << "rc (pat_status_port): " << rc << std::endl;
 
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
-	rc = zmq_setsockopt(pat_health_port, ZMQ_LINGER, &linger, sizeof(linger));
+	//rc = zmq_setsockopt(pat_health_port, ZMQ_LINGER, &linger, sizeof(linger));
     pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+	//std::cout << "rc (pat_health_port): " << rc << std::endl;
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
-	rc = zmq_setsockopt(pat_control_port, ZMQ_LINGER, &linger, sizeof(linger));
+	//rc = zmq_setsockopt(pat_control_port, ZMQ_LINGER, &linger, sizeof(linger));
     pat_control_port.connect(PAT_CONTROL_PORT); // connect to the transport
     pat_control_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+	//std::cout << "rc (pat_control_port): " << rc << std::endl;
 
     // create the FPGA_MAP_REQUEST_PORT PUB socket
     zmq::socket_t fpga_map_request_port(context, ZMQ_PUB); 
-	rc = zmq_setsockopt(fpga_map_request_port, ZMQ_LINGER, &linger, sizeof(linger));
+	//rc = zmq_setsockopt(fpga_map_request_port, ZMQ_LINGER, &linger, sizeof(linger));
     fpga_map_request_port.connect(FPGA_MAP_REQUEST_PORT); // connect to the transport
+	//std::cout << "rc (fpga_map_request_port): " << rc << std::endl;
 
     // create the FPGA_MAP_ANSWER_PORT SUB socket
     zmq::socket_t fpga_map_answer_port(context, ZMQ_SUB); // create the FPGA_MAP_ANSWER_PORT SUB socket
-	rc = zmq_setsockopt(fpga_map_answer_port, ZMQ_LINGER, &linger, sizeof(linger));
+	//rc = zmq_setsockopt(fpga_map_answer_port, ZMQ_LINGER, &linger, sizeof(linger));
     fpga_map_answer_port.connect(FPGA_MAP_ANSWER_PORT); // connect to the transport
-    fpga_map_answer_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+	uint32_t pat_pid = getpid();
+	char subscription[sizeof(pat_pid)];
+	memcpy(subscription, &pat_pid, sizeof(subscription));	
+	//std::cout << "PAT PID: " << subscription << std::endl;
+    fpga_map_answer_port.set(zmq::sockopt::subscribe, subscription); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
+	//std::cout << "rc (fpga_map_answer_port): " << rc << std::endl;
 
     // create the TX_PACKETS_PORT PUB socket
     zmq::socket_t tx_packets_port(context, ZMQ_PUB); 
-	rc = zmq_setsockopt(tx_packets_port, ZMQ_LINGER, &linger, sizeof(linger));
+	//rc = zmq_setsockopt(tx_packets_port, ZMQ_LINGER, &linger, sizeof(linger));
     tx_packets_port.connect(TX_PACKETS_PORT); // connect to the transport
+	//std::cout << "rc (tx_packets_port): " << rc << std::endl;
 
     /*
     // create the RX_PAT_PACKETS_PORT SUB socket
@@ -170,7 +207,7 @@ int main() //int argc, char** argv
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 		
 	//telemetry file names
-	std::string pathName = string("/root/log/pat/"); //save path
+	std::string pathName = getExperimentFolder(true); //save path, get experiment id, update exp id csv file, make experiment folder
 	std::string textFileName = pathName + timeStamp() + string("_pat_logs.txt"); //used for text telemetry
 	std::string dataFileName = pathName + timeStamp() + string("_pat_data.csv"); //used by csv data file generation
 
@@ -202,6 +239,16 @@ int main() //int argc, char** argv
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
+	bool initBeaconWindow = false;
+	int beaconWindowSize = CAMERA_HEIGHT;
+	beaconWindow.w = beaconWindowSize;
+	beaconWindow.h = beaconWindow.w;
+	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
+	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
+	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
+	int laser_tests_passed = 0;
+	bool self_test_passed = false, self_test_failed = false;
+	tx_offsets offsets = calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -211,6 +258,7 @@ int main() //int argc, char** argv
 	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
 	signal(SIGINT, [](int signum) { stop = true; });
 
+	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid);
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -244,7 +292,6 @@ int main() //int argc, char** argv
 				laser_test_result = NULL_SELF_TEST;
 				fsm_test_result = NULL_SELF_TEST;
 				calibration_test_result = NULL_SELF_TEST;			
-
 				//send self test results
 				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 				
@@ -266,8 +313,16 @@ int main() //int argc, char** argv
 
 		// Allow graceful exit with Ctrl-C (not for flight)
 		if(stop){
-			OPERATIONAL = false;
-			break;
+			log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Saving text file and ending process.");
+			textFileOut.close(); //close telemetry text file
+			pat_status_port.close();
+			pat_health_port.close();
+			pat_control_port.close();
+			fpga_map_request_port.close();
+			fpga_map_answer_port.close();
+			tx_packets_port.close();
+			context.close();
+			exit(0); 
 		}
 	}
 	if(camera_initialized){log(pat_health_port, textFileOut, "In main.cpp Camera Connection Initialized");}
@@ -318,7 +373,15 @@ int main() //int argc, char** argv
 				OPERATIONAL = false;
 				break;
 			}
-			send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+			if(self_test_passed){
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
+			} else if(self_test_failed){
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
+			} else if(haveCalibKnowledge){
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
+			} else {
+				send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+			}
 			if(haveCalibKnowledge){
 				log(pat_health_port, textFileOut, "In main.cpp - Standby - Calib is at [", calib.x, ",", calib.y, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
 			}
@@ -334,12 +397,16 @@ int main() //int argc, char** argv
 				{
 					case CMD_START_PAT:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in test configuration. Proceeding to ACQUISITION...");
-							phase = ACQUISITION;
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command with skip calibration flag. Proceeding to ACQUISITION...");
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command with do calibration flag. Proceeding to CALIBRATION...");
 							phase = CALIBRATION;
 							STANDBY = false;
 						} else{
@@ -349,13 +416,17 @@ int main() //int argc, char** argv
 						
 					case CMD_START_PAT_OPEN_LOOP:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command with skip calibration flag. Proceeding to ACQUISITION...");
 							openLoop = true;
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command with do calibration flag. Proceeding to CALIBRATION...");
 							openLoop = true;
 							phase = CALIBRATION;
 							STANDBY = false;
@@ -372,13 +443,17 @@ int main() //int argc, char** argv
 						
 					case CMD_START_PAT_BUS_FEEDBACK:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command with skip calibration flag. Proceeding to ACQUISITION...");
 							sendBusFeedback = true;
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command with do calibration flag Proceeding to CALIBRATION...");
 							sendBusFeedback = true;
 							phase = CALIBRATION;
 							STANDBY = false;
@@ -389,14 +464,18 @@ int main() //int argc, char** argv
 
 					case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
 						main_entry_flag = atoi(command_data); 
-						if(main_entry_flag == TEST_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in test configuration. Proceeding to ACQUISITION...");
+						if(main_entry_flag == SKIP_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command with skip calibration flag. Proceeding to ACQUISITION...");
 							openLoop = true; 
 							sendBusFeedback = true;
-							phase = ACQUISITION;
+							if(haveCalibKnowledge){phase = ACQUISITION;}
+							else{
+								log(pat_health_port, textFileOut, "In main.cpp - Standby - Do not have calibration knowledge. Proceeding to calibration.");
+								phase = CALIBRATION;
+							}
 							STANDBY = false;
-						} else if(main_entry_flag == FLIGHT_FLAG){
-							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in flight configuration. Proceeding to CALIBRATION...");
+						} else if(main_entry_flag == DO_CALIB_FLAG){
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command with do calibration flag. Proceeding to CALIBRATION...");
 							openLoop = true; 
 							sendBusFeedback = true;
 							phase = CALIBRATION;
@@ -511,6 +590,30 @@ int main() //int argc, char** argv
 						STANDBY = false;
 						break;
 
+					case CMD_SET_BEACON_X:
+						beacon_x_rel = atoi(command_data); 
+						beacon.x = beacon_x_rel + CAMERA_WIDTH/2;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_X - Updating Beacon X to ", beacon_x_rel, " rel to center =>, ", beacon.x, " absolute");
+						break;
+
+					case CMD_SET_BEACON_Y:
+						beacon_y_rel = atoi(command_data); 
+						beacon.y = beacon_y_rel + CAMERA_HEIGHT/2;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_Y - Updating Beacon Y to ", beacon_y_rel, " rel to center =>, ", beacon.y, " absolute");
+						break;
+
+					case CMD_SET_BEACON_WINDOW_SIZE:
+						beaconWindowSize = atoi(command_data); 
+						beaconWindow.w = beaconWindowSize;
+						beaconWindow.h = beaconWindowSize;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_WINDOW_SIZE - Updating Beacon Window Size to ", beaconWindowSize);
+						break;
+
+					case CMD_SET_BEACON_MAX_EXP:
+						maxBcnExposure = atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_BEACON_MAX_EXP - Updating Beacon Max Exposure (us) to ", maxBcnExposure);
+						break;
+
 					case CMD_TX_ALIGN:
 						if(haveCalibKnowledge){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Executing CMD_TX_ALIGN command.");
@@ -523,12 +626,12 @@ int main() //int argc, char** argv
 						break;
 
 					case CMD_UPDATE_TX_OFFSET_X:
-						tx_offset_x += atoi(command_data); 
+						tx_offset_x = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_X - Updating Tx Offset X to ", tx_offset_x);
 						break;
 
 					case CMD_UPDATE_TX_OFFSET_Y:
-						tx_offset_y += atoi(command_data); 
+						tx_offset_y = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", tx_offset_y);
 						break;
 
@@ -579,37 +682,49 @@ int main() //int argc, char** argv
 						//Laser Test:
 						if((camera_test_result = PASS_SELF_TEST) && (fpga_test_result == PASS_SELF_TEST)){							
 							fsm.setNormalizedAngles(0,0); //ensure FSM is centered
-							calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
-							camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							
-							log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
-							camera.config->expose_us.write(calibExposure); //set calib exposure
-							int laser_tests_passed = 0;
-							for(int i = 0; i < 2; i++){ //run twice to make sure on/off switching is working
-								if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
-									if(calibration.checkLaserOn(calib)){
-										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check passed.");
-										logImage(string("CMD_SELF_TEST_LASER_ON"), camera, textFileOut, pat_health_port); //save image
-										if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
-											if(calibration.checkLaserOff()){
-												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check passed.");
-												logImage(string("CMD_SELF_TEST_LASER_OFF"), camera, textFileOut, pat_health_port);
-												laser_tests_passed++;
+							if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, 0)){
+								if(calibration.findExposureRange(true)){
+									calibExposure = calibration.preferredExpo;
+									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Using auto-tuned exposure = ", calibExposure, " us.");
+								} else{
+									calibExposure = CALIB_EXPOSURE_SELF_TEST; 	
+									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
+								}
+								camera.config->expose_us.write(calibExposure); //set calib exposure
+								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							 
+								laser_tests_passed = 0;
+								for(int i = 1; i < 3; i++){ //run twice to make sure on/off switching is working
+									if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
+										if(calibration.checkLaserOn(calib)){
+											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check passed.");
+											logImage(string("CMD_SELF_TEST_LASER_ON_") + to_string(i), camera, textFileOut, pat_health_port); //save image
+											if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
+												if(calibration.checkLaserOff()){
+													log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check passed.");
+													logImage(string("CMD_SELF_TEST_LASER_OFF_") + to_string(i), camera, textFileOut, pat_health_port);
+													laser_tests_passed++;
+												} else{
+													log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check failed!");
+													self_test_stream << "(Laser Test) laserOff check failed!\n";
+													logImage(string("CMD_SELF_TEST_LASER_OFF_") + to_string(i), camera, textFileOut, pat_health_port);
+												}
 											} else{
-												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check failed!");
-												self_test_stream << "(Laser Test) laserOff check failed!\n";
+												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff FPGA command failed!");
+												self_test_stream << "(Laser Test) laserOff FPGA command failed!\n";
 											}
 										} else{
-											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff FPGA command failed!");
-											self_test_stream << "(Laser Test) laserOff FPGA command failed!\n";
+											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check failed!");
+											self_test_stream << "(Laser Test) laserOn check failed!\n";
+											logImage(string("CMD_SELF_TEST_LASER_ON_") + to_string(i), camera, textFileOut, pat_health_port); //save image
 										}
 									} else{
-										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check failed!");
-										self_test_stream << "(Laser Test) laserOn check failed!\n";
-									}
-								} else{
-									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
-									self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
-								}	
+										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
+										self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
+									}	
+								}
+							} else{
+								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
+								self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
 							}
 							if(laser_tests_passed == 2){laser_test_result = PASS_SELF_TEST;}
 							else{laser_test_result = FAIL_SELF_TEST;}								
@@ -637,12 +752,13 @@ int main() //int argc, char** argv
 									{
 										calibExposure = camera.config->expose_us.read(); //save calib exposure
 										log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test). Calib Exposure = ", calibExposure, " us.");
-										
+										haveCalibKnowledge = true; 
 										//Check offset
 										if(abs(calibration.centerOffsetX) <= CALIB_OFFSET_TOLERANCE){
 											if(abs(calibration.centerOffsetY) <= CALIB_OFFSET_TOLERANCE){
 												if(calibration.s00/calibration.s11 - 1/sqrt(2) <= CALIB_SENSITIVITY_RATIO_TOL){
 													calibration_test_result = PASS_SELF_TEST;
+													self_test_passed = true;
 													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Calibration Test passed.");
 													self_test_stream << "None";
 												} else{
@@ -677,7 +793,7 @@ int main() //int argc, char** argv
 							fsm_test_result = NULL_SELF_TEST;
 							calibration_test_result = NULL_SELF_TEST;
 						}
-
+						if(!self_test_passed){self_test_failed = true;}
 						//send self test results
 						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
 						break;
@@ -716,10 +832,10 @@ int main() //int argc, char** argv
 					OPERATIONAL = false;
 					break; 
 				} else if(command == CMD_UPDATE_TX_OFFSET_X){
-					tx_offset_x += atoi(command_data); 
+					tx_offset_x = atoi(command_data); 
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", tx_offset_x);
 				} else if(command == CMD_UPDATE_TX_OFFSET_Y){
-					tx_offset_y += atoi(command_data); 
+					tx_offset_y = atoi(command_data); 
 					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", tx_offset_y);
 				}
 			}
@@ -745,12 +861,12 @@ int main() //int argc, char** argv
 					if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
 					if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
 					if(haveBeaconKnowledge){
-						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x, ",", beacon.y, ", exp = ", beaconExposure, ", valueMax = ", beacon.valueMax, ", valueSum = ", beacon.valueSum, ", pixelCount = ", beacon.pixelCount, "]");
+						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
 					} else{
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where beacon is.");
 					}
 					if(haveCalibKnowledge){
-						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
+						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Calib is at [", calib.x - CAMERA_WIDTH/2, ",", calib.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", calibExposure, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
 					} else{
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where calib is.");
 					}
@@ -800,7 +916,7 @@ int main() //int argc, char** argv
 				case ACQUISITION:
 					log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - Beacon Acquisition Beginning. Switching off Cal Laser.");
 					if(laserOff(fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){ //turn calibration laser off for acquistion
-						if(track.runAcquisition(beacon, beaconWindow)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
+						if(track.runAcquisition(beacon, beaconWindow, maxBcnExposure)) // && (beacon.pixelCount > MIN_PIXELS_PER_GROUP))
 						{
 							// Acquisition passed!
 							haveBeaconKnowledge = true;
@@ -833,9 +949,11 @@ int main() //int argc, char** argv
 						else
 						{
 							if(track.received_end_pat_cmd){
+								logImage(std::string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port); //save image telemetry
 								break;
 							}
 							else if(track.received_end_process_cmd){
+								logImage(std::string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port); //save image telemetry
 								OPERATIONAL = false;
 								break; 
 							}
@@ -849,7 +967,7 @@ int main() //int argc, char** argv
 								camera.config->binningMode.write(cbmBinningHV);
 								camera.config->expose_us.write(TRACK_GUESS_EXPOSURE);
 								camera.config->gain_dB.write(0);
-								logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); 
+								logImage(string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port, true); 
 								phase = STATIC_POINT;
 							} else{
 								phase = ACQUISITION;
@@ -927,7 +1045,7 @@ int main() //int argc, char** argv
 												beacon.valueSum = spot.valueSum;
 												beacon.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, beaconWindow);
-												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
+												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												// If sending beacon angle errors to the bus adcs
 												if(sendBusFeedback){
 													check_tx_adcs = steady_clock::now(); // Record current time
@@ -1205,7 +1323,7 @@ int main() //int argc, char** argv
 												beacon.valueSum = spot.valueSum;
 												beacon.pixelCount = spot.pixelCount;
 												track.updateTrackingWindow(frame, spot, beaconWindow);
-												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure);  //auto-tune exposure
+												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												if(!bcnAlignment){
 													// Control pointing in open-loop
 													calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;

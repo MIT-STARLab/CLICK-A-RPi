@@ -51,7 +51,7 @@ def fline(fpgabus):
         reply = reply[1]
         return reply
     else:
-        return ''
+        return '0 '*len(mmap.EDFA_PARSED_BLOCK)
         
 def parse(regs,flist):
     if   flist[0] == 'EL': regs[mmap.EDFA_EN_PIN] = 0
@@ -70,12 +70,12 @@ def parse(regs,flist):
     try:    regs[mmap.EDFA_MYSTERY_TEMP] = float(flist[3])
     except: regs[mmap.EDFA_MYSTERY_TEMP] = -1000.0
     
-    if flist[3] == 'IPA': regs[ mmap.EDFA_POWER_IN] = -100.0
+    if flist[4] == 'IPA': regs[ mmap.EDFA_POWER_IN] = -100.0
     else:
         try:              regs[ mmap.EDFA_POWER_IN] = float(flist[4])
         except:           regs[ mmap.EDFA_POWER_IN] = -1000.0
         
-    if flist[5] == 'IPA': regs[mmap.EDFA_POWER_OUT] = -100.0
+    if flist[5] == 'OPA': regs[mmap.EDFA_POWER_OUT] = -100.0
     else:
         try:              regs[mmap.EDFA_POWER_OUT] = float(flist[5])
         except:           regs[mmap.EDFA_POWER_OUT] = -1000.0
@@ -86,8 +86,10 @@ def parse(regs,flist):
     try:    regs[mmap.EDFA_PRE_POWER] = int(flist[7])
     except: regs[mmap.EDFA_PRE_POWER] = 0xFFFFFFFF
     
-    try:    regs[mmap.EDFA_PUMP_CURRENT] = int(flist[8])
-    except: regs[mmap.EDFA_PUMP_CURRENT] = 0xFFFFFFFF
+    if flist[8] == 'LOW': regs[mmap.EDFA_PUMP_CURRENT] = 0
+    else:
+        try:    regs[mmap.EDFA_PUMP_CURRENT] = int(flist[8])
+        except: regs[mmap.EDFA_PUMP_CURRENT] = 0xFFFFFFFF
     
     if flist[9] == 'CTA': regs[mmap.EDFA_CASE_TEMP] = 60.0
     else:
