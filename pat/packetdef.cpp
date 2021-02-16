@@ -342,15 +342,15 @@ bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::polli
 			memcpy(&packet_struct, packet, sizeof(packet));		
 			error_flag = (packet_struct.combined_flag & 0x02) >> 1;
 			//make sure message is for PAT process:
-			std::cout << "In packetdef.cpp - get_temperature: Response Attempt = " << i << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: return_address (Rx) = " << packet_struct.return_address << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: request_number (Tx) = " << unsigned(request_number) << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: request_number (Rx) = " << unsigned(packet_struct.request_number) << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: start_address (Tx) = " << channel << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: start_address (Rx) = " << packet_struct.start_address << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: error_flag = " << error_flag << std::endl;
-			std::cout << "In packetdef.cpp - get_temperature: temperature = " << packet_struct.temperature << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: Response Attempt = " << i << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: return_address (Tx) = " << (uint32_t) getpid() << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: return_address (Rx) = " << packet_struct.return_address << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: request_number (Tx) = " << unsigned(request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: request_number (Rx) = " << unsigned(packet_struct.request_number) << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: start_address (Tx) = " << channel << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: start_address (Rx) = " << packet_struct.start_address << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: error_flag = " << error_flag << std::endl;
+			// std::cout << "In packetdef.cpp - get_temperature: temperature = " << packet_struct.temperature << std::endl;
 			
 			if((((uint32_t) getpid()) == packet_struct.return_address) &&
 				(request_number == packet_struct.request_number) && 
@@ -359,6 +359,6 @@ bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::polli
 			} 
 		}
 	}
-	std::cout << "In packetdef.cpp - get_temperature: Get FPGA Map Timeout!" << std::endl; 
+	// std::cout << "In packetdef.cpp - get_temperature: Get FPGA Map Timeout!" << std::endl; 
 	return false; //timeout
 }

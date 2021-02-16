@@ -102,53 +102,53 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 6
     transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
     file_name = file_name_payload[0:file_name_len]
-    try:
-        # TODO: Error handling for file not found (send error packet)
-        hash_func = hashlib.md5()
-        with open(file_name, "rb") as source_file:
-            buf = source_file.read(1024) # Hash block size is 1024, change if necessary
-            while (len(buf) > 0):
-                hash_func.update(buf)
-                buf = source_file.read(1024)
-        file_hash = hash_func.digest()
+    #try:
+    # TODO: Error handling for file not found (send error packet)
+    hash_func = hashlib.md5()
+    with open(file_name, "rb") as source_file:
+        buf = source_file.read(1024) # Hash block size is 1024, change if necessary
+        while (len(buf) > 0):
+            hash_func.update(buf)
+            buf = source_file.read(1024)
+    file_hash = hash_func.digest()
 
-        hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
-        # hash_file_name = 'test_file_staging/'+str(transfer_id)+'/'+'md5.hash'
+    hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
+    # hash_file_name = 'test_file_staging/'+str(transfer_id)+'/'+'md5.hash'
 
-        with safe_open_w(hash_file_name) as hash_file:
-            hash_file.write(file_hash)
+    with safe_open_w(hash_file_name) as hash_file:
+        hash_file.write(file_hash)
 
-        # TODO: Better to handle with only looping once...
-        with open(file_name, 'rb') as source_file:
-            file_len = os.stat(file_name).st_size
-            seq_len = int(math.ceil(float(file_len)/chunk_size))
-            seq_num = 1
+    # TODO: Better to handle with only looping once...
+    with open(file_name, 'rb') as source_file:
+        file_len = os.stat(file_name).st_size
+        seq_len = int(math.ceil(float(file_len)/chunk_size))
+        seq_num = 1
 
-            while (seq_num*chunk_size) < file_len:
-                chunk_data = source_file.read(chunk_size)
-                chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-                # chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-                with safe_open_w(chunk_file_name) as chunk_file:
-                    chunk_file.write(chunk_data)
-                seq_num += 1
+        while (seq_num*chunk_size) < file_len:
+            chunk_data = source_file.read(chunk_size)
+            chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+            # chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+            with safe_open_w(chunk_file_name) as chunk_file:
+                chunk_file.write(chunk_data)
+            seq_num += 1
 
-            if (((seq_num - 1) * chunk_size) < file_len):
-                chunk_data_len = file_len - ((seq_num - 1) * chunk_size)
-                chunk_data = source_file.read(chunk_data_len)
-                chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-                # chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-                with safe_open_w(chunk_file_name) as chunk_file:
-                    chunk_file.write(chunk_data)
+        if (((seq_num - 1) * chunk_size) < file_len):
+            chunk_data_len = file_len - ((seq_num - 1) * chunk_size)
+            chunk_data = source_file.read(chunk_data_len)
+            chunk_file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+            # chunk_file_name = 'test_file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+            with safe_open_w(chunk_file_name) as chunk_file:
+                chunk_file.write(chunk_data)
 
-        # Send telemetry
-        txpacket = TxPacket()
-        raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!H', seq_num))
-        socket_tx_packets.send(raw_packet)
+    # Send telemetry
+    txpacket = TxPacket()
+    raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!H', seq_num))
+    socket_tx_packets.send(raw_packet)
 
-    except:
-        #TODO error handling telemetry
-        print('Unexpected error:', sys.exc_info()[0])
-        print('In filehandling - disassemble_file - Error - File Not Found: ', file_name)
+    # except:
+    #     #TODO error handling telemetry
+    #     print('Unexpected error:', sys.exc_info()[0])
+    #     print('In filehandling - disassemble_file - Error - File Not Found: ', file_name)
 
 
 def request_file(ipc_rxcompacket, socket_tx_packets):
