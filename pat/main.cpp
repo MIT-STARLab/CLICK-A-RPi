@@ -222,7 +222,14 @@ int main() //int argc, char** argv
 	// Initialize execution variables
 	Phase phase = CALIBRATION;
 	Group beacon, calib;
-	AOI beaconWindow, calibWindow;
+	AOI beaconWindow, calibWindow, getImageWindow;
+	//set default get image window
+	getImageWindow.w = CALIB_BIG_WINDOW;
+	getImageWindow.h = CALIB_BIG_WINDOW;
+	getImageWindow.x = CAMERA_WIDTH/2 - CALIB_BIG_WINDOW/2;
+	getImageWindow.y = CAMERA_HEIGHT/2 - CALIB_BIG_WINDOW/2;
+	int cmd_get_image_w = getImageWindow.w, cmd_get_image_h = getImageWindow.h;
+	int cmd_get_image_center_x_rel = 0, cmd_get_image_center_y_rel = 0;
 	int beaconExposure = 0, spotIndex = 0, calibExposure = 0;
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
@@ -483,7 +490,47 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in unknown configuration. Standing by...");
 						}
-						break;		
+						break;	
+
+					case CMD_SET_GET_IMAGE_CENTER_X:
+						cmd_get_image_center_x_rel = atoi(command_data); 
+						if(abs(cmd_get_image_center_x_rel) <= CAMERA_WIDTH/2 - getImageWindow.w/2){
+							getImageWindow.x = CAMERA_WIDTH/2 + cmd_get_image_center_x_rel - getImageWindow.w/2;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_X - Updating Get Image Window Center X to ", cmd_get_image_center_x_rel, " rel-to-ctr.");
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_X - Error, command out of bounds: ", cmd_get_image_center_x_rel);
+						}
+						break;
+
+					case CMD_SET_GET_IMAGE_CENTER_Y:
+						cmd_get_image_center_y_rel = atoi(command_data); 
+						if(abs(cmd_get_image_center_y_rel) <= CAMERA_HEIGHT/2 - getImageWindow.h/2){
+							getImageWindow.y = CAMERA_HEIGHT/2 + cmd_get_image_center_y_rel - getImageWindow.h/2;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_Y - Updating Get Image Window Center Y to ", cmd_get_image_center_y_rel, " rel-to-ctr.");
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_Y - Error, command out of bounds: ", cmd_get_image_center_y_rel);
+						}
+						break;
+
+					case CMD_SET_GET_IMAGE_WINDOW_WIDTH:
+						cmd_get_image_w = atoi(command_data); 
+						if(cmd_get_image_w <= CAMERA_WIDTH){
+							getImageWindow.w = cmd_get_image_w;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_WIDTH - Updating Get Image Window Width to ", getImageWindow.w);
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_WIDTH - Error, command out of bounds: ", getImageWindow.w);
+						}
+						break;	
+
+					case CMD_SET_GET_IMAGE_WINDOW_HEIGHT:
+						cmd_get_image_h = atoi(command_data); 
+						if(cmd_get_image_h <= CAMERA_HEIGHT){
+							getImageWindow.h = cmd_get_image_h;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_HEIGHT - Updating Get Image Window Height to ", getImageWindow.h);
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_HEIGHT - Error, command out of bounds: ", getImageWindow.h);
+						}
+						break;	
 						
 					case CMD_GET_IMAGE:
 						//set to commanded exposure
@@ -493,8 +540,8 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
 						camera.config->expose_us.write(command_exposure);
 
-						//set to sufficiently large window size (but not too large)
-						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+						//set window size
+						camera.setWindow(getImageWindow);
 
 						//save image
 						logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 

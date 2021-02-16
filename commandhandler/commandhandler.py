@@ -400,19 +400,19 @@ while True:
                 ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
-            exp_cmd = exp_cmd_tuple[0]
-            if(exp_cmd < CAMERA_MIN_EXP):
-                    log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
-                    exp_cmd = CAMERA_MIN_EXP
-            elif(exp_cmd > CAMERA_MAX_EXP):
-                    log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = CAMERA_MAX_EXP
+            window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload) #TBR
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
-                log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
-                ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ACK)
-                #manage image telemetry file...
+                if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT, str(window_height))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_X, str(window_ctr_rel_x))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_Y, str(window_ctr_rel_y))
+                    send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
+                    log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
+                    ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ACK)
+                else:
+                    log_to_hk("ERROR CMD PL_SINGLE_CAPTURE: Parameters out of bounds. [" + str(window_ctr_rel_x) + ", " + str(window_ctr_rel_y) + ", " + str(window_width) + ", " + str(window_height) + ", " + str(exp_cmd) + "]")
+                    ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
             else:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
@@ -478,7 +478,6 @@ while True:
                     ack_to_hk(CMD_PL_UPDATE_ACQUISITION_PARAMS, CMD_ACK)
                 else:
                     log_to_hk('ERROR CMD PL_UPDATE_ACQUISITION_PARAMS: Parameters out of bounds')
-
             else:
                 log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
