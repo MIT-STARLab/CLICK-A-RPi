@@ -36,8 +36,8 @@
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
-#define BCN_X_REL_GUESS 0 //estimate of beacon x position on acquisition rel to center
-#define BCN_Y_REL_GUESS 0 //estimate of beacon y position on acquisition rel to center
+#define BCN_X_REL_GUESS -161 //estimate of beacon x position on acquisition rel to center
+#define BCN_Y_REL_GUESS -134 //estimate of beacon y position on acquisition rel to center
 #define TX_OFFSET_SLOPE_X 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
 #define TX_OFFSET_BIAS_X 0 //TBD, pxls - linear model of tx offset as a function of temperature
 #define TX_OFFSET_SLOPE_Y 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
@@ -246,7 +246,6 @@ int main() //int argc, char** argv
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
-	bool initBeaconWindow = false;
 	int beaconWindowSize = CAMERA_HEIGHT;
 	beaconWindow.w = beaconWindowSize;
 	beaconWindow.h = beaconWindow.w;
