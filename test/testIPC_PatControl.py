@@ -194,10 +194,10 @@ while True:
                     elif(user_cmd in [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK]):
                             if(int(input('Enter 1 to skip calibration (0 otherwise): ')) == 1):
                                     print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-                                    ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_TEST_FLAG)) 
+                                    ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_SKIP_CALIB_FLAG)) 
                             else:
                                     print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT)))
-                                    ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_FLIGHT_FLAG)) 
+                                    ipc_patControlPacket = send_pat_command(socket_PAT_control, return_address, user_cmd, str(PAT_DO_CALIB_FLAG)) 
 
                     elif(user_cmd == PAT_CMD_GET_IMAGE):
                                 window_ctr_rel_x = int(input("Please enter window center X relative to center: "))
