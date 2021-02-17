@@ -28,13 +28,15 @@ class txPacket():
         if(self.ascii): binary_data = ascii2bits(self.data)
         else: binary_data = self.data
         symbols = []
+        symbols += [int(0b1 << 7 | int("0b" + "1"*(int(math.log(self.ppm_order)/math.log(2))),2))]
+
         if(self.ppm_order == 4 | self.ppm_order == 8 | self.ppm_order == 64): setter = 6
         elif(self.ppm_order == 16):  setter = 4
         elif(self.ppm_order == 32):  setter = 5
         elif(self.ppm_order == 128): setter = 7
 
         symbols += [int('0b'+ binary_data[x:x+setter].zfill(8),2) for x in range(0,len(binary_data),setter)]
-        # symbols += [int(0b1 << 7 | int("0b" + "1"*(int(math.log(4)/math.log(2))),2))]
+        symbols += [int(0b1 << 7 | int("0b" + "1"*(int(math.log(self.ppm_order)/math.log(2))),2))]
 
         self.symbols = symbols
 

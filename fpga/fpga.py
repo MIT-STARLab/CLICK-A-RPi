@@ -142,8 +142,27 @@ def loop():
                     addresses = options.FPGA_TELEM_REGS
                     values_out = []
                     for addr in addresses:
-                        if addr not in mmap.EDFA_PARSED_BLOCK:
+                        if addr in mmap.TEMPERATURE_BLOCK:
+                            msb = fpgabus.read_reg(mmap.BYTE_1[addr])
+                            lsb = fpgabus.read_reg(mmap.BYTE_2[addr])
+                            temp = mmap.decode_temperature(msb,lsb)
+                            values_out.append(temp)
+
+                        elif addr in mmap.CURRENT_BLOCK:
+                            msb = fpgabus.read_reg(mmap.BYTE_3[addr])
+                            lsb = fpgabus.read_reg(mmap.BYTE_4[addr])
+                            temp = mmap.decode_current(msb,lsb)
+                            values_out.append(temp)
+
+                        elif addr in mmap.DAC_BLOCK:
+                            if req.rw_flag:
+                                target_chan = addr - mmap.DAC_BLOCK[0]
+                                dac.write_and_update(fpgabus,target_chan,value)
+                            values_out.append(value)
+
+                        elif addr not in mmap.EDFA_PARSED_BLOCK:
                             values_out.append(fpgabus.transfer([addr], [req.rw_flag], [0])[1][0])
+
                         else:
                             values_out.append(reg_buffer[addr])
                     # print(values_out)   

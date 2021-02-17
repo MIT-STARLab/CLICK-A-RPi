@@ -372,25 +372,25 @@ def test_heaters(fo):
     #Make sure heaters are off
     power.heaters_off()
     power.heater_1_off()
-    power.heater_2_off
-    time.sleep(.1)
+    power.heater_2_off()
+    time.sleep(.25)
     heater_off_curr = fpga.read_reg(mmap.HEATER_CURRENT)
     
     power.heaters_on()
-    time.sleep(.1)
+    time.sleep(.25)
     power.heater_1_on()
-    time.sleep(.1)
+    time.sleep(.25)
     heater_one_curr = fpga.read_reg(mmap.HEATER_CURRENT)
     power.heater_1_off()
     power.heater_2_on()
-    time.sleep(.1)
+    time.sleep(.25)
     heater_two_curr = fpga.read_reg(mmap.HEATER_CURRENT)
 
     power.heaters_off()
     power.heater_2_off()
 
     success = True
-    if(heater_off_curr > 10e-2):
+    if(heater_off_curr > 15e-2):
         success = False
         fo.write("Heater off current is larger than 10mA: " + str(heater_off_curr) + "\n")
     
@@ -416,7 +416,7 @@ Verify TEC driver linearity, readback matches commanded value and current does n
 def test_tec_driver(fo):
 
     print_test(fo, "TEC driver test")
-    power.edfa_off()
+    # power.edfa_off()
 
     if(fpga.read_reg(mmap.PO4) != 85):
         power.tec_on()
@@ -432,37 +432,48 @@ def test_tec_driver(fo):
         fpga.write_reg(mmap.LTSb, test_lsb[i])
         
         #Wait for TEC to settle
-        time.sleep(1.5)
-
-        for y in range(10):
-            avg_len = 10
-            on_curr = sum([fpga.read_reg(mmap.TEC_CURRENT) for x in range(avg_len)])/avg_len
-
-        if(on_curr > 250e-3):
-            success = False
-            fo.write("TEC on current is higher than 200mA: %s" % on_curr )
-            print("TEC on current is higher than 200mA: %s" % on_curr )
-
-        #check TEC linearity
-        tec_readback = []
+        tosa_temp = fpga.read_reg(mmap.TOSA_TEMP)
         val = test_msb[i]*256 + test_lsb[i]
         tec_readback = fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb)
-        error = .05
-        if (abs(val -tec_readback) > val*error):
-            success = False
-            fo.write("TEC Readback is more than 5" + '%'+" from TEC value: %s Readback: %s \n" %(val, tec_readback))
-            print("TEC Readback is more than 5"+'%'+"from TEC value: %s Readback: %s \n" %(val, tec_readback))
+        error = .03
+        start_time = time.time()
+        while((abs(val - tec_readback ) > val*error)):
+            tec_readback = fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb)
+            fo.write("MSB: " +str(test_msb[i]) + " LSB: " +str(test_lsb[i]) +" Total val: "+str(val)+" TEC_READBACK: "+ str(tec_readback) +
+             " Elapsed Time: " +str(time.time()-start_time) +" TOSA TEMP " +str(tosa_temp) +'\n')
+            print("MSB: " +str(test_msb[i]) + " LSB: " +str(test_lsb[i]) +" Total val: "+str(val)+" TEC_READBACK: "+ str(tec_readback) +
+             " Elapsed Time: " +str(time.time()-start_time) +" TOSA TEMP " +str(tosa_temp) +'\n')
+            time.sleep(.5) #Needs more time at colder temperatures
 
-    power.tec_off()
+
+
+        # for y in range(10):
+        #     avg_len = 10
+        #     on_curr = sum([fpga.read_reg(mmap.TEC_CURRENT) for x in range(avg_len)])/avg_len
+
+        # if(on_curr > 300e-3):
+        #     success = False
+        #     fo.write("TEC on current is higher than 300mA: %s" % on_curr )
+        #     print("TEC on current is higher than 300mA: %s" % on_curr )
+
+        # #check TEC linearity
+        # val = test_msb[i]*256 + test_lsb[i]
+        # tec_readback = fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb)
+        # error = .05
+        # if (abs(val -tec_readback ) > val*error):
+        #     success = False
+        #     fo.write("TEC Readback is more than 5" + '%'+" from TEC value: %s Readback: %s \n" %(val, tec_readback))
+        #     print("TEC Readback is more than 5"+'%'+"from TEC value: %s Readback: %s \n" %(val, tec_readback))
+
     fpga.write_reg(mmap.LTSa, 0)
     fpga.write_reg(mmap.LTSb, 0)
     
-    if success:
-        pass_test(fo)
-    else:
-        fail_test(fo)
+    # if success:
+    #     pass_test(fo)
+    # else:
+    #     fail_test(fo)
 
-    return success
+    # return success
 
 
 @error_to_file 
@@ -504,9 +515,9 @@ def test_bias_driver(fo):
             fo.write("LD off current is greater than %sA: %s" % (str(100e-2), str(off_curr)))
             break
 
-        if(avg_on_curr > 500e-3 or avg_on_curr < 100e-3):
+        if(avg_on_curr > 550e-3 or avg_on_curr < 100e-3):
             success = False
-            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
+            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A" % (str(550e-3), str(100e-3), str(round(avg_on_curr,3))))
             break
 
     power.bias_off()
@@ -774,16 +785,10 @@ def test_mod_FIFO(fo):
     return success
 
 
-def seed_align(default_settings):
-
+def seed_align(fo):
+    default_settings = [options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB]
     tec_msb, tec_lsb, ld_msb, ld_lsb = default_settings
     total_tec = tec_msb*256 + tec_lsb
-
-    power.edfa_on()
-    power.tec_on()
-    power.bias_on()
-
-    time.sleep(2)
 
     for i in range(1,5):
         fpga.write_reg(i, default_settings[i-1])
@@ -798,8 +803,7 @@ def seed_align(default_settings):
         tec_lsb = i%256
         fpga.write_reg(mmap.LTSa, tec_msb)
         fpga.write_reg(mmap.LTSb, tec_lsb)
-        time.sleep(.1)
-        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(5)])/5
+        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(1)])/1
         power_inputs.append(avg_input_power)
 
     new_tec = total_tec+power_inputs.index(max(power_inputs))-window
@@ -808,34 +812,43 @@ def seed_align(default_settings):
     fpga.write_reg(mmap.LTSa, tec_msb)
     fpga.write_reg(mmap.LTSb, tec_lsb)
 
-    # print(new_tec, power_inputs, power_inputs[power_inputs.index(max(power_inputs))], fpga.read_reg(mmap.TOSA_TEMP))
-
-    power.edfa_off()
-    power.tec_off()
-    power.bias_on()
-
+    fo.write("New Set point " + str(new_tec) +" Power inputs: " +str(power_inputs) + " Max input: " +str(power_inputs[power_inputs.index(max(power_inputs))])
+     +" TOSA Temp: "+ str(fpga.read_reg(mmap.TOSA_TEMP)) +'\n')
+    print("New Set point " + str(new_tec) +" Power inputs: " +str(power_inputs) + " Max input: " +str(power_inputs[power_inputs.index(max(power_inputs))])
+     +" TOSA Temp: "+ str(fpga.read_reg(mmap.TOSA_TEMP)) +'\n')
 
 
 if __name__ == '__main__':
-    
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
     with file_manager.ManagedFileOpen('/root/log/self_test_data/%s.gz' % t_str,'w') as (f, tags):
     
         tags['origin'] = 'command line'
+        while(fpga.read_reg(mmap.TOSA_TEMP) < 50):
 
-        reflash_fpga(f)
-        test_basic_fpga_if(f)
-        test_fpga_if_performance(f)
-        test_mod_FIFO(f)
-        check_temperature_init(f)
-        test_BIST(f)
-        test_EDFA_IF(f)
-        test_tec_driver(f)
-        test_bias_driver(f)
-        seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
-        test_scan_PPM(f)
-        check_CW_power(f)
-        test_heaters(f)
+            power.heaters_off()
+            time.sleep(1)
+            fo.write("Heater off Current: " +str(fpga.read(mmap.HEATER_CURRENT))+" TOSA TEMP: "+str(fpga.read_reg(mmap.TOSA_TEMP)))
+            power.heaters_on()
+            power.edfa_on()
+            power.tec_on()
+            power.bias_on()
+            time.sleep(5)
+            #reflash_fpga(f)
+            #test_basic_fpga_if(f)
+            #test_fpga_if_performance(f)
+            #test_mod_FIFO(f)
+            #check_temperature_init(f)
+            #test_BIST(f)
+            #test_EDFA_IF(f)
+            test_tec_driver(f)
+            #test_bias_driver(f)
+            seed_align(f)
+            #test_scan_PPM(f)
+            #check_CW_power(f)
+            #test_heaters(f)
+            power.edfa_off()
+            power.tec_off()
+            power.bias_off()
         
         
         

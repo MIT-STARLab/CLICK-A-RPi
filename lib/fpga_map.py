@@ -131,20 +131,21 @@ for reg in TEMPERATURE_BLOCK:
 def decode_temperature(msb, lsb):
     # 12 bit ADC
     val = msb*256 + lsb # complete value
-    Vadc = val*2.5/2**12 # volatge as a float
+    #Vadc = val*2.5/2**12 # volatge as a float
 
     # # Wheatstone bridge
     R = 920.0
     Vs = 3.3
     amp_gain = 8.5
     #Rrtd = (R*Vs - 2*R*Vadc) / (R*Vs + 2*R*Vadc) * R
-    Rrtd = (-Vs*R/((Vadc/amp_gain) -Vs/2)) - R
+    #Rrtd = (-Vs*R/((Vadc/amp_gain) -Vs/2)) - R
+    Rrtd = -4.22806*10**4/(val - 22978.6)
     # # RTD probe
     A =  3.81e-3
     B = -6.02e-7
     R0 = 1000.0
-    temp = (-A + math.sqrt(A**2 - 4*B*(1-Rrtd/R0))) / (2*B)
-
+    #temp = (-A + math.sqrt(A**2 - 4*B*(1-Rrtd/R0))) / (2*B)
+    temp = (-A + math.sqrt(1.451e-5 +2.408e-6*(1.92 - Rrtd))) / -1.2e-6
     return temp
 
 # ----------------- Current consumption -----------------
@@ -160,8 +161,10 @@ for reg in CURRENT_BLOCK:
 #Converts adc value to amps according to CLICK-A FPGA current sensor schematic
 def decode_current(msb, lsb):
     val = msb*256 + lsb # complete value
-    Vadc = val*3.3/2**12 # voltage as a float
-    current = Vadc/(101*.01) #amplifier output/gain/resistor = current
+    #Vadc = val*3.3/2**12 # voltage as a float
+    Vadc = val*8.05e-4
+    current = Vadc/1.01
+    #current = Vadc/(101*.01) #amplifier output/gain/resistor = current
 
     return current
 

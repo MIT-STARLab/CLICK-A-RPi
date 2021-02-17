@@ -673,9 +673,9 @@ while True:
             while(temps < 0):
                 temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
                 time.sleep(15)
-                print(temps)
-                if ((time.time() - begin.time()) > 900):
-                    print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
+                print([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])
+                if ((time.time() - begin_time) > 1800):
+                    print("Heater time reched 15 minutes and avg temps: %s" % str(sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6))
                 
 
             fpga.write_reg(mmap.PO3, 15)
@@ -706,12 +706,12 @@ while True:
 
                 #if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 end_time = time.time()
-                log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
+                log_to_hk("Pretransmit Time: %s" % str(end_time - start_time))
                 
                 #log transmit start time
                 start_time = time.time()
 
-                ppm_order = 16
+                ppm_order = 4
                 data = "Hi I'm Mr.Meeseeks!"
                 tx_pkt = tx_packet.txPacket(ppm_order, data)
                 tx_pkt.pack()
@@ -720,7 +720,7 @@ while True:
                 if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
                 tx_pkt.set_PPM(fpga)
 
-                transmit_time = 100 #seconds
+                transmit_time = 900 #seconds
 
                 #turn on laser
                 seed_setting = 1
@@ -735,7 +735,7 @@ while True:
                 time.sleep(0.1)
                 fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
                 time.sleep(0.1)
-                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
                 time.sleep(2)
 
                 #set points are dependent on temperature
@@ -763,7 +763,7 @@ while True:
                 while(abs(end_time - start_time) < transmit_time):
 
                     i = abs(end_time - start_time)//150
-                    ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
+                    ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[int(i)])/math.log(2)))))
                     fpga.write_reg(mmap.DATA, ppm_order) 
                     print((end_time - start_time), i, fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
                     #Stall Fifo
