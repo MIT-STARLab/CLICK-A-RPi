@@ -250,7 +250,7 @@ int main() //int argc, char** argv
 	beaconWindow.w = beaconWindowSize;
 	beaconWindow.h = beaconWindow.w;
 	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
-	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
+	beacon.x = CAMERA_WIDTH/2 + beacon_x_rel; beacon.y = CAMERA_HEIGHT/2 + beacon_y_rel;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
