@@ -15,7 +15,7 @@
 #define TRACK_MAX_GAIN 0 //maximum gain limit
 
 #define TRACK_ACQUISITION_BRIGHTNESS 200		// Minimum spot brightness to work with for acquisition
-#define TRACK_ACQUISITION_WINDOW 30			// Initial camera window size after acquisition is declared
+#define TRACK_ACQUISITION_WINDOW 200			// Initial camera window size after acquisition is declared
 #define TRACK_GOOD_PEAKTOMAX_DISTANCE 100		// Minimum distance between histogram peak's brightness and maximum brightness
 												// I.e. difference between most pixels (background) and active (brightest) pixels
 
