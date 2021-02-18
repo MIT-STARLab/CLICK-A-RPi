@@ -29,7 +29,7 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 600.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
-#define PERIOD_DITHER_TX_OFFSETS 30.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
+#define PERIOD_DITHER_TX_OFFSETS 1.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
 #define TX_OFFSET_Y_DEFAULT 194 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
@@ -129,7 +129,7 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 
 void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
 	count = count%DITHER_COUNT_PERIOD;
-	float t = count/DITHER_COUNT_PERIOD;
+	float t = (float) count / ((float) DITHER_COUNT_PERIOD);
 	offsets.x = t * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * t) - offset_x_init;
 	offsets.y = t * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * t) - offset_y_init;
 	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
