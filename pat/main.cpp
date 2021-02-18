@@ -127,7 +127,7 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 	}
 }
 
-void ditherOffsets(std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
+void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
 	offsets.x = count * DITHER_FREQUENCY * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * DITHER_FREQUENCY * count) - offset_x_init;
 	offsets.y = count * DITHER_FREQUENCY * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * DITHER_FREQUENCY * count) - offset_y_init;
 	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
@@ -962,7 +962,7 @@ int main() //int argc, char** argv
 				elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
 				if(elapsed_time_dither > period_dither){
 					log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
-					ditherOffsets(textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
+					ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
 					dither_count++;
 					time_prev_dither = steady_clock::now();
 				}
