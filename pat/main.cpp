@@ -19,6 +19,7 @@
 #define HEATER_CH 0x23 //heater fpga channel (Notated_memory_map on Google Drive)
 #define HEATER_ON 0x55 //heater ON code (Notated_memory_map on Google Drive)
 #define HEATER_OFF 0x0F //heater OFF code (Notated_memory_map on Google Drive)
+#define TEMPERATURE_CH 201 //EDFA Temperature (TBR, maybe pick one of the other ones, test and see)
 #define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
@@ -30,13 +31,17 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X -23 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
-#define TX_OFFSET_Y 125 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
-#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, for self tests
+#define TX_OFFSET_X -13 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y 197 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
+#define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
-#define BCN_X_REL_GUESS -13 //estimate of beacon x position on acquisition rel to center
-#define BCN_Y_REL_GUESS 14 //estimate of beacon y position on acquisition rel to center
+#define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
+#define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
+#define TX_OFFSET_SLOPE_X 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X 0 //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 0 //TBD, pxls - linear model of tx offset as a function of temperature
 
 using namespace std;
 using namespace std::chrono;
@@ -97,9 +102,29 @@ struct error_angles{
 };
 error_angles centroid2angles(double centroid_x, double centroid_y){
 	error_angles angles = error_angles();
-	angles.angle_x_radians = (float) CENTROID2ANGLE_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
+	angles.angle_x_radians = (float) TX_OFFSET_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
 	angles.angle_y_radians = (float) CENTROID2ANGLE_SLOPE_Y*centroid_y + CENTROID2ANGLE_BIAS_Y;
 	return angles;
+}
+
+//Get payload temperature and compute Tx offsets
+struct tx_offsets{
+	int x;
+	int y;
+};
+ tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
+	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
+	tx_offsets offsets = tx_offsets();
+	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
+		offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
+		offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", tx_offset_x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
+	} else{
+		offsets.x = (int) TX_OFFSET_X;
+		offsets.y = (int) TX_OFFSET_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: get_temperature failed! Using default offsets: ", TX_OFFSET_X, TX_OFFSET_Y);
+	}
+	return offsets;
 }
 
 atomic<bool> stop(false); //not for flight
@@ -197,7 +222,14 @@ int main() //int argc, char** argv
 	// Initialize execution variables
 	Phase phase = CALIBRATION;
 	Group beacon, calib;
-	AOI beaconWindow, calibWindow;
+	AOI beaconWindow, calibWindow, getImageWindow;
+	//set default get image window
+	getImageWindow.w = CALIB_BIG_WINDOW;
+	getImageWindow.h = CALIB_BIG_WINDOW;
+	getImageWindow.x = CAMERA_WIDTH/2 - CALIB_BIG_WINDOW/2;
+	getImageWindow.y = CAMERA_HEIGHT/2 - CALIB_BIG_WINDOW/2;
+	int cmd_get_image_w = getImageWindow.w, cmd_get_image_h = getImageWindow.h;
+	int cmd_get_image_center_x_rel = 0, cmd_get_image_center_y_rel = 0;
 	int beaconExposure = 0, spotIndex = 0, calibExposure = 0;
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
@@ -214,15 +246,15 @@ int main() //int argc, char** argv
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
-	bool initBeaconWindow = false;
-	int beaconWindowSize = CAMERA_HEIGHT;
+	int beaconWindowSize = TRACK_ACQUISITION_WINDOW;
 	beaconWindow.w = beaconWindowSize;
 	beaconWindow.h = beaconWindow.w;
 	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
-	beacon.x = CAMERA_WIDTH/2; beacon.y = CAMERA_HEIGHT/2;
+	beacon.x = CAMERA_WIDTH/2 + beacon_x_rel; beacon.y = CAMERA_HEIGHT/2 + beacon_y_rel;
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
+	tx_offsets offsets = calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -457,7 +489,47 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in unknown configuration. Standing by...");
 						}
-						break;		
+						break;	
+
+					case CMD_SET_GET_IMAGE_CENTER_X:
+						cmd_get_image_center_x_rel = atoi(command_data); 
+						if(abs(cmd_get_image_center_x_rel) <= CAMERA_WIDTH/2 - getImageWindow.w/2){
+							getImageWindow.x = CAMERA_WIDTH/2 + cmd_get_image_center_x_rel - getImageWindow.w/2;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_X - Updating Get Image Window Center X to ", cmd_get_image_center_x_rel, " rel-to-ctr.");
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_X - Error, command out of bounds: ", cmd_get_image_center_x_rel);
+						}
+						break;
+
+					case CMD_SET_GET_IMAGE_CENTER_Y:
+						cmd_get_image_center_y_rel = atoi(command_data); 
+						if(abs(cmd_get_image_center_y_rel) <= CAMERA_HEIGHT/2 - getImageWindow.h/2){
+							getImageWindow.y = CAMERA_HEIGHT/2 + cmd_get_image_center_y_rel - getImageWindow.h/2;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_Y - Updating Get Image Window Center Y to ", cmd_get_image_center_y_rel, " rel-to-ctr.");
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_CENTER_Y - Error, command out of bounds: ", cmd_get_image_center_y_rel);
+						}
+						break;
+
+					case CMD_SET_GET_IMAGE_WINDOW_WIDTH:
+						cmd_get_image_w = atoi(command_data); 
+						if(cmd_get_image_w <= CAMERA_WIDTH){
+							getImageWindow.w = cmd_get_image_w;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_WIDTH - Updating Get Image Window Width to ", getImageWindow.w);
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_WIDTH - Error, command out of bounds: ", getImageWindow.w);
+						}
+						break;	
+
+					case CMD_SET_GET_IMAGE_WINDOW_HEIGHT:
+						cmd_get_image_h = atoi(command_data); 
+						if(cmd_get_image_h <= CAMERA_HEIGHT){
+							getImageWindow.h = cmd_get_image_h;
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_HEIGHT - Updating Get Image Window Height to ", getImageWindow.h);
+						} else{
+							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SET_GET_IMAGE_WINDOW_HEIGHT - Error, command out of bounds: ", getImageWindow.h);
+						}
+						break;	
 						
 					case CMD_GET_IMAGE:
 						//set to commanded exposure
@@ -467,8 +539,8 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_GET_IMAGE command with exposure = ", command_exposure);
 						camera.config->expose_us.write(command_exposure);
 
-						//set to sufficiently large window size (but not too large)
-						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+						//set window size
+						camera.setWindow(getImageWindow);
 
 						//save image
 						logImage(string("CMD_GET_IMAGE"), camera, textFileOut, pat_health_port); 
@@ -932,9 +1004,12 @@ int main() //int argc, char** argv
 								break; 
 							}
 							haveBeaconKnowledge = false; 
-							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - track.runAcquisition failed!");
 							num_acquisition_attempts++;
 							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
+							if(beaconWindow.w < CAMERA_HEIGHT){
+								beaconWindow.w += 100;
+								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Increasing window size to: ", beaconWindow.w, ", centered on ", beacon.x - CAMERA_WIDTH/2, beacon.y - CAMERA_HEIGHT/2, ", rel-to-ctr");
+							}
 							if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
 								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
 								camera.setFullWindow();

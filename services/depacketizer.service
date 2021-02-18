@@ -1,6 +1,11 @@
 [Unit]
 Description=Depacketizer
+After=spi-driver-load.service
+Before=default.target
 
 [Service]
 Type=simple
 ExecStart=/bin/python -u /root/bus/depacketizer.py
+
+[Install]
+WantedBy=default.target

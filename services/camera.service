@@ -6,3 +6,6 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=/bin/bash -c "echo 0 >> /sys/class/gpio/gpio34/value"
 ExecStop=/bin/bash -c "echo 1 >> /sys/class/gpio/gpio34/value"
+
+[Install]
+WantedBy=default.target

@@ -14,6 +14,7 @@ static void spi_data_init(spi_data_t *data)
     data->sync = 0;
     data->read_len = 0;
     data->payload_len = 0;
+    data->apid = 0;
     data->busy = true;
     data->read_ptr = NULL;
     data->header = NULL;
@@ -88,6 +89,7 @@ void spi_xfer_complete(void *arg)
         /* After sync, read CCSDS header */
         else if (data->payload_len == 0)
         {
+            data->apid = (data->header->apid_msb << 8) | data->header->apid_lsb;
             data->payload_len = ((data->header->len_msb << 8) | data->header->len_lsb) + 1;
             if (data->payload_len > 0 && data->payload_len <= (PACKET_TM_MAX_LEN - PACKET_OVERHEAD))
             {
@@ -120,18 +122,23 @@ void spi_xfer_complete(void *arg)
     /* Check if successful */
     if (data->payload_len > 0)
     {
-        /* Try adding packet to fifo */
-        if(kfifo_avail(data->rx_fifo) >= (PACKET_OVERHEAD + data->payload_len))
+        /* Ignore if it's a no-op packet */
+        if (data->apid != NOOP_APID)
         {
-            copied = kfifo_in(data->rx_fifo, ((uint8_t*) data->header) - PACKET_SYNC_LEN,
-                PACKET_OVERHEAD + data->payload_len);
-            if (copied == (PACKET_OVERHEAD + data->payload_len))
+            /* Try adding packet to fifo */
+            if (kfifo_avail(data->rx_fifo) >= (PACKET_OVERHEAD + data->payload_len))
             {
-                dev_notice_once(&data->spi->dev, "packets are being received\n");
+                copied = kfifo_in(data->rx_fifo, ((uint8_t*) data->header) - PACKET_SYNC_LEN,
+                    PACKET_OVERHEAD + data->payload_len);
+                if (copied == (PACKET_OVERHEAD + data->payload_len))
+                {
+                    dev_notice_once(&data->spi->dev, "packets are being received\n");
+                }
+                else dev_warn_once(&data->spi->dev, "rx fifo copy error\n");
             }
-            else dev_warn_once(&data->spi->dev, "rx fifo copy error\n");
+            else dev_warn_once(&data->spi->dev, "rx fifo is full\n");
         }
-        else dev_warn_once(&data->spi->dev, "rx fifo is full\n");
+        else dev_notice_once(&data->spi->dev, "no-ops are being received\n");
     }
     else dev_warn_ratelimited(&data->spi->dev, "invalid packet received\n");
 

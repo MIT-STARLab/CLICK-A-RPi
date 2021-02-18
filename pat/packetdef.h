@@ -43,6 +43,10 @@
 #define CMD_SET_BEACON_Y 0x13
 #define CMD_SET_BEACON_WINDOW_SIZE 0x14
 #define CMD_SET_BEACON_MAX_EXP 0x15 
+#define CMD_SET_GET_IMAGE_CENTER_X 0x16
+#define CMD_SET_GET_IMAGE_CENTER_Y 0x17
+#define CMD_SET_GET_IMAGE_WINDOW_WIDTH 0x18
+#define CMD_SET_GET_IMAGE_WINDOW_HEIGHT 0x19
 //status flags:
 #define STATUS_CAMERA_INIT 0x00
 #define STATUS_STANDBY 0x01
@@ -125,6 +129,15 @@ struct fpga_answer_struct{
 	uint8_t data_to_read;
 };
 
+struct fpga_answer_temperature_struct{
+	uint32_t return_address;
+	uint8_t request_number;
+	bool combined_flag;
+	uint16_t start_address;
+	uint32_t data_size;
+	float temperature;
+};
+
 struct pat_self_test_packet_struct{
 	uint16_t apid;
 	uint16_t data_size;
@@ -157,6 +170,8 @@ bool check_fpga_map_value(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::
 bool check_fpga_comms(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port);
 
 void send_packet_self_test(zmq::socket_t& tx_packets_port, uint8_t camera_test_result, uint8_t fpga_test_result, uint8_t laser_test_result, uint8_t fsm_test_result, uint8_t calibration_test_result, char* error);
+
+bool get_temperature(zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, zmq::socket_t& fpga_map_request_port, fpga_answer_temperature_struct& packet_struct, uint16_t channel, uint8_t request_number);
 
 // Optional: receive_packet_pat_rx (commands from bus)
 
