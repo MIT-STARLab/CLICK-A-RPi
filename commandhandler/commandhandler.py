@@ -121,8 +121,8 @@ def initialize_cal_laser():
         power.heaters_on()
     #Make sure cal laser diode is on
     if(fpga.read_reg(mmap.CAL) != 85):
-        power.calib_diode_on()   
-    log_to_hk('CALIBRATION LASER ON')    
+        power.calib_diode_on()
+    log_to_hk('CALIBRATION LASER ON')
     #Set DAC
     fpga.write_reg(mmap.DAC_SETUP,1)
     fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
@@ -270,7 +270,9 @@ while True:
                 #print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
                 #print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
+                print(tai_secs)
                 set_time = time.gmtime(tai_secs)
+                print(set_time)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
                                                                                     set_time.tm_mon,
                                                                                     set_time.tm_mday,
@@ -286,7 +288,7 @@ while True:
             ack_to_hk(CMD_PL_REBOOT, CMD_ACK)
             time.sleep(1)
             os.system("shutdown -r now") #reboot the RPi
-        
+
         elif(CMD_ID == CMD_PL_SHUTDOWN):
             log_to_hk('ACK CMD PL_SHUTDOWN')
             ack_to_hk(CMD_PL_SHUTDOWN, CMD_ACK)
@@ -465,7 +467,7 @@ while True:
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ERR)
-        
+
         elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
             bcn_rel_x, bcn_rel_y, bcn_window_size, bcn_max_exp = struct.unpack('!hhHI', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
@@ -675,14 +677,14 @@ while True:
                 print(temps)
                 if ((time.time() - begin.time()) > 900):
                     print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
-                
+
 
             fpga.write_reg(mmap.PO3, 15)
             fpga.write_reg(mmap.HE1, 15)
             fpga.write_reg(mmap.HE1, 15)
 
             os.system('python ~/test/general_functionality_test.py') #starts self test script
-            
+
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
@@ -706,7 +708,7 @@ while True:
                 #if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 end_time = time.time()
                 log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
-                
+
                 #log transmit start time
                 start_time = time.time()
 
@@ -745,10 +747,10 @@ while True:
                 ppm4_input = PPM4_THRESHOLDS
                 ppm = ppm_codes[0]
 
-                if(seed_setting): 
-                    seed = payload_seed 
+                if(seed_setting):
+                    seed = payload_seed
                     ppm_input = [ppm4_input[0], ppm4_input[1]]
-                else: 
+                else:
                     seed = flat_sat_seed
                     ppm_input = [ppm4_input[2], ppm4_input[3]]
 
@@ -756,14 +758,14 @@ while True:
                     fpga.write_reg(x, seed[x-1])
 
                 ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
-                fpga.write_reg(mmap.DATA, ppm_order) 
+                fpga.write_reg(mmap.DATA, ppm_order)
                 log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
 
                 while(abs(end_time - start_time) < transmit_time):
 
                     i = abs(end_time - start_time)//150
                     ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
-                    fpga.write_reg(mmap.DATA, ppm_order) 
+                    fpga.write_reg(mmap.DATA, ppm_order)
                     print((end_time - start_time), i, fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
                     #Stall Fifo
                     # fpga.write_reg(mmap.CTL, control | 0x8)
@@ -775,8 +777,8 @@ while True:
                     # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
                     #     # success = False
                     #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                    #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
-                    #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
+                    #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+                    #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
 
                     # if(fifo_len < 100): time.sleep(.005)
 
@@ -794,11 +796,11 @@ while True:
                 log_to_hk('Commanding PAT to return to STANDBY mode.')
                 send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
-                
+
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                 log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
-            else: 
+            else:
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
             #else:
