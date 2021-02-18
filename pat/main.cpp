@@ -29,7 +29,7 @@
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 600.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
-#define PERIOD_DITHER_TX_OFFSETS 1.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
+#define PERIOD_DITHER_TX_OFFSETS 10.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
 #define TX_OFFSET_Y_DEFAULT 194 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
@@ -957,6 +957,18 @@ int main() //int argc, char** argv
 				time_prev_tx_offset = steady_clock::now();
 				if(dithering_on){offset_x_init = offsets.x; offset_y_init = offsets.y;} //update offsets for dithering
 			}
+
+			if(dithering_on){
+				if(dither_count == 0){offset_x_init = offsets.x; offset_y_init = offsets.y;} //initialize reference point
+				check_dither = steady_clock::now(); // Record current time
+				elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
+				if(elapsed_time_dither > period_dither){
+					log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
+					ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
+					dither_count++;
+					time_prev_dither = steady_clock::now();
+				}
+			}
 	
 			//PAT Phases:		
 			switch(phase)
@@ -1271,17 +1283,17 @@ int main() //int argc, char** argv
 													if(!haveCsvData){haveCsvData = true;}	
 												}
 
-												if(dithering_on){
-													if(dither_count == 0){offset_x_init = offsets.x; offset_y_init = offsets.y;} //initialize reference point
-													check_dither = steady_clock::now(); // Record current time
-													elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
-													if(elapsed_time_dither > period_dither){
-														log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
-														ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
-														dither_count++;
-														time_prev_dither = steady_clock::now();
-													}
-												}
+												// if(dithering_on){
+												// 	if(dither_count == 0){offset_x_init = offsets.x; offset_y_init = offsets.y;} //initialize reference point
+												// 	check_dither = steady_clock::now(); // Record current time
+												// 	elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
+												// 	if(elapsed_time_dither > period_dither){
+												// 		log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
+												// 		ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
+												// 		dither_count++;
+												// 		time_prev_dither = steady_clock::now();
+												// 	}
+												// }
 											}
 											else
 											{
