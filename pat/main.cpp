@@ -19,7 +19,7 @@
 #define HEATER_CH 0x23 //heater fpga channel (Notated_memory_map on Google Drive)
 #define HEATER_ON 0x55 //heater ON code (Notated_memory_map on Google Drive)
 #define HEATER_OFF 0x0F //heater OFF code (Notated_memory_map on Google Drive)
-#define TEMPERATURE_CH 201 //EDFA Temperature (TBR, maybe pick one of the other ones, test and see)
+#define TEMPERATURE_CH 202 //Camera Temperature
 #define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
@@ -39,10 +39,10 @@
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
-#define TX_OFFSET_SLOPE_X 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_X 0 //TBD, pxls - linear model of tx offset as a function of temperature
-#define TX_OFFSET_SLOPE_Y 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_Y 0 //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_X 0.1895f //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X -17.657f //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y 0.0706f //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 191.85f //TBD, pxls - linear model of tx offset as a function of temperature
 
 using namespace std;
 using namespace std::chrono;
