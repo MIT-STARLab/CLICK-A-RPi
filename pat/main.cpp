@@ -25,6 +25,7 @@
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
 #define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
+#define PERIOD_CALIB_LOSS 3.0f //seconds, time to wait after beacon loss before switching to open loop
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
@@ -130,8 +131,8 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
 	count = count%DITHER_COUNT_PERIOD;
 	float t = (float) count / ((float) DITHER_COUNT_PERIOD);
-	offsets.x = t * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * t) - offset_x_init;
-	offsets.y = t * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * t) - offset_y_init;
+	offsets.x = t * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * t) + offset_x_init;
+	offsets.y = t * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * t) + offset_y_init;
 	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 }
 
@@ -356,6 +357,10 @@ int main() //int argc, char** argv
 	//Beacon Loss Timing
 	time_point<steady_clock> startBeaconLoss;
 	duration<double> waitBeaconLoss(PERIOD_BEACON_LOSS); //wait time before switching back to ACQUISITION
+
+	//Calib Loss Timing
+	time_point<steady_clock> startCalibLoss;
+	duration<double> waitCalibLoss(PERIOD_CALIB_LOSS); //wait time before switching back to ACQUISITION
 
 	//Health Heartbeat Telemetry Timing
 	time_point<steady_clock> time_prev_heartbeat;
@@ -955,19 +960,10 @@ int main() //int argc, char** argv
 				log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Updating Tx offsets.");
 				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 				time_prev_tx_offset = steady_clock::now();
-				if(dithering_on){offset_x_init = offsets.x; offset_y_init = offsets.y;} //update offsets for dithering
-			}
-
-			if(dithering_on){
-				if(dither_count == 0){offset_x_init = offsets.x; offset_y_init = offsets.y;} //initialize reference point
-				check_dither = steady_clock::now(); // Record current time
-				elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
-				if(elapsed_time_dither > period_dither){
-					log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
-					ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
-					dither_count++;
-					time_prev_dither = steady_clock::now();
-				}
+				if(dithering_on){
+					offset_x_init = offsets.x; offset_y_init = offsets.y; //update offsets for dithering
+					dither_count = 0; //reset dither counter
+				} 
 			}
 	
 			//PAT Phases:		
@@ -1195,17 +1191,13 @@ int main() //int argc, char** argv
 									startBeaconLoss = steady_clock::now(); // Record time of Loss
 								}
 							}
-							
-							phase = CL_CALIB;
 						}
 						else
 						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
-							phase = CL_INIT;
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - camera.waitForFrame() Failed! Camera.error: ", camera.error);
 						}
 					} else{
 						log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - laserOff FPGA command failed!");
-						phase = CL_BEACON; //TBR: may want to add a timeout and when it ends, shift to static pointing
 						if(haveBeaconKnowledge) // Beacon Loss Scenario
 						{
 							log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1213,7 +1205,7 @@ int main() //int argc, char** argv
 							startBeaconLoss = steady_clock::now(); // Record time of Loss
 						}
 					}
-					
+					phase = CL_CALIB;
 					if(!haveBeaconKnowledge) //Check timeout and return to acquisition if loss criterion met
 					{
 						time_point<steady_clock> checkBeaconLoss = steady_clock::now(); // Record current time
@@ -1241,7 +1233,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > CALIB_MIN_BRIGHTNESS/4)
+							if(frame.histBrightest > CALIB_MIN_BRIGHTNESS)
 							{
 								cl_calib_num_groups = frame.performPixelGrouping();
 								if(cl_calib_num_groups > 0)
@@ -1249,7 +1241,7 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS/4)
+										if(frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
@@ -1283,17 +1275,20 @@ int main() //int argc, char** argv
 													if(!haveCsvData){haveCsvData = true;}	
 												}
 
-												// if(dithering_on){
-												// 	if(dither_count == 0){offset_x_init = offsets.x; offset_y_init = offsets.y;} //initialize reference point
-												// 	check_dither = steady_clock::now(); // Record current time
-												// 	elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
-												// 	if(elapsed_time_dither > period_dither){
-												// 		log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
-												// 		ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
-												// 		dither_count++;
-												// 		time_prev_dither = steady_clock::now();
-												// 	}
-												// }
+												if(dithering_on){
+													check_dither = steady_clock::now(); // Record current time
+													elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
+													if(elapsed_time_dither > period_dither){
+														if(dither_count == 0){
+															offset_x_init = offsets.x; offset_y_init = offsets.y; //initialize reference point
+														} else{
+															log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
+															ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
+														} 
+														dither_count++;
+														time_prev_dither = steady_clock::now();
+													}
+												}
 											}
 											else
 											{
@@ -1311,6 +1306,7 @@ int main() //int argc, char** argv
 											{						
 												log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
 												haveCalibKnowledge = false;
+												startCalibLoss = steady_clock::now(); // Record time of Loss
 											}
 										}
 									}
@@ -1322,6 +1318,7 @@ int main() //int argc, char** argv
 										{						
 											log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
 											haveCalibKnowledge = false;
+											startCalibLoss = steady_clock::now(); // Record time of Loss
 										}
 									}
 								}	
@@ -1333,32 +1330,31 @@ int main() //int argc, char** argv
 									{						
 										log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
 										haveCalibKnowledge = false;
+										startCalibLoss = steady_clock::now(); // Record time of Loss
 									}
-								}
-													
+								}			
 							}
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");						
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS,")");						
 								if(haveCalibKnowledge)
 								{						
 									log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
 									haveCalibKnowledge = false;
+									startCalibLoss = steady_clock::now(); // Record time of Loss
 								}
 							}
-							
-							phase = CL_BEACON;
 						}
 						else
 						{
-							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - camera.waitForFrame() Failed! Transitioning to CL_INIT. camera.error: ", camera.error);
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - camera.waitForFrame() Failed! Camera.error: ", camera.error);
 							if(haveCalibKnowledge)
 							{						
 								log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
 								haveCalibKnowledge = false;
+								startCalibLoss = steady_clock::now(); // Record time of Loss
 							}
-							phase = CL_INIT;
 						}
 					} else{
 						log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - laserOn FPGA command failed!");
@@ -1366,8 +1362,20 @@ int main() //int argc, char** argv
 						{						
 							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
 							haveCalibKnowledge = false;
+							startCalibLoss = steady_clock::now(); // Record time of Loss
 						}
-						phase = CL_BEACON; //TBR: may want to add a timeout and when it ends, shift to static pointing
+					}
+					phase = CL_BEACON;
+					if(!haveCalibKnowledge) //Check timeout and return to acquisition if loss criterion met
+					{
+						time_point<steady_clock> checkCalibLoss = steady_clock::now(); // Record current time
+						duration<double> elapsedCalibLoss = checkCalibLoss - startCalibLoss; // Calculate time since calib loss
+						if(elapsedCalibLoss > waitCalibLoss) 
+						{
+							log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib loss timeout. Switching to open loop.");
+							phase = OPEN_LOOP;
+							break; 
+						}
 					}
 					break;
 
