@@ -29,7 +29,7 @@
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
-#define PERIOD_CALCULATE_TX_OFFSETS 600.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
+#define PERIOD_CALCULATE_TX_OFFSETS 300.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define PERIOD_DITHER_TX_OFFSETS 10.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
@@ -39,13 +39,13 @@
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
-#define TX_OFFSET_SLOPE_X 0.3511f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_X -22.234f //TBD, pxls - bias coeff of tx offset as a function of temperature
-#define TX_OFFSET_QUADRATIC_Y 0.0072f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
-#define TX_OFFSET_SLOPE_Y -0.2961f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_Y 196.02f //TBD, pxls - bias coeff of tx offset as a function of temperature
-#define TX_OFFSET_DITHER_X_RADIUS 1 //pxls
-#define TX_OFFSET_DITHER_Y_RADIUS 1 //pxls
+#define TX_OFFSET_SLOPE_X 0.3275f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X -21.955f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_QUADRATIC_Y 0.0077f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y -0.3093f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 196.08f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_DITHER_X_RADIUS 2.0f //pxls
+#define TX_OFFSET_DITHER_Y_RADIUS 1.0f //pxls
 #define DITHER_COUNT_PERIOD 10 //1 full period after 10 ditherings
 
 using namespace std;
