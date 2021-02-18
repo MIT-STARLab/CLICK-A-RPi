@@ -116,8 +116,8 @@ struct tx_offsets{
 void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, tx_offsets& offsets){
 	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
 	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
-		offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
-		offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+		offsets.x = (int) (TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X);
+		offsets.y = (int) (TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y);
 		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
 	} else{
 		offsets.x = (int) TX_OFFSET_X_DEFAULT;
