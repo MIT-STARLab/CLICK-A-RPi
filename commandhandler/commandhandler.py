@@ -578,20 +578,26 @@ while True:
 
         elif(CMD_ID == CMD_PL_GET_FPGA):
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
-            read_data = list(fpga.read_reg(start_addr, num_registers))
-            read_data_len = len(read_data)
-            if(num_registers != read_data_len):
-                log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
-                ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
+            read_data = fpga.read_reg(start_addr, num_registers)
+            if(type(read_data) == int):
+                read_data = [read_data]
+            if(type(read_data == list)):  
+                read_data_len = len(read_data)
+                if(num_registers != read_data_len):
+                    log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
+                    ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
+                else:
+                    #send on tx port
+                    fpga_read_payload = struct.pack('!BHB%dI'%read_data_len, rq_number, start_addr, read_data_len, *read_data)
+                    print (fpga_read_payload) #debug print
+                    fpga_read_txpacket = TxPacket()
+                    raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
+                    socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
+                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number))
+                    ack_to_hk(CMD_PL_GET_FPGA, CMD_ACK)
             else:
-                #send on tx port
-                fpga_read_payload = struct.pack('!BHB%dI'%read_data_len, rq_number, start_addr, read_data_len, *read_data)
-                print (fpga_read_payload) #debug print
-                fpga_read_txpacket = TxPacket()
-                raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
-                socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
-                log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number))
-                ack_to_hk(CMD_PL_GET_FPGA, CMD_ACK)
+                log_to_hk('ERROR CMD PL_GET_FPGA - Type error, expected list, got: ' + str(type(read_data)))
+                ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SET_HK):
             ipc_HKControlPacket = HKControlPacket()
