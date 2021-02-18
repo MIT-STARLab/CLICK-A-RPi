@@ -562,7 +562,7 @@ while True:
                 check_write_data = fpga.read_reg(start_addr, num_registers)
                 if(type(check_write_data) == int):
                     check_write_data = [check_write_data]
-                if(type(check_write_data == list)): 
+                if(type(check_write_data) == list): 
                     addresses = range(start_addr, start_addr+num_registers)
                     return_message = ""
                     num_errors = 0
@@ -587,7 +587,7 @@ while True:
             read_data = fpga.read_reg(start_addr, num_registers)
             if(type(read_data) == int):
                 read_data = [read_data]
-            if(type(read_data == list)):  
+            if(type(read_data) == list):  
                 read_data_len = len(read_data)
                 if(num_registers != read_data_len):
                     log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
