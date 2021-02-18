@@ -936,6 +936,7 @@ int main() //int argc, char** argv
 			elapsed_time_tx_offset = check_tx_offset - time_prev_tx_offset; // Calculate time since last tx offset calculation
 			if(elapsed_time_tx_offset > period_tx_offset){
 				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+				time_prev_tx_offset = steady_clock::now();
 			}
 					
 			//PAT Phases:		
