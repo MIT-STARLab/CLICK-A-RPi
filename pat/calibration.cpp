@@ -191,7 +191,7 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 
 				// Very high parameters reached
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, "). Using maximum parameters: CALIB_MAX_EXPOSURE = ", CALIB_MAX_EXPOSURE, ", gain = 0");
-				preferredExpo = exposure;
+				preferredExpo = CALIB_MAX_EXPOSURE;
 				camera.config->expose_us.write(preferredExpo);
 				return true;
 			}
