@@ -30,19 +30,20 @@
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
-#define PERIOD_CALCULATE_TX_OFFSETS 450.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
+#define PERIOD_CALCULATE_TX_OFFSETS 600.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X_DEFAULT -13 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
-#define TX_OFFSET_Y_DEFAULT 193 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
+#define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y_DEFAULT 194 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
-#define TX_OFFSET_SLOPE_X 0.1821f //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_X -17.527f //TBD, pxls - linear model of tx offset as a function of temperature
-#define TX_OFFSET_SLOPE_Y 0.0757f //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_Y 191.76f //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_X 0.3511f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X -22.234f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_QUADRATIC_Y 0.0072f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y -0.2961f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 196.02f //TBD, pxls - bias coeff of tx offset as a function of temperature
 
 using namespace std;
 using namespace std::chrono;
@@ -117,7 +118,7 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
 	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
 		offsets.x = (int) roundf(TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X);
-		offsets.y = (int) roundf(TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y);
+		offsets.y = (int) roundf(TX_OFFSET_QUADRATIC_Y*temperature_packet.temperature*temperature_packet.temperature + TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y);
 		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	} else{
 		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: FPGA temperature read failed. Using offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
@@ -933,7 +934,7 @@ int main() //int argc, char** argv
 			elapsed_time_tx_offset = check_tx_offset - time_prev_tx_offset; // Calculate time since last tx offset calculation
 			if(elapsed_time_tx_offset > period_tx_offset){
 				log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Updating Tx offsets.");
-				//calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 				time_prev_tx_offset = steady_clock::now();
 			}
 					
