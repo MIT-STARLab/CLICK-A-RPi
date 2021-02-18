@@ -599,7 +599,7 @@ while True:
                     fpga_read_txpacket = TxPacket()
                     raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
                     socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
-                    log_to_hk('ACK CMD PL_GET_FPGA. Request Number = ' + str(rq_number))
+                    log_to_hk('ACK CMD PL_GET_FPGA. Request Number = ' + str(rq_number) + '. Start Addr: ' + str(start_addr) + '. Num Reg: ' + str(num_registers))
                     ack_to_hk(CMD_PL_GET_FPGA, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_GET_FPGA - Type error, expected list for read_data, got: ' + str(type(read_data)))
