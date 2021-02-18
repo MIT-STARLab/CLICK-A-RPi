@@ -560,9 +560,9 @@ while True:
             else:
                 fpga.write_reg(start_addr, write_data)
                 check_write_data = fpga.read_reg(start_addr, num_registers)
-                if(type(read_data) == int):
-                    read_data = [read_data]
-                if(type(read_data == list)): 
+                if(type(check_write_data) == int):
+                    check_write_data = [check_write_data]
+                if(type(check_write_data == list)): 
                     addresses = range(start_addr, start_addr+num_registers)
                     return_message = ""
                     num_errors = 0
