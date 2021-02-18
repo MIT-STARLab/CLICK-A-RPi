@@ -39,10 +39,10 @@
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
-#define TX_OFFSET_SLOPE_X 0.1821f //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_X -17.527f //TBD, pxls - linear model of tx offset as a function of temperature
-#define TX_OFFSET_SLOPE_Y 0.0757f //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_Y 191.76f //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_X 0.1815f //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X -17.515f //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y 0.0224f //TBD, pxls/C - linear model of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 192.76f //TBD, pxls - linear model of tx offset as a function of temperature
 
 using namespace std;
 using namespace std::chrono;
