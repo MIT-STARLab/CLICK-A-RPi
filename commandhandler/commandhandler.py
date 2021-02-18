@@ -271,7 +271,8 @@ while True:
                 #print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
                 print(tai_secs)
-                set_time = time.gmtime(tai_secs)
+                # Epoch starts Jan 1 2000 (or 946684800 s)
+                set_time = time.gmtime(946684800+tai_secs)
                 print(set_time)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
                                                                                     set_time.tm_mon,
