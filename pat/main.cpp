@@ -19,29 +19,33 @@
 #define HEATER_CH 0x23 //heater fpga channel (Notated_memory_map on Google Drive)
 #define HEATER_ON 0x55 //heater ON code (Notated_memory_map on Google Drive)
 #define HEATER_OFF 0x0F //heater OFF code (Notated_memory_map on Google Drive)
-#define TEMPERATURE_CH 201 //EDFA Temperature (TBR, maybe pick one of the other ones, test and see)
+#define TEMPERATURE_CH 202 //Camera Temperature
 #define CENTROID2ANGLE_SLOPE_X -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_X 0.127856502f //user input from calibration
 #define CENTROID2ANGLE_SLOPE_Y -0.0000986547085f //user input from calibration
 #define CENTROID2ANGLE_BIAS_Y 0.095892377f //user input from calibration
-#define MAX_CALIBRATION_ATTEMPTS 2 //number of times to attempt calibration
-#define MAX_ACQUISITION_ATTEMPTS 250 //number of times to attempt beacon acquisition
 #define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
+#define PERIOD_CALCULATE_TX_OFFSETS 600.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
+#define PERIOD_DITHER_TX_OFFSETS 1.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X -13 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
-#define TX_OFFSET_Y 197 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
+#define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y_DEFAULT 194 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
-#define TX_OFFSET_SLOPE_X 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_X 0 //TBD, pxls - linear model of tx offset as a function of temperature
-#define TX_OFFSET_SLOPE_Y 1 //TBD, pxls/C - linear model of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_Y 0 //TBD, pxls - linear model of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_X 0.3511f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X -22.234f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_QUADRATIC_Y 0.0072f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y -0.2961f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 196.02f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_DITHER_X_RADIUS 1 //pxls
+#define TX_OFFSET_DITHER_Y_RADIUS 1 //pxls
+#define DITHER_COUNT_PERIOD 10 //1 full period after 10 ditherings
 
 using namespace std;
 using namespace std::chrono;
@@ -109,22 +113,26 @@ error_angles centroid2angles(double centroid_x, double centroid_y){
 
 //Get payload temperature and compute Tx offsets
 struct tx_offsets{
-	int x;
-	int y;
+	float x;
+	float y;
 };
- tx_offsets calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer){
+void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, tx_offsets& offsets){
 	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
-	tx_offsets offsets = tx_offsets();
 	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
-		offsets.x = (int) TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
-		offsets.y = (int) TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
-		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", tx_offset_x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
+		offsets.x = TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
+		offsets.y = TX_OFFSET_QUADRATIC_Y*temperature_packet.temperature*temperature_packet.temperature + TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	} else{
-		offsets.x = (int) TX_OFFSET_X;
-		offsets.y = (int) TX_OFFSET_Y;
-		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: get_temperature failed! Using default offsets: ", TX_OFFSET_X, TX_OFFSET_Y);
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: FPGA temperature read failed. Using offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	}
-	return offsets;
+}
+
+void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
+	count = count%DITHER_COUNT_PERIOD;
+	float t = (float) count / ((float) DITHER_COUNT_PERIOD);
+	offsets.x = t * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * t) - offset_x_init;
+	offsets.y = t * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * t) - offset_y_init;
+	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 }
 
 atomic<bool> stop(false); //not for flight
@@ -234,7 +242,6 @@ int main() //int argc, char** argv
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
 	double propertyDifference = 0;
-	int tx_offset_x = TX_OFFSET_X, tx_offset_y = TX_OFFSET_Y; 
 	bool openLoop = false, staticPoint = false, sendBusFeedback = false, bcnAlignment = false; 
 	uint16_t command; 
 	int command_exposure;  
@@ -254,7 +261,10 @@ int main() //int argc, char** argv
 	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
-	tx_offsets offsets = calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer);
+	tx_offsets offsets;
+	offsets.x = TX_OFFSET_X_DEFAULT; offsets.y = TX_OFFSET_Y_DEFAULT;
+	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets); 
+	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -366,6 +376,18 @@ int main() //int argc, char** argv
 	duration<double> period_tx_adcs(PERIOD_TX_ADCS); //wait time in between feedback messages to the bus (1s = 1 Hz)
 	time_point<steady_clock> check_tx_adcs; // Record current time
 	duration<double> elapsed_time_tx_adcs; // time since tx adcs tlm
+
+	//Tx Offset Calculation Timing
+	time_point<steady_clock> time_prev_tx_offset; 
+	duration<double> period_tx_offset(PERIOD_CALCULATE_TX_OFFSETS); //wait time in between feedback messages to the bus (1s = 1 Hz)
+	time_point<steady_clock> check_tx_offset; // Record current time
+	duration<double> elapsed_time_tx_offset; // time since last tx offset calculation
+
+	//Tx Offset Dithering Timing
+	time_point<steady_clock> time_prev_dither; 
+	duration<double> period_dither(PERIOD_DITHER_TX_OFFSETS); //wait time in between feedback messages to the bus (1s = 1 Hz)
+	time_point<steady_clock> check_dither; // Record current time
+	duration<double> elapsed_time_dither; // time since last tx offset calculation
 	
 	// Enter Primary Process Loop: Standby + Main
 	while(OPERATIONAL){
@@ -418,6 +440,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in unknown configuration. Standing by...");
 						}
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 						break;
 						
 					case CMD_START_PAT_OPEN_LOOP:
@@ -439,12 +462,14 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in unknown configuration. Standing by...");
 						}
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 						break;
 					
 					case CMD_START_PAT_STATIC_POINT:
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
 						phase = STATIC_POINT;
 						STANDBY = false;
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 						break;
 						
 					case CMD_START_PAT_BUS_FEEDBACK:
@@ -466,6 +491,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in unknown configuration. Standing by...");
 						}
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 						break;
 
 					case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
@@ -489,6 +515,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in unknown configuration. Standing by...");
 						}
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 						break;	
 
 					case CMD_SET_GET_IMAGE_CENTER_X:
@@ -663,22 +690,24 @@ int main() //int argc, char** argv
 					case CMD_TX_ALIGN:
 						if(haveCalibKnowledge){
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Executing CMD_TX_ALIGN command.");
-							calib.x = (CAMERA_WIDTH/2) + tx_offset_x;
-							calib.y = (CAMERA_HEIGHT/2) + tx_offset_y;
-							track.controlOpenLoop(fsm, calib.x, calib.y);
+							double setPointX_OL = (double) CAMERA_WIDTH/2 + (double) offsets.x;
+							double setPointY_OL = (double) CAMERA_HEIGHT/2 + (double) offsets.y;
+							calib.x = (int) setPointX_OL;
+							calib.y = (int) setPointY_OL;
+							track.controlOpenLoop(fsm, setPointX_OL, setPointY_OL);
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_TX_ALIGN - Do not have calibration knowledge. Run CMD_CALIB_TEST first.");
 						}
 						break;
 
 					case CMD_UPDATE_TX_OFFSET_X:
-						tx_offset_x = atoi(command_data); 
-						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_X - Updating Tx Offset X to ", tx_offset_x);
+						offsets.x = atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_X - Updating Tx Offset X to ", offsets.x);
 						break;
 
 					case CMD_UPDATE_TX_OFFSET_Y:
-						tx_offset_y = atoi(command_data); 
-						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", tx_offset_y);
+						offsets.y = atoi(command_data); 
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", offsets.y);
 						break;
 
 					case CMD_UPDATE_FSM_X:
@@ -878,11 +907,11 @@ int main() //int argc, char** argv
 					OPERATIONAL = false;
 					break; 
 				} else if(command == CMD_UPDATE_TX_OFFSET_X){
-					tx_offset_x = atoi(command_data); 
-					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", tx_offset_x);
+					offsets.x = atoi(command_data); 
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset X to ", offsets.x);
 				} else if(command == CMD_UPDATE_TX_OFFSET_Y){
-					tx_offset_y = atoi(command_data); 
-					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", tx_offset_y);
+					offsets.y = atoi(command_data); 
+					log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Updating Tx Offset Y to ", offsets.y);
 				}
 			}
 			if(track.received_end_pat_cmd){
@@ -919,7 +948,28 @@ int main() //int argc, char** argv
 				}	
 				time_prev_heartbeat = steady_clock::now(); // Record time of message		
 			}
-					
+
+			check_tx_offset = steady_clock::now(); // Record current time
+			elapsed_time_tx_offset = check_tx_offset - time_prev_tx_offset; // Calculate time since last tx offset calculation
+			if(elapsed_time_tx_offset > period_tx_offset){
+				log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Updating Tx offsets.");
+				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+				time_prev_tx_offset = steady_clock::now();
+				if(dithering_on){offset_x_init = offsets.x; offset_y_init = offsets.y;} //update offsets for dithering
+			}
+
+			if(dithering_on){
+				if(dither_count == 0){offset_x_init = offsets.x; offset_y_init = offsets.y;} //initialize reference point
+				check_dither = steady_clock::now(); // Record current time
+				elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
+				if(elapsed_time_dither > period_dither){
+					log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
+					ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
+					dither_count++;
+					time_prev_dither = steady_clock::now();
+				}
+			}
+	
 			//PAT Phases:		
 			switch(phase)
 			{
@@ -939,22 +989,14 @@ int main() //int argc, char** argv
 							log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - calibration.run failed!");
 							num_calibration_attempts++;
 							log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
-							if(num_calibration_attempts >= MAX_CALIBRATION_ATTEMPTS){
-								phase = STATIC_POINT;
-							} else{
-								phase = CALIBRATION;
-							}
+							phase = CALIBRATION;
 						}
 					} else{
 						haveCalibKnowledge = false; 
 						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - laserOn FPGA command failed!");
 						num_calibration_attempts++;
 						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
-						if(num_calibration_attempts >= MAX_CALIBRATION_ATTEMPTS){
-							phase = STATIC_POINT;
-						} else{
-							phase = CALIBRATION;
-						}
+						phase = CALIBRATION;
 					}
 					break;
 
@@ -977,10 +1019,12 @@ int main() //int argc, char** argv
 							logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port); 
 							if(!bcnAlignment){
 								// Set initial pointing in open-loop
-								calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
-								calib.y = CAMERA_HEIGHT - beacon.y + tx_offset_y;
+								double setPointX_OL = (double) (CAMERA_WIDTH - beacon.x) + (double) offsets.x;
+								double setPointY_OL = (double) (CAMERA_HEIGHT - beacon.y) + (double) offsets.y;
+								calib.x = (int) setPointX_OL;
+								calib.y = (int) setPointY_OL;
+								track.controlOpenLoop(fsm, setPointX_OL, setPointY_OL);
 								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Setting Calib to: [", calib.x, ",", calib.y, ", exp = ", calibExposure, "], gain = ", calibGain); //, ", smoothing: ", calibration.smoothing ",  smoothing: ", track.beaconSmoothing
-								track.controlOpenLoop(fsm, calib.x, calib.y);
 							}
 							camera.ignoreNextFrames(camera.queuedCount); //clear queue
 							if(openLoop)
@@ -1010,34 +1054,14 @@ int main() //int argc, char** argv
 								beaconWindow.w += 100;
 								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Increasing window size to: ", beaconWindow.w, ", centered on ", beacon.x - CAMERA_WIDTH/2, beacon.y - CAMERA_HEIGHT/2, ", rel-to-ctr");
 							}
-							if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
-								log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
-								camera.setFullWindow();
-								camera.config->binningMode.write(cbmBinningHV);
-								camera.config->expose_us.write(TRACK_GUESS_EXPOSURE);
-								camera.config->gain_dB.write(0);
-								logImage(string("ACQUISITION_DEBUG"), camera, textFileOut, pat_health_port, true); 
-								phase = STATIC_POINT;
-							} else{
-								phase = ACQUISITION;
-							}
+							phase = ACQUISITION;
 						}
 					} else{
 						haveBeaconKnowledge = false; 
 						log(pat_health_port, textFileOut, "In main.cpp phase ACQUISITION - laserOff FPGA command failed!");
 						num_acquisition_attempts++;
 						log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - Beacon Acquisition attempt ", num_acquisition_attempts, " failed!");
-						if(num_acquisition_attempts >= MAX_ACQUISITION_ATTEMPTS){
-							log(pat_health_port, textFileOut,  "In main.cpp phase ACQUISITION - maximum number of beacon acquisition attempts (= ", MAX_ACQUISITION_ATTEMPTS, ") reached. Transitioning to STATIC_POINT mode.");
-							camera.setFullWindow();
-							camera.config->binningMode.write(cbmBinningHV);
-							camera.config->expose_us.write(TRACK_GUESS_EXPOSURE);
-							camera.config->gain_dB.write(0);
-							logImage(string("ACQUISITION"), camera, textFileOut, pat_health_port, true); 
-							phase = STATIC_POINT;
-						} else{
-							phase = ACQUISITION;
-						}
+						phase = ACQUISITION;
 					}
 					break;
 
@@ -1241,8 +1265,8 @@ int main() //int argc, char** argv
 												track.updateTrackingWindow(frame, spot, calibWindow);
 												
 												// Control in closed loop!
-												double setPointX = CAMERA_WIDTH - beacon.x + tx_offset_x;
-												double setPointY = CAMERA_HEIGHT - beacon.y + tx_offset_y;
+												double setPointX = (double) (CAMERA_WIDTH - beacon.x) + (double) offsets.x;
+												double setPointY = (double) (CAMERA_HEIGHT - beacon.y) + (double) offsets.y;
 												track.control(fsm, calib.x, calib.y, setPointX, setPointY);
 
 												check_csv_write = steady_clock::now(); // Record current time
@@ -1375,9 +1399,11 @@ int main() //int argc, char** argv
 												beaconExposure = track.controlExposure(beacon.valueMax, beaconExposure, maxBcnExposure);  //auto-tune exposure
 												if(!bcnAlignment){
 													// Control pointing in open-loop
-													calib.x = CAMERA_WIDTH - beacon.x + tx_offset_x;
-													calib.y = CAMERA_HEIGHT - beacon.y + tx_offset_y;
-													track.controlOpenLoop(fsm, calib.x, calib.y);
+													double setPointX_OL = (double) (CAMERA_WIDTH - beacon.x) + (double) offsets.x;
+													double setPointY_OL = (double) (CAMERA_HEIGHT - beacon.y) + (double) offsets.y;
+													calib.x = (int) setPointX_OL;
+													calib.y = (int) setPointY_OL;
+													track.controlOpenLoop(fsm, setPointX_OL, setPointY_OL);
 												}
 												check_csv_write = steady_clock::now(); // Record current time
 												elapsed_time_csv_write = check_csv_write - time_prev_csv_write; // Calculate time since csv write
@@ -1508,11 +1534,14 @@ int main() //int argc, char** argv
 					if(!static_pointing_initialized){
 						// Command FSM
 						if(haveCalibKnowledge){
-							calib.x = (CAMERA_WIDTH/2) + calibration.centerOffsetX;
-							calib.y = (CAMERA_HEIGHT/2) + calibration.centerOffsetY;
+							// Control pointing in open-loop
+							double setPointX_OL = (double) CAMERA_WIDTH/2 + (double) offsets.x;
+							double setPointY_OL = (double) CAMERA_HEIGHT/2 + (double) offsets.y;
+							calib.x = (int) setPointX_OL;
+							calib.y = (int) setPointY_OL;
+							track.controlOpenLoop(fsm, setPointX_OL, setPointY_OL);
 							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Have calibration knowledge. Setting FSM to: ",
 							"x_pixels = ", calib.x, ", y_pixels = ", calib.y);
-							track.controlOpenLoop(fsm, calib.x, calib.y);
 						} else{
 							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Do not have calibration knowledge. Setting FSM to (x_normalized, y_normalized) = (0,0).");
 							fsm.setNormalizedAngles(0,0); 
