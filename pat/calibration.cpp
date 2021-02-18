@@ -157,6 +157,7 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 				// Camera reached lower limit, too high power
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to reduce brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, "). Using minimum parameters: CALIB_MIN_EXPOSURE = ", CALIB_MIN_EXPOSURE, ", gain = 0");
 				preferredExpo = CALIB_MIN_EXPOSURE;
+				camera.config->expose_us.write(preferredExpo);
 				return true;
 			}
 			// Otherwise, have to increase exposure
@@ -189,7 +190,10 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 				// }
 
 				// Very high parameters reached
-				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, ") with maximum parameters: CALIB_MAX_EXPOSURE = ", CALIB_MAX_EXPOSURE, ", gain = 0");
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, "). Using maximum parameters: CALIB_MAX_EXPOSURE = ", CALIB_MAX_EXPOSURE, ", gain = 0");
+				preferredExpo = CALIB_MAX_EXPOSURE;
+				camera.config->expose_us.write(preferredExpo);
+				return true;
 			}
 		} else{
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Pixel grouping failed!");
