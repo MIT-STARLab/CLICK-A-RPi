@@ -30,7 +30,7 @@
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
-#define PERIOD_CALCULATE_TX_OFFSETS 450.0f	//seconds, time to wait in-between updating tx offsets due to temperature fluctuations
+#define PERIOD_CALCULATE_TX_OFFSETS 450.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -11 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
 #define TX_OFFSET_Y_DEFAULT 195 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
@@ -119,6 +119,8 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 		offsets.x = (int) (TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X);
 		offsets.y = (int) (TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y);
 		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
+	} else{
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: FPGA temperature read failed. Using offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	}
 }
 
@@ -930,7 +932,8 @@ int main() //int argc, char** argv
 			check_tx_offset = steady_clock::now(); // Record current time
 			elapsed_time_tx_offset = check_tx_offset - time_prev_tx_offset; // Calculate time since last tx offset calculation
 			if(elapsed_time_tx_offset > period_tx_offset){
-				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+				log(pat_health_port, fileStream, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Updating Tx offsets.");
+				//calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
 				time_prev_tx_offset = steady_clock::now();
 			}
 					
