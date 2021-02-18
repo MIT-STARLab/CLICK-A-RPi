@@ -560,21 +560,27 @@ while True:
             else:
                 fpga.write_reg(start_addr, write_data)
                 check_write_data = fpga.read_reg(start_addr, num_registers)
-                addresses = range(start_addr, start_addr+num_registers)
-                return_message = ""
-                num_errors = 0
-                for i in range(num_registers):
-                    if check_write_data[i] != write_data[i]:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
-                        num_errors += 1
+                if(type(read_data) == int):
+                    read_data = [read_data]
+                if(type(read_data == list)): 
+                    addresses = range(start_addr, start_addr+num_registers)
+                    return_message = ""
+                    num_errors = 0
+                    for i in range(num_registers):
+                        if check_write_data[i] != write_data[i]:
+                            return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
+                            num_errors += 1
+                        else:
+                            return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
+                    if(num_errors == 0):
+                        log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                        ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
                     else:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
-                if(num_errors == 0):
-                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
+                        log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                        ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
                 else:
-                    log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
+                    log_to_hk('ERROR CMD PL_SET_FPGA - Type error, expected list for check_write_data, got: ' + str(type(check_write_data)))
+                    ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_GET_FPGA):
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
@@ -596,7 +602,7 @@ while True:
                     log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number))
                     ack_to_hk(CMD_PL_GET_FPGA, CMD_ACK)
             else:
-                log_to_hk('ERROR CMD PL_GET_FPGA - Type error, expected list, got: ' + str(type(read_data)))
+                log_to_hk('ERROR CMD PL_GET_FPGA - Type error, expected list for read_data, got: ' + str(type(read_data)))
                 ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SET_HK):
