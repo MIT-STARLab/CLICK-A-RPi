@@ -32,8 +32,8 @@
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 450.0f	//seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
-#define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
-#define TX_OFFSET_Y_DEFAULT 193 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
+#define TX_OFFSET_X_DEFAULT -11 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
+#define TX_OFFSET_Y_DEFAULT 195 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
@@ -118,11 +118,7 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
 		offsets.x = (int) (TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X);
 		offsets.y = (int) (TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y);
-		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", tx_offsets_y = ", offsets.y);
-	} else{
-		offsets.x = (int) TX_OFFSET_X_DEFAULT;
-		offsets.y = (int) TX_OFFSET_Y_DEFAULT;
-		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: get_temperature failed! Using default offsets: ", TX_OFFSET_X_DEFAULT, TX_OFFSET_Y_DEFAULT);
+		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	}
 }
 
@@ -253,9 +249,8 @@ int main() //int argc, char** argv
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
 	tx_offsets offsets;
+	offsets.x = TX_OFFSET_X_DEFAULT; offsets.y = TX_OFFSET_Y_DEFAULT;
 	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets); 
-	std::cout << offsets.x << std::endl;
-	std::cout << offsets.y << std::endl;
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
