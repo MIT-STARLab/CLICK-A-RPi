@@ -45,7 +45,7 @@
 #define TX_OFFSET_BIAS_Y 196.02f //TBD, pxls - bias coeff of tx offset as a function of temperature
 #define TX_OFFSET_DITHER_X_RADIUS 1 //pxls
 #define TX_OFFSET_DITHER_Y_RADIUS 1 //pxls
-#define DITHER_FREQUENCY 0.1f //1 full period after 10 ditherings
+#define DITHER_COUNT_PERIOD 10 //1 full period after 10 ditherings
 
 using namespace std;
 using namespace std::chrono;
@@ -128,8 +128,10 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 }
 
 void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
-	offsets.x = count * DITHER_FREQUENCY * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * DITHER_FREQUENCY * count) - offset_x_init;
-	offsets.y = count * DITHER_FREQUENCY * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * DITHER_FREQUENCY * count) - offset_y_init;
+	count = count%DITHER_COUNT_PERIOD;
+	float t = count/DITHER_COUNT_PERIOD;
+	offsets.x = t * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * t) - offset_x_init;
+	offsets.y = t * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * t) - offset_y_init;
 	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 }
 
