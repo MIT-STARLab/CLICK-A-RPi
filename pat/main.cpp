@@ -130,6 +130,7 @@ void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStrea
 void ditherOffsets(tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
 	offsets.x = count * DITHER_FREQUENCY * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * DITHER_FREQUENCY * count) - offset_x_init;
 	offsets.y = count * DITHER_FREQUENCY * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * DITHER_FREQUENCY * count) - offset_y_init;
+	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 }
 
 atomic<bool> stop(false); //not for flight
