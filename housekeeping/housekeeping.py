@@ -114,7 +114,9 @@ class Housekeeping:
 
         for i in range(COMMAND_HANDLERS_COUNT):
             try:
-                ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                # TODO: switch this for multiple commandhandlers
+                # ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                ch_pid = self.get_service_pid('commandhandler')
             except:
                 #TODO: handle error here
                 ch_pid = 0
@@ -338,10 +340,13 @@ class Housekeeping:
         print("Restart process")
         if (process_id == self.HK_CH_ID and self.ch_restart_enable):
             print("Restart ch")
+            # TODO: switch this for multiple commandhandlers
+            # os.system("systemctl --user restart commandhandler@%d" % instance_num)
+            # ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
 
-            os.system("systemctl --user restart commandhandler@%d" % instance_num)
-            ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
-
+            os.system("systemctl --user restart commandhandler")
+            ch_pid = self.get_service_pid('commandhandler')
+            
             old_ch_pid = self.ch_pids[instance_num]
             self.ch_pids[instance_num] = ch_pid
             removed = self.ch_heartbeat_wds.pop(old_ch_pid)
