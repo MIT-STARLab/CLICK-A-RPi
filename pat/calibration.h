@@ -15,7 +15,7 @@
 #define CALIB_SMALL_WINDOW 300		// Camera window for calibration pattern tracking
 
 #define CALIB_MIN_BRIGHTNESS 100	// Minimum brightness of calib laser spot to work with
-#define CALIB_MAX_EXPOSURE 500 	// Max exposure in us to check for range tuning
+#define CALIB_MAX_EXPOSURE 1000 	// Max exposure in us to check for range tuning
 #define CALIB_MIN_EXPOSURE 10 //minimum exposure in us to check for range tuning
 #define CALIB_EXP_INCREMENT 50 //coarse exposure search increment
 #define CALIB_MAX_GAIN 20			// Max detector gain to allow

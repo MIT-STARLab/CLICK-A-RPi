@@ -38,6 +38,8 @@ class Depacketizer:
 
     def __init__(self):
         self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+        # #ZMQ REQ worker socket for load balancing
+        # ipc_client = ipc_loadbalancer.ClientInterface(context)
         self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
 
     def read_data(self, n_bytes):
@@ -192,6 +194,8 @@ class Depacketizer:
 
         # in the future, consider the pat packets and send those separately
         self.rx_cmd_socket.send(raw_ipc_pkt)
+        # #send payload to idle worker (this will wait until a worker becomes idle)
+        # ipc_client.send_request(raw)
 
 
     def run(self):

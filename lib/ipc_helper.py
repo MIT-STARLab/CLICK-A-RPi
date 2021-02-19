@@ -249,7 +249,6 @@ class FPGAServerInterface:
                 return struct.pack('I',lstr) + value
                 
             elif type(value) is list:
-                # print(value)
                 raw = [self._encode_reg(a,v) for a,v in zip(range(addr,addr+len(value)),value)]
                 return ''.join(raw)
             

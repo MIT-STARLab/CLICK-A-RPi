@@ -114,7 +114,9 @@ class Housekeeping:
 
         for i in range(COMMAND_HANDLERS_COUNT):
             try:
-                ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                # TODO: switch this for multiple commandhandlers
+                # ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                ch_pid = self.get_service_pid('commandhandler')
             except:
                 #TODO: handle error here
                 ch_pid = 0
@@ -224,6 +226,8 @@ class Housekeeping:
         # Handle FPGA packet format
         for i in range(0, len(answer_pkt)):
             pkt += struct.pack('!'+FPGA_TELEM_TYPE[i], answer_pkt[i])
+
+        self.fpga_hk_count += 1
         return pkt
 
     def check_sys(self):
@@ -274,19 +278,23 @@ class Housekeeping:
             pkt += struct.pack('!L', 0xFFFFFFFF)
 
         # 13-16: Disk usage
-        # TODO: Update path if necessary
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage('/root')
         pkt += struct.pack('!L', (disk.used % 2**32))
 
         # 17-20: Disk free
         pkt += struct.pack('!L', (disk.free % 2**32))
 
-        # 21-24: Available virtual memory
+        # 21-24: Total virtual memory
         vmem = psutil.virtual_memory()
+        pkt += struct.pack('!L', (vmem.total % 2**32))
+
+        # 25-28: Available virtual memory
         pkt += struct.pack('!L', (vmem.available % 2**32))
 
-        # 25-N: Process info
+        # 29-32: Used virtual memory
+        pkt += struct.pack('!L', (vmem.used % 2**32))
 
+        # 33-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
             p_name = ''
             if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
@@ -295,33 +303,36 @@ class Housekeeping:
                 p_name = p.info['cmdline'][0]
 
             if p_name in self.procs:
+                print(p_name)
                 pkt += struct.pack('B', self.procs[p_name])
                 pkt += struct.pack('B', (p.cpu_percent() % 256))
                 pkt += struct.pack('B', (p.memory_percent('rss') % 256))
+
+        self.sys_hk_count += 1
         return pkt
 
 
     def handle_hk_pkt(self, data, process_id):
         # TODO: Update packet handling if necessary
 
-        if (process_id == HK_PAT_ID):
+        if (process_id == self.HK_PAT_ID):
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
             payload, _, _, _ = pat_pkt.decode(data)
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             print('Handling PAT pkt w/ payload: ', payload)
 
-        elif (process_id == HK_FPGA_ID):
+        elif (process_id == self.HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
             payload = data #data is already a packed byte string
             print('Handling FPGA pkt w/ payload: ', payload)
 
-        elif (process_id == HK_SYS_ID):
+        elif (process_id == self.HK_SYS_ID):
             apid = TLM_HK_SYS
             payload = data #data is already a packed byte string
             print('Handling SYS pkt w/ payload: ', payload)
 
-        elif (process_id == HK_CH_ID):
+        elif (process_id == self.HK_CH_ID):
             apid = TLM_HK_CH
             ch_pkt = HKControlPacket()
             origin, _, data = ch_pkt.decode(data)
@@ -336,11 +347,14 @@ class Housekeeping:
 
     def restart_process(self, process_id, instance_num):
         print("Restart process")
-        if (process_id == HK_CH_ID and self.ch_restart_enable):
+        if (process_id == self.HK_CH_ID and self.ch_restart_enable):
             print("Restart ch")
+            # TODO: switch this for multiple commandhandlers
+            # os.system("systemctl --user restart commandhandler@%d" % instance_num)
+            # ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
 
-            os.system("systemctl --user restart commandhandler@%d" % instance_num)
-            ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
+            os.system("systemctl --user restart commandhandler")
+            ch_pid = self.get_service_pid('commandhandler')
 
             old_ch_pid = self.ch_pids[instance_num]
             self.ch_pids[instance_num] = ch_pid
@@ -349,13 +363,13 @@ class Housekeeping:
             self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
             self.ch_heartbeat_wds[ch_pid].start()
 
-        if (process_id == HK_PAT_ID and self.pat_restart_enable):
+        if (process_id == self.HK_PAT_ID and self.pat_restart_enable):
             print("Restart pat")
             os.system("systemctl --user restart pat.service")
             self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
             self.pat_health_wd.start()
 
-        if (process_id == HK_FPGA_ID and self.fpga_restart_enable):
+        if (process_id == self.HK_FPGA_ID and self.fpga_restart_enable):
             print("Restart fpga")
             os.system("systemctl --user restart fpga.service")
             self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
@@ -399,40 +413,42 @@ class Housekeeping:
             # Periodically generate system HK
             if (self.sys_check_flag.is_set()):
                 message = self.check_sys()
-                self.handle_hk_pkt(message, HK_SYS_ID)
+                self.handle_hk_pkt(message, self.HK_SYS_ID)
                 self.sys_check_flag.clear()
 
             if (self.missing_ch_queue.qsize() > 0):
                 ch_inst = self.missing_ch_queue.get()
-                self.restart_process(HK_CH_ID, ch_inst)
+                self.restart_process(self.HK_CH_ID, ch_inst)
 
             if (self.missing_pat_flag.is_set()):
-                self.restart_process(HK_PAT_ID, 0)
+                self.restart_process(self.HK_PAT_ID, 0)
                 self.missing_pat_flag.clear()
 
             if (self.missing_fpga_flag.is_set()):
-                self.restart_process(HK_FPGA_ID, 0)
+                self.restart_process(self.HK_FPGA_ID, 0)
                 self.missing_fpga_flag.clear()
 
             if(self.fpga_queue.qsize() > 0):
                 pkt = self.check_fpga(self.fpga_queue.get())
-                self.handle_hk_pkt(pkt, HK_FPGA_ID)
+                self.handle_hk_pkt(pkt, self.HK_FPGA_ID)
 
             # Receive packets from the other processes
             sockets = dict(self.poller.poll(500)) # 500 ms timeout
             if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
                 message = self.pat_health_socket.recv()
-                self.handle_hk_pkt(message, HK_PAT_ID)
+                self.handle_hk_pkt(message, self.HK_PAT_ID)
                 self.pat_health_wd.kick()
 
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
                 message = self.ch_heartbeat_socket.recv()
                 ch_packet = CHHeartbeatPacket()
                 ch_packet.decode(message)
-
+                print(ch_packet.origin)
                 if ch_packet.origin in self.ch_heartbeat_wds:
+                    print("Recognized PID")
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
                 else:
+                    print(self.ch_heartbeat_wds)
                     # TODO: error handling of unknown PID
                     pass
 
@@ -454,7 +470,7 @@ class Housekeeping:
 
                 elif (hk_packet.command == HK_CONTROL_LOG):
                     # TODO: Potentially update handling log packet
-                    self.handle_hk_pkt(message, TLM_HK_CH)
+                    self.handle_hk_pkt(message, self.HK_CH_ID)
 
                 elif (hk_packet.command == CMD_PL_SET_HK):
                     # handle command packet

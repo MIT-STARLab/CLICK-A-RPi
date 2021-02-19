@@ -15,6 +15,7 @@ import traceback
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
+# import ipc_loadbalancer
 from options import *
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, CHHeartbeatPacket, HKControlPacket, PATStatusPacket
 from zmqTxRx import recv_zmq, separate
@@ -55,6 +56,19 @@ pat_status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SEL
 # ZeroMQ inter process communication
 context = zmq.Context()
 
+# #ZMQ REQ worker socket for load balancing
+# ipc_worker = ipc_loadbalancer.WorkerInterface(context)
+# # Tell the router we're ready for work
+# ipc_worker.send_ready()
+
+print ("Pulling Rx Cmd Packets")
+print ("on port {}".format(RX_CMD_PACKETS_PORT))
+socket_rx_command_packets = context.socket(zmq.SUB)
+socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
+socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+poller_rx_command_packets = zmq.Poller() #poll rx commands
+poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
+
 socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
 socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
@@ -66,14 +80,6 @@ socket_hk_control.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to speci
 
 socket_tx_packets = context.socket(zmq.PUB)
 socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-
-print ("Pulling Rx Cmd Packets")
-print ("on port {}".format(RX_CMD_PACKETS_PORT))
-socket_rx_command_packets = context.socket(zmq.SUB)
-socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
-socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-poller_rx_command_packets = zmq.Poller() #poll rx commands
-poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 
 print ("Pulling PAT Status Packets")
 print ("on port {}".format(PAT_STATUS_PORT))
@@ -121,8 +127,8 @@ def initialize_cal_laser():
         power.heaters_on()
     #Make sure cal laser diode is on
     if(fpga.read_reg(mmap.CAL) != 85):
-        power.calib_diode_on()   
-    log_to_hk('CALIBRATION LASER ON')    
+        power.calib_diode_on()
+    log_to_hk('CALIBRATION LASER ON')
     #Set DAC
     fpga.write_reg(mmap.DAC_SETUP,1)
     fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
@@ -212,28 +218,26 @@ while True:
         counter_ground_test += 1
 
     if(CH_MODE_ID == CH_MODE_DEBUG):
-        time_remaining = TIMEOUT_PD_DEBUG - elapsed_time
-        if(time_remaining <= 0):
-            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Timeout Reached.')
-            #Do pre-shutdown tasks
-            stop_pat()
-            break #exit main loop
-
-        elif(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):
-            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Time Remaining (sec): ' + str(time_remaining) + '. Start Time: ' + str(start_time))
+        # time_remaining = TIMEOUT_PD_DEBUG - elapsed_time
+        # if(time_remaining <= 0):
+        #     log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Timeout Reached.')
+        #     #Do pre-shutdown tasks
+        #     stop_pat()
+        #     break #exit main loop
+        if(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):
+            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(start_time))
             #TODO: do any repetitive process tasks
             counter_debug += 1
 
     if(CH_MODE_ID == CH_MODE_DOWNLINK):
-        time_remaining = TIMEOUT_PD_DOWNLINK - elapsed_time
-        if(time_remaining <= 0):
-            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Timeout Reached.')
-            #Do pre-shutdown tasks
-            stop_pat()
-            break #exit main loop
-
-        elif(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):
-            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Time Remaining (sec): ' + str(time_remaining) + '. Start Time: ' + str(start_time))
+        # time_remaining = TIMEOUT_PD_DOWNLINK - elapsed_time
+        # if(time_remaining <= 0):
+        #     log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Timeout Reached.')
+        #     #Do pre-shutdown tasks
+        #     stop_pat()
+        #     break #exit main loop
+        if(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):
+            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(start_time))
             #TODO: do any repetitive process tasks
             counter_downlink += 1
 
@@ -248,6 +252,12 @@ while True:
     #update PAT status
     pat_status_flag = update_pat_status(pat_status_flag)
 
+    # # Check if new RxCommandPacket() workload is available from router
+    # workload = ipc_worker.poll_request(500) #500 ms timeout
+    # if workload:
+        # # interpret workload as RxCommandPacket
+        # ipc_rxcompacket = RxCommandPacket()
+        # ipc_rxcompacket.decode(workload)
     #poll for received commands
     sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds
     if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
@@ -270,7 +280,10 @@ while True:
                 #print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
                 #print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
-                set_time = time.gmtime(tai_secs)
+                print(tai_secs)
+                # Epoch starts Jan 1 2000 (or 946684800 s)
+                set_time = time.gmtime(946684800+tai_secs)
+                print(set_time)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
                                                                                     set_time.tm_mon,
                                                                                     set_time.tm_mday,
@@ -286,7 +299,7 @@ while True:
             ack_to_hk(CMD_PL_REBOOT, CMD_ACK)
             time.sleep(1)
             os.system("shutdown -r now") #reboot the RPi
-        
+
         elif(CMD_ID == CMD_PL_SHUTDOWN):
             log_to_hk('ACK CMD PL_SHUTDOWN')
             ack_to_hk(CMD_PL_SHUTDOWN, CMD_ACK)
@@ -400,19 +413,19 @@ while True:
                 ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            exp_cmd_tuple = struct.unpack('!I', ipc_rxcompacket.payload) #TBR
-            exp_cmd = exp_cmd_tuple[0]
-            if(exp_cmd < CAMERA_MIN_EXP):
-                    log_to_hk('Exposure below minimum of 10 us entered. Using 10 us.')
-                    exp_cmd = CAMERA_MIN_EXP
-            elif(exp_cmd > CAMERA_MAX_EXP):
-                    log_to_hk('Exposure above maximum of 10000000 us entered. Using 10000000 us.')
-                    exp_cmd = CAMERA_MAX_EXP
+            window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload) #TBR
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
-                log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
-                ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ACK)
-                #manage image telemetry file...
+                if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT, str(window_height))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_X, str(window_ctr_rel_x))
+                    send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_Y, str(window_ctr_rel_y))
+                    send_pat_command(socket_PAT_control, PAT_CMD_GET_IMAGE, str(exp_cmd))
+                    log_to_hk('ACK CMD PL_SINGLE_CAPTURE')
+                    ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ACK)
+                else:
+                    log_to_hk("ERROR CMD PL_SINGLE_CAPTURE: Parameters out of bounds. [" + str(window_ctr_rel_x) + ", " + str(window_ctr_rel_y) + ", " + str(window_width) + ", " + str(window_height) + ", " + str(exp_cmd) + "]")
+                    ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
             else:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
@@ -465,7 +478,7 @@ while True:
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ERR)
-        
+
         elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
             bcn_rel_x, bcn_rel_y, bcn_window_size, bcn_max_exp = struct.unpack('!hhHI', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
@@ -478,7 +491,6 @@ while True:
                     ack_to_hk(CMD_PL_UPDATE_ACQUISITION_PARAMS, CMD_ACK)
                 else:
                     log_to_hk('ERROR CMD PL_UPDATE_ACQUISITION_PARAMS: Parameters out of bounds')
-
             else:
                 log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
@@ -493,12 +505,17 @@ while True:
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
-            tx_update_x, tx_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
+            tx_update_x, tx_update_y, tx_offset_calc_pd, enable_dither, dither_pd = struct.unpack('!hhHBH', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED) or pat_status_is(PAT_STATUS_MAIN)):
                 if(abs(tx_update_x) < CAMERA_WIDTH/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
                 if(abs(tx_update_y) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_Y, str(tx_update_y))
+                if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET, str(tx_offset_calc_pd))
+                    if(enable_dither == PAT_ENABLE_DITHER):
+                        send_pat_command(socket_PAT_control, PAT_CMD_ENABLE_DITHER_TX_OFFSET, str(enable_dither))
+                        send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_PERIOD_DITHER_TX_OFFSET, str(dither_pd))
                 log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
             else:
@@ -558,37 +575,50 @@ while True:
             else:
                 fpga.write_reg(start_addr, write_data)
                 check_write_data = fpga.read_reg(start_addr, num_registers)
-                addresses = range(start_addr, start_addr+num_registers)
-                return_message = ""
-                num_errors = 0
-                for i in range(num_registers):
-                    if check_write_data[i] != write_data[i]:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
-                        num_errors += 1
+                if(type(check_write_data) == int):
+                    check_write_data = [check_write_data]
+                if(type(check_write_data) == list): 
+                    addresses = range(start_addr, start_addr+num_registers)
+                    return_message = ""
+                    num_errors = 0
+                    for i in range(num_registers):
+                        if check_write_data[i] != write_data[i]:
+                            return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
+                            num_errors += 1
+                        else:
+                            return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
+                    if(num_errors == 0):
+                        log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                        ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
                     else:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
-                if(num_errors == 0):
-                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
+                        log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
+                        ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
                 else:
-                    log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
+                    log_to_hk('ERROR CMD PL_SET_FPGA - Type error, expected list for check_write_data, got: ' + str(type(check_write_data)))
+                    ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_GET_FPGA):
             rq_number, start_addr, num_registers = struct.unpack('!BHB', ipc_rxcompacket.payload)
             read_data = fpga.read_reg(start_addr, num_registers)
-            read_data_len = len(read_data)
-            if(num_registers != read_data_len):
-                log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
-                ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
+            if(type(read_data) == int):
+                read_data = [read_data]
+            if(type(read_data) == list):  
+                read_data_len = len(read_data)
+                if(num_registers != read_data_len):
+                    log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
+                    ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
+                else:
+                    #send on tx port
+                    fpga_read_payload = struct.pack('!BHB%dI'%read_data_len, rq_number, start_addr, read_data_len, *read_data)
+                    print (fpga_read_payload) #debug print
+                    fpga_read_txpacket = TxPacket()
+                    raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
+                    socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
+                    log_to_hk('ACK CMD PL_GET_FPGA. Request Number = ' + str(rq_number) + '. Start Addr: ' + str(start_addr) + '. Num Reg: ' + str(num_registers))
+                    ack_to_hk(CMD_PL_GET_FPGA, CMD_ACK)
             else:
-                #send on tx port
-                fpga_read_payload = struct.pack('!BHB%dI'%read_data_len, rq_number, start_addr, read_data_len, *read_data)
-                print (fpga_read_payload) #debug print
-                fpga_read_txpacket = TxPacket()
-                raw_fpga_read_txpacket = fpga_read_txpacket.encode(APID = TLM_GET_FPGA, payload = fpga_read_payload)
-                socket_tx_packets.send(raw_fpga_read_txpacket) #send packet
-                ack_to_hk(CMD_PL_GET_FPGA, CMD_ACK)
+                log_to_hk('ERROR CMD PL_GET_FPGA - Type error, expected list for read_data, got: ' + str(type(read_data)))
+                ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SET_HK):
             ipc_HKControlPacket = HKControlPacket()
@@ -661,7 +691,7 @@ while True:
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
             temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
             print([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])
-            if (temps<10):
+            if (temps<0):
                 fpga.write_reg(mmap.PO3, 85)
                 fpga.write_reg(mmap.HE1, 85)
                 fpga.write_reg(mmap.HE2, 85)
@@ -674,16 +704,16 @@ while True:
                 temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
                 time.sleep(15)
                 print(temps)
-                if ((time.time() - begin.time()) > 900):
+                if ((time.time() - begin_time) > 1200):
                     print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
-                
+
 
             fpga.write_reg(mmap.PO3, 15)
             fpga.write_reg(mmap.HE1, 15)
             fpga.write_reg(mmap.HE1, 15)
 
             os.system('python ~/test/general_functionality_test.py') #starts self test script
-            
+
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
@@ -707,20 +737,19 @@ while True:
                 #if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
                 end_time = time.time()
                 log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
-                
+
                 #log transmit start time
                 start_time = time.time()
 
-                ppm_order = 16
-                data = "Hi I'm Mr.Meeseeks!"
+                ppm_order = 4
+                data = TRANSMIT_MESSAGE
                 tx_pkt = tx_packet.txPacket(ppm_order, data)
                 tx_pkt.pack()
 
                 control = fpga.read_reg(mmap.CTL)
                 if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-                tx_pkt.set_PPM(fpga)
 
-                transmit_time = 100 #seconds
+                transmit_time = TRANSMIT_TIME #seconds
 
                 #turn on laser
                 seed_setting = 1
@@ -746,10 +775,10 @@ while True:
                 ppm4_input = PPM4_THRESHOLDS
                 ppm = ppm_codes[0]
 
-                if(seed_setting): 
-                    seed = payload_seed 
+                if(seed_setting):
+                    seed = payload_seed
                     ppm_input = [ppm4_input[0], ppm4_input[1]]
-                else: 
+                else:
                     seed = flat_sat_seed
                     ppm_input = [ppm4_input[2], ppm4_input[3]]
 
@@ -757,33 +786,34 @@ while True:
                     fpga.write_reg(x, seed[x-1])
 
                 ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
-                fpga.write_reg(mmap.DATA, ppm_order) 
+                fpga.write_reg(mmap.DATA, ppm_order)
                 log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
-
+                last_i = 0
                 while(abs(end_time - start_time) < transmit_time):
 
-                    i = abs(end_time - start_time)//150
+                    i = int(abs(end_time - start_time)//150)
                     ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
-                    fpga.write_reg(mmap.DATA, ppm_order) 
-                    print((end_time - start_time), i, fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
+                    if i > last_i:
+                        tx_pkt = tx_packet.txPacket(ppm_order, data)
+                        tx_pkt.pack()
+                        last_i = i
                     #Stall Fifo
-                    # fpga.write_reg(mmap.CTL, control | 0x8)
+                    fpga.write_reg(mmap.CTL, control | 0x8)
 
                     # # #Write to FIFO
-                    # tx_pkt.transmit(fpga, .1)
+                    tx_pkt.transmit(fpga, .1)
 
-                    # fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                    # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                    #     # success = False
-                    #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                    #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols)) 
-                    #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))   
+                    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                    if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                        # success = False
+                        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                        # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+                        # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
 
-                    # if(fifo_len < 100): time.sleep(.005)
+                    if(fifo_len < 100): time.sleep(.005)
 
-                    # # #Release FIFO
-                    # fpga.write_reg(mmap.CTL, 0x7)
-                    time.sleep(10)
+                    # #Release FIFO
+                    fpga.write_reg(mmap.CTL, 0x7)
                     end_time = time.time()
 
                 log_to_hk("Transmit Session Complete")
@@ -793,15 +823,17 @@ while True:
                 power.tec_off()
 
                 log_to_hk('Commanding PAT to return to STANDBY mode.')
-                send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
-                
+
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                 log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
-            else: 
+            else:
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+
+            send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+            
             #else:
             #    log_to_hk('Transmit did not run b/c pat self test did not succeed.')
             #    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
@@ -852,3 +884,6 @@ while True:
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
             # TODO: Send Error Packet
+        
+        # # Tell the router we're ready for work
+        # ipc_worker.send_ready()
