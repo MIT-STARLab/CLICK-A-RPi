@@ -316,7 +316,7 @@ class Housekeeping:
                 p_name = p.info['cmdline'][0]
 
             if p_name in self.procs:
-                print(p_name)
+                #print(p_name)
                 pkt += struct.pack('B', self.procs[p_name])
                 pkt += struct.pack('B', (p.cpu_percent() % 256))
                 pkt += struct.pack('B', (p.memory_percent('rss') % 256))
@@ -333,17 +333,17 @@ class Housekeeping:
             apid = TLM_HK_PAT
             payload, _, _, _ = pat_pkt.decode(data)
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
-            print('Handling PAT pkt w/ payload: ', payload)
+            #print('Handling PAT pkt w/ payload: ', payload)
 
         elif (process_id == self.HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
             payload = data #data is already a packed byte string
-            print('Handling FPGA pkt w/ payload: ', payload)
+            #print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == self.HK_SYS_ID):
             apid = TLM_HK_SYS
             payload = data #data is already a packed byte string
-            print('Handling SYS pkt w/ payload: ', payload)
+            #print('Handling SYS pkt w/ payload: ', payload)
 
         elif (process_id == self.HK_CH_ID):
             apid = TLM_HK_CH
