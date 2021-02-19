@@ -107,8 +107,8 @@ def request_file(ipc_rxcompacket, socket_tx_packets):
     transfer_id, all_flag, chunk_start_index, num_chunks = struct.unpack('!HBHH', ipc_rxcompacket.payload)
     try:
         # TODO: Error handling for file not found (send error packet)
-        chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'))
-        # chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
+        chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'), key=lambda s: s.split('_')[0])
+        # chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'), key=lambda s: s.split('_')[0])
 
         # Dir is empty -> error
         if not chunk_files:
@@ -176,8 +176,8 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
     pkt_data = ''
     try:
         # FOR TEST:
-        # chunk_files = sorted(os.listdir('test_file_staging/'+str(transfer_id)+'/'))
-        chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'))
+        # chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'), key=lambda s: s.split('_')[0])
+        chunk_files = sorted(os.listdir('/root/file_staging/'+str(transfer_id)+'/'), key=lambda s: s.split('_')[0])
 
         # Check that the directory isn't empty
         if not chunk_files:
