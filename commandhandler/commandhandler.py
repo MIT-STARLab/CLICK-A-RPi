@@ -505,12 +505,17 @@ while True:
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
-            tx_update_x, tx_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
+            tx_update_x, tx_update_y, tx_offset_calc_pd, enable_dither, dither_pd = struct.unpack('!hhHBH', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED) or pat_status_is(PAT_STATUS_MAIN)):
                 if(abs(tx_update_x) < CAMERA_WIDTH/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
                 if(abs(tx_update_y) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_Y, str(tx_update_y))
+                if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET, str(tx_offset_calc_pd))
+                    if(enable_dither == PAT_ENABLE_DITHER):
+                        send_pat_command(socket_PAT_control, PAT_CMD_ENABLE_DITHER_TX_OFFSET, str(enable_dither))
+                        send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_PERIOD_DITHER_TX_OFFSET, str(dither_pd))
                 log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
             else:
