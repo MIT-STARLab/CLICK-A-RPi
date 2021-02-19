@@ -25,7 +25,7 @@ DEFAULT_CW_FTEC_MSB = 5
 DEFAULT_CW_FTEC_LSB = 107
 
 #HIGH/LOW for Payload/flatsat
-PPM4_THRESHOLDS = [-2.0, -2.9, -6.4,-7.3]
+PPM4_THRESHOLDS = [-1.6, -2.4, -5,-7]
 
 #HIGH/LOW for Payload/flatsat
 CW_THRESHOLDS = [4.8, 4.2, -1,-2.3]

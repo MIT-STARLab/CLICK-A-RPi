@@ -165,11 +165,9 @@ def loop():
 
                         else:
                             values_out.append(reg_buffer[addr])
-                    # print(values_out)   
 
                 else: req.answer('',error_flag=1)
 
-                
                 
             req.answer(values_out)
         
