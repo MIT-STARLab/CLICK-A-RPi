@@ -676,7 +676,7 @@ while True:
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
             temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
             print([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])
-            if (temps<10):
+            if (temps<0):
                 fpga.write_reg(mmap.PO3, 85)
                 fpga.write_reg(mmap.HE1, 85)
                 fpga.write_reg(mmap.HE2, 85)
@@ -689,7 +689,7 @@ while True:
                 temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
                 time.sleep(15)
                 print(temps)
-                if ((time.time() - begin.time()) > 900):
+                if ((time.time() - begin.time()) > 1200):
                     print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
 
 
@@ -727,15 +727,14 @@ while True:
                 start_time = time.time()
 
                 ppm_order = 4
-                data = "Hi I'm Mr.Meeseeks!"
+                data = options.TRANSMIT_MESSAGE
                 tx_pkt = tx_packet.txPacket(ppm_order, data)
                 tx_pkt.pack()
 
                 control = fpga.read_reg(mmap.CTL)
                 if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-                tx_pkt.set_PPM(fpga)
 
-                transmit_time = 900 #seconds
+                transmit_time = options.TRANSMIT_TIME #seconds
 
                 #turn on laser
                 seed_setting = 1
@@ -750,7 +749,7 @@ while True:
                 time.sleep(0.1)
                 fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
                 time.sleep(0.1)
-                # fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
                 time.sleep(2)
 
                 #set points are dependent on temperature
@@ -774,31 +773,32 @@ while True:
                 ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
                 fpga.write_reg(mmap.DATA, ppm_order)
                 log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
-
+                last_i = 0
                 while(abs(end_time - start_time) < transmit_time):
 
-                    i = abs(end_time - start_time)//150
+                    i = int(abs(end_time - start_time)//150)
                     ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
-                    fpga.write_reg(mmap.DATA, ppm_order)
-                    print((end_time - start_time), i, fpga.read_reg(34), fpga.read_reg(33), fpga.read_reg(36), fpga.read_reg(1), fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4), fpga.read_reg(606))
+                    if i > last_i:
+                        tx_pkt = tx_packet.txPacket(ppm_order, data)
+                        tx_pkt.pack()
+                        last_i = i
                     #Stall Fifo
-                    # fpga.write_reg(mmap.CTL, control | 0x8)
+                    fpga.write_reg(mmap.CTL, control | 0x8)
 
                     # # #Write to FIFO
-                    # tx_pkt.transmit(fpga, .1)
+                    tx_pkt.transmit(fpga, .1)
 
-                    # fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                    # if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                    #     # success = False
-                    #     print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                    #     # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
-                    #     # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
+                    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                    if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                        # success = False
+                        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                        # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+                        # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
 
-                    # if(fifo_len < 100): time.sleep(.005)
+                    if(fifo_len < 100): time.sleep(.005)
 
-                    # # #Release FIFO
-                    # fpga.write_reg(mmap.CTL, 0x7)
-                    time.sleep(10)
+                    # #Release FIFO
+                    fpga.write_reg(mmap.CTL, 0x7)
                     end_time = time.time()
 
                 log_to_hk("Transmit Session Complete")
@@ -808,7 +808,6 @@ while True:
                 power.tec_off()
 
                 log_to_hk('Commanding PAT to return to STANDBY mode.')
-                send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
 
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
@@ -817,6 +816,9 @@ while True:
             else:
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+
+            send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+            
             #else:
             #    log_to_hk('Transmit did not run b/c pat self test did not succeed.')
             #    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)

@@ -18,7 +18,7 @@ import hashlib
 fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga)
 edfa = mmap.EDFA(fpga)
-seed_setting = 0 #0 for flat_sat 1 for payload
+seed_setting = 1 #0 for flat_sat 1 for payload
 
 
 len_pass_string = 100
@@ -143,8 +143,8 @@ def test_fpga_if_performance(fo):
     time_async = time.time() - start_async
     fo.write('Completed in %f sec\n' % (time_async))
 
-    if time_single > 3: success = False
-    if time_block  > 3: success = False
+    if time_single > 3.5: success = False #housekeeping causes delay, adding .5 second
+    if time_block  > 3.5: success = False #housekeeping causes delay, adding .5 second
     if time_async  > 3: success = False
 
     if success:
@@ -328,29 +328,20 @@ def test_EDFA_IF(fo):
 
     print_test(fo, "Testing EDFA IF & current")
 
-    if(fpga.read_reg(mmap.PO2) == 85):
-        power.edfa_off()
-        time.sleep(.5)
-    off_current = fpga.read_reg(mmap.EDFA_CURRENT)
-    
-    power.edfa_on()
+    if(fpga.read_reg(mmap.PO2) != 85):  
+        power.edfa_on()
+
     time.sleep(5)
     
     edfa_temp = fpga.read_reg(mmap.EDFA_CASE_TEMP)
     power_in = fpga.read_reg(mmap.EDFA_POWER_IN)
     power_out = fpga.read_reg(mmap.EDFA_POWER_OUT)
-    on_current = sum([fpga.read_reg(mmap.EDFA_CURRENT) for x in range(10)])/10
     time.sleep(.2)
 
     success = True
-    if(off_current > 0.010 or on_current < 0.100 or on_current > 0.600):
-        success = False
-        fo.write('EDFA current is more than 10mA when off: %s or less than 100mA or greater than 600mA when on: %s \n' % (off_current, on_current))
-
     if(edfa_temp < -20 and edfa_temp > 60):
         success = False
         fo.write('EDFA Case temp is outside range -20-60C: %s \n' % edfa_temp)
-
 
     if(power_in != -100.0):
         success = False
@@ -403,21 +394,22 @@ def test_heaters(fo):
 
 
     success = True
-    if(heater_off_curr > 0.010):
+    #can be 110mA while off at 0C
+    if(heater_off_curr > 0.2):
         success = False
         fo.write("Heater off current is larger than 10mA\n")
         print(1)
-
-    if(not (0.7 < heater_one_curr < 0.9)):
+    add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP)
+    if(not (0.7 < heater_one_curr < 0.9+add_temp)):
         success = False
         fo.write("Heater one current is outside of bounds: %f A to %f A: %f\n" % (.7, .9, heater_one_curr))
         print(2)
 
-    if(not (0.4 < heater_two_curr < 0.6)):
+    if(not (0.4 < heater_two_curr < 0.6+add_temp)):
         success = False
         fo.write("Heater two current is outside of bounds: %f A to %f A: %f\n" % (.4, .6, heater_two_curr))
         print(3)
-    if(not (1.1 <  heater_both_curr < 1.5)):
+    if(not (1.1 <  heater_both_curr < 1.5+add_temp)):
         success = False
         print(4)
         fo.write("Both heater current is outside of bounds: %f A to %f A: %f\n" % (1.1, 1.5, heater_both_curr))
@@ -446,8 +438,8 @@ def test_tec_driver(fo):
 
     success = True
     #standard room temperature values
-    test_msb = [4,4,5,5,6,6]
-    test_lsb = [0,128,0,128,0,128]
+    test_msb = [4,5,5,6,6]
+    test_lsb = [128,0,128,0,128]
     for i in range(len(test_msb)):
         fpga.write_reg(mmap.LTSa, test_msb[i])
         fpga.write_reg(mmap.LTSb, test_lsb[i])
@@ -459,21 +451,21 @@ def test_tec_driver(fo):
             avg_len = 10
             on_curr = sum([fpga.read_reg(mmap.TEC_CURRENT) for x in range(avg_len)])/avg_len
 
-        if(on_curr > 250e-3):
-            success = False
-            fo.write("TEC on current is higher than 200mA: %s\n" % on_curr )
-            to_print.append("TEC on current is higher than 200mA: %s" % on_curr )
+            limit = .300 + .007*fpga.read_reg(mmap.TOSA_TEMP)
+
+            if(on_curr > limit):
+                success = False
+                fo.write("TEC on current is higher than %smA: %s\n" % (round(limit,3), on_curr))
+                to_print.append("TEC on current is higher than %s mA: %s" % (round(limit,3), on_curr))
         
-        fo.write("Reg 1 at %d, reg 2 at %d: readback %f\n" % (test_msb[i], test_lsb[i], on_curr))
+            fo.write("Reg 1 at %d, reg 2 at %d: readback %f\n" % (test_msb[i], test_lsb[i], on_curr))
 
         time.sleep(5)
         #check TEC linearity
         error = .05
         tec_readback = []
         if(fpga.read_reg(mmap.TOSA_TEMP) < 10):
-            error = .1
-            if(test_msb == 4):
-                continue
+            continue
 
         val = test_msb[i]*256 + test_lsb[i]
         tec_readback = fpga.read_reg(mmap.LTRa)*256 + fpga.read_reg(mmap.LTRb)
@@ -530,15 +522,11 @@ def test_bias_driver(fo):
         avg_len = 10
         avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
         time.sleep(.1)
-    
-        if(off_curr > 10e-3):
-            success = False
-            fo.write("LD off current is greater than %sA: %s\n" % (str(10e-3), str(off_curr)))
-            break
 
-        if(avg_on_curr > 600e-3 or avg_on_curr < 100e-3):
+        limit = .600 + .01*fpga.read_reg(mmap.TOSA_TEMP)
+        if(avg_on_curr > limit or avg_on_curr < 100e-3):
             success = False
-            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(500e-3), str(100e-3), str(round(avg_on_curr,3))))
+            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(round(limit,3)), str(100e-3), str(round(avg_on_curr,3))))
             break
 
     power.bias_off()
