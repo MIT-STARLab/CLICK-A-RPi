@@ -277,33 +277,10 @@ class Housekeeping:
             # Error if journal file can't be opened
             pkt += struct.pack('!L', 0xFFFFFFFF)
 
-        # 13-16: /dev/run disk usage
-        disk = psutil.disk_usage('/dev')
+        # 13-16: Disk usage
+        disk = psutil.disk_usage('/root')
         pkt += struct.pack('!L', (disk.used % 2**32))
-        # 17-20: Disk free
-        pkt += struct.pack('!L', (disk.free % 2**32))
 
-        # 13-16: /dev/shm disk usage
-        disk = psutil.disk_usage('/dev/shm')
-        pkt += struct.pack('!L', (disk.used % 2**32))
-        # 17-20: Disk free
-        pkt += struct.pack('!L', (disk.free % 2**32))
-
-        # 13-16: /dev/run disk usage
-        disk = psutil.disk_usage('/run')
-        pkt += struct.pack('!L', (disk.used % 2**32))
-        # 17-20: Disk free
-        pkt += struct.pack('!L', (disk.free % 2**32))
-
-        # 13-16: /dev/run disk usage
-        disk = psutil.disk_usage('/var')
-        pkt += struct.pack('!L', (disk.used % 2**32))
-        # 17-20: Disk free
-        pkt += struct.pack('!L', (disk.free % 2**32))
-
-        # 13-16: /dev/run disk usage
-        disk = psutil.disk_usage('/tmp')
-        pkt += struct.pack('!L', (disk.used % 2**32))
         # 17-20: Disk free
         pkt += struct.pack('!L', (disk.free % 2**32))
 
@@ -311,13 +288,13 @@ class Housekeeping:
         vmem = psutil.virtual_memory()
         pkt += struct.pack('!L', (vmem.total % 2**32))
 
-        # 21-24: Available virtual memory
+        # 25-28: Available virtual memory
         pkt += struct.pack('!L', (vmem.available % 2**32))
 
-        # 21-24: Used virtual memory
+        # 29-32: Used virtual memory
         pkt += struct.pack('!L', (vmem.used % 2**32))
 
-        # 25-N: Process info
+        # 33-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
             p_name = ''
             if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
