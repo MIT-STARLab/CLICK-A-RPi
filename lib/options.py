@@ -28,7 +28,10 @@ DEFAULT_CW_FTEC_LSB = 107
 PPM4_THRESHOLDS = [-1.6, -2.4, -5,-7]
 
 #HIGH/LOW for Payload/flatsat
-CW_THRESHOLDS = [4.8, 4.2, -1,-2.3]
+CW_THRESHOLDS = [4.8, 4.15, -1,-2.3]
+
+TRANSMIT_MESSAGE = "Hello I'm Mr. Meeseeks!"
+TRANSMIT_TIME = 900
 
 
 #IPC Port Numbers
@@ -174,7 +177,7 @@ HK_PAT_RESTART_ENABLE = 1
 HK_FPGA_RESTART_ENABLE = 1
 HK_ALLPKTS_SEND_ENABLE = 1
 
-HK_FPGA_CHECK_PD = 1 #seconds
+HK_FPGA_CHECK_PD = 5 #seconds
 HK_SYS_CHECK_PD = 1 #seconds
 HK_CH_HEARTBEAT_PD = 10 #seconds
 HK_PAT_HEALTH_PD = 3 #seconds
