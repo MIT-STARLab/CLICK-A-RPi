@@ -689,7 +689,7 @@ while True:
                 temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
                 time.sleep(15)
                 print(temps)
-                if ((time.time() - begin.time()) > 1200):
+                if ((time.time() - begin_time) > 1200):
                     print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
 
 
@@ -727,14 +727,14 @@ while True:
                 start_time = time.time()
 
                 ppm_order = 4
-                data = options.TRANSMIT_MESSAGE
+                data = TRANSMIT_MESSAGE
                 tx_pkt = tx_packet.txPacket(ppm_order, data)
                 tx_pkt.pack()
 
                 control = fpga.read_reg(mmap.CTL)
                 if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
 
-                transmit_time = options.TRANSMIT_TIME #seconds
+                transmit_time = TRANSMIT_TIME #seconds
 
                 #turn on laser
                 seed_setting = 1
