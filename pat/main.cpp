@@ -719,7 +719,7 @@ int main() //int argc, char** argv
 
 					case CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET:
 						period_calculate_tx_offsets = (float) atoi(command_data); 
-						period_tx_offset = period_calculate_tx_offsets;
+						duration<double> period_tx_offset(period_calculate_tx_offsets);
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET - Updating Tx Offset Calculation PD to ", period_calculate_tx_offsets);
 						break;
 
@@ -730,7 +730,7 @@ int main() //int argc, char** argv
 
 					case CMD_UPDATE_PERIOD_DITHER_TX_OFFSET:
 						period_dither_tx_offsets = (float) atoi(command_data); 
-						period_dither = period_dither_tx_offsets;
+						duration<double> period_dither(period_dither_tx_offsets);
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_PERIOD_DITHER_TX_OFFSET - Updating Tx Offset Dither PD to ", period_dither_tx_offsets);
 						break;
 
