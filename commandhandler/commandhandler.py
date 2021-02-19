@@ -15,6 +15,7 @@ import traceback
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
+# import ipc_loadbalancer
 from options import *
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, CHHeartbeatPacket, HKControlPacket, PATStatusPacket
 from zmqTxRx import recv_zmq, separate
@@ -55,6 +56,19 @@ pat_status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SEL
 # ZeroMQ inter process communication
 context = zmq.Context()
 
+# #ZMQ REQ worker socket for load balancing
+# ipc_worker = ipc_loadbalancer.WorkerInterface(context)
+# # Tell the router we're ready for work
+# ipc_worker.send_ready()
+
+print ("Pulling Rx Cmd Packets")
+print ("on port {}".format(RX_CMD_PACKETS_PORT))
+socket_rx_command_packets = context.socket(zmq.SUB)
+socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
+socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+poller_rx_command_packets = zmq.Poller() #poll rx commands
+poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
+
 socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
 socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
 
@@ -66,14 +80,6 @@ socket_hk_control.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to speci
 
 socket_tx_packets = context.socket(zmq.PUB)
 socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-
-print ("Pulling Rx Cmd Packets")
-print ("on port {}".format(RX_CMD_PACKETS_PORT))
-socket_rx_command_packets = context.socket(zmq.SUB)
-socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
-socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-poller_rx_command_packets = zmq.Poller() #poll rx commands
-poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 
 print ("Pulling PAT Status Packets")
 print ("on port {}".format(PAT_STATUS_PORT))
@@ -212,28 +218,26 @@ while True:
         counter_ground_test += 1
 
     if(CH_MODE_ID == CH_MODE_DEBUG):
-        time_remaining = TIMEOUT_PD_DEBUG - elapsed_time
-        if(time_remaining <= 0):
-            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Timeout Reached.')
-            #Do pre-shutdown tasks
-            stop_pat()
-            break #exit main loop
-
-        elif(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):
-            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Time Remaining (sec): ' + str(time_remaining) + '. Start Time: ' + str(start_time))
+        # time_remaining = TIMEOUT_PD_DEBUG - elapsed_time
+        # if(time_remaining <= 0):
+        #     log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Timeout Reached.')
+        #     #Do pre-shutdown tasks
+        #     stop_pat()
+        #     break #exit main loop
+        if(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):
+            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(start_time))
             #TODO: do any repetitive process tasks
             counter_debug += 1
 
     if(CH_MODE_ID == CH_MODE_DOWNLINK):
-        time_remaining = TIMEOUT_PD_DOWNLINK - elapsed_time
-        if(time_remaining <= 0):
-            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Timeout Reached.')
-            #Do pre-shutdown tasks
-            stop_pat()
-            break #exit main loop
-
-        elif(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):
-            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Time Remaining (sec): ' + str(time_remaining) + '. Start Time: ' + str(start_time))
+        # time_remaining = TIMEOUT_PD_DOWNLINK - elapsed_time
+        # if(time_remaining <= 0):
+        #     log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Timeout Reached.')
+        #     #Do pre-shutdown tasks
+        #     stop_pat()
+        #     break #exit main loop
+        if(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):
+            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(start_time))
             #TODO: do any repetitive process tasks
             counter_downlink += 1
 
@@ -248,6 +252,12 @@ while True:
     #update PAT status
     pat_status_flag = update_pat_status(pat_status_flag)
 
+    # # Check if new RxCommandPacket() workload is available from router
+    # workload = ipc_worker.poll_request(500) #500 ms timeout
+    # if workload:
+        # # interpret workload as RxCommandPacket
+        # ipc_rxcompacket = RxCommandPacket()
+        # ipc_rxcompacket.decode(workload)
     #poll for received commands
     sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds
     if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
@@ -495,12 +505,17 @@ while True:
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
-            tx_update_x, tx_update_y = struct.unpack('!hh', ipc_rxcompacket.payload)
+            tx_update_x, tx_update_y, tx_offset_calc_pd, enable_dither, dither_pd = struct.unpack('!hhHBH', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED) or pat_status_is(PAT_STATUS_MAIN)):
                 if(abs(tx_update_x) < CAMERA_WIDTH/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_X, str(tx_update_x))
                 if(abs(tx_update_y) < CAMERA_HEIGHT/2):
                     send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_TX_OFFSET_Y, str(tx_update_y))
+                if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                    send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET, str(tx_offset_calc_pd))
+                    if(enable_dither == PAT_ENABLE_DITHER):
+                        send_pat_command(socket_PAT_control, PAT_CMD_ENABLE_DITHER_TX_OFFSET, str(enable_dither))
+                        send_pat_command(socket_PAT_control, PAT_CMD_UPDATE_PERIOD_DITHER_TX_OFFSET, str(dither_pd))
                 log_to_hk('ACK CMD PL_UPDATE_TX_OFFSETS')
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
             else:
@@ -869,3 +884,6 @@ while True:
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
             # TODO: Send Error Packet
+        
+        # # Tell the router we're ready for work
+        # ipc_worker.send_ready()

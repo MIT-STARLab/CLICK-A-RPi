@@ -29,7 +29,7 @@
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
-#define PERIOD_CALCULATE_TX_OFFSETS 300.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
+#define PERIOD_CALCULATE_TX_OFFSETS 1000.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define PERIOD_DITHER_TX_OFFSETS 10.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -15 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
@@ -266,6 +266,8 @@ int main() //int argc, char** argv
 	offsets.x = TX_OFFSET_X_DEFAULT; offsets.y = TX_OFFSET_Y_DEFAULT;
 	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets); 
 	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
+	float period_calculate_tx_offsets = PERIOD_CALCULATE_TX_OFFSETS;
+	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -384,13 +386,13 @@ int main() //int argc, char** argv
 
 	//Tx Offset Calculation Timing
 	time_point<steady_clock> time_prev_tx_offset; 
-	duration<double> period_tx_offset(PERIOD_CALCULATE_TX_OFFSETS); //wait time in between feedback messages to the bus (1s = 1 Hz)
+	duration<double> period_tx_offset(period_calculate_tx_offsets); //wait time in between calculation of tx offsets
 	time_point<steady_clock> check_tx_offset; // Record current time
 	duration<double> elapsed_time_tx_offset; // time since last tx offset calculation
 
 	//Tx Offset Dithering Timing
 	time_point<steady_clock> time_prev_dither; 
-	duration<double> period_dither(PERIOD_DITHER_TX_OFFSETS); //wait time in between feedback messages to the bus (1s = 1 Hz)
+	duration<double> period_dither(period_dither_tx_offsets); //wait time in between dithering
 	time_point<steady_clock> check_dither; // Record current time
 	duration<double> elapsed_time_dither; // time since last tx offset calculation
 	
@@ -713,6 +715,23 @@ int main() //int argc, char** argv
 					case CMD_UPDATE_TX_OFFSET_Y:
 						offsets.y = atoi(command_data); 
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_TX_OFFSET_Y - Updating Tx Offset Y to ", offsets.y);
+						break;
+
+					case CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET:
+						period_calculate_tx_offsets = (float) atoi(command_data); 
+						period_tx_offset = period_calculate_tx_offsets;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET - Updating Tx Offset Calculation PD to ", period_calculate_tx_offsets);
+						break;
+
+					case CMD_ENABLE_DITHER_TX_OFFSET:
+						dithering_on = true;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_ENABLE_DITHER_TX_OFFSET - Tx Offset dithering enabled.");
+						break;
+
+					case CMD_UPDATE_PERIOD_DITHER_TX_OFFSET:
+						period_dither_tx_offsets = (float) atoi(command_data); 
+						period_dither = period_dither_tx_offsets;
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_PERIOD_DITHER_TX_OFFSET - Updating Tx Offset Dither PD to ", period_dither_tx_offsets);
 						break;
 
 					case CMD_UPDATE_FSM_X:
