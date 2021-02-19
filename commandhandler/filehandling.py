@@ -319,12 +319,12 @@ def auto_assemble_file(ipc_rxcompacket, socket_tx_packets):
 
     temp_file_name = '/root/file_staging/'+str(transfer_id)+'/reassembled_file.temp'
     temp_file_name_len = len(temp_file_name)
-    assm_file_cmd = struct.pack('!HH%ds' % (file_name_len), transfer_id, temp_file_name_len, temp_file_name)
+    assm_file_cmd = struct.pack('!HH%ds' % (temp_file_name_len), transfer_id, temp_file_name_len, temp_file_name)
     assm_file_cmd_pkt = RxCommandPacket()
     assm_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(assm_file_cmd))
     assemble_file(assm_file_cmd_pkt, socket_tx_packets)
 
-    val_file_cmd = struct.pack('!%dsH%ds' % (16, file_name_len), file_hash, temp_file_name_len, temp_file_name)
+    val_file_cmd = struct.pack('!%dsH%ds' % (16, temp_file_name_len), file_hash, temp_file_name_len, temp_file_name)
     val_file_cmd_pkt = RxCommandPacket()
     val_file_cmd_pkt.encode(APID=0, ts_txed_s=0, ts_txed_ms=0, payload=bytearray(val_file_cmd))
     validate_file(val_file_cmd_pkt, socket_tx_packets)

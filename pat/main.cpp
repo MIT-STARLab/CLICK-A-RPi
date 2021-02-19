@@ -39,12 +39,12 @@
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
 #define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
 #define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
-#define TX_OFFSET_SLOPE_X 0.3275f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_X -21.955f //TBD, pxls - bias coeff of tx offset as a function of temperature
-#define TX_OFFSET_QUADRATIC_Y 0.0077f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
-#define TX_OFFSET_SLOPE_Y -0.3093f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
-#define TX_OFFSET_BIAS_Y 196.08f //TBD, pxls - bias coeff of tx offset as a function of temperature
-#define TX_OFFSET_DITHER_X_RADIUS 2.0f //pxls
+#define TX_OFFSET_SLOPE_X 0.3462f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_X -22.464f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_QUADRATIC_Y 0.0085f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
+#define TX_OFFSET_SLOPE_Y -0.3471f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
+#define TX_OFFSET_BIAS_Y 196.46f //TBD, pxls - bias coeff of tx offset as a function of temperature
+#define TX_OFFSET_DITHER_X_RADIUS 4.0f //pxls
 #define TX_OFFSET_DITHER_Y_RADIUS 1.0f //pxls
 #define DITHER_COUNT_PERIOD 10 //1 full period after 10 ditherings
 
