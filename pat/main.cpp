@@ -386,13 +386,11 @@ int main() //int argc, char** argv
 
 	//Tx Offset Calculation Timing
 	time_point<steady_clock> time_prev_tx_offset; 
-	duration<double> period_tx_offset(period_calculate_tx_offsets); //wait time in between calculation of tx offsets
 	time_point<steady_clock> check_tx_offset; // Record current time
 	duration<double> elapsed_time_tx_offset; // time since last tx offset calculation
 
 	//Tx Offset Dithering Timing
 	time_point<steady_clock> time_prev_dither; 
-	duration<double> period_dither(period_dither_tx_offsets); //wait time in between dithering
 	time_point<steady_clock> check_dither; // Record current time
 	duration<double> elapsed_time_dither; // time since last tx offset calculation
 	
@@ -719,7 +717,6 @@ int main() //int argc, char** argv
 
 					case CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET:
 						period_calculate_tx_offsets = (float) atoi(command_data); 
-						period_tx_offset(period_calculate_tx_offsets);
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_PERIOD_CALCULATE_TX_OFFSET - Updating Tx Offset Calculation PD to ", period_calculate_tx_offsets);
 						break;
 
@@ -730,7 +727,6 @@ int main() //int argc, char** argv
 
 					case CMD_UPDATE_PERIOD_DITHER_TX_OFFSET:
 						period_dither_tx_offsets = (float) atoi(command_data); 
-						period_dither(period_dither_tx_offsets);
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_PERIOD_DITHER_TX_OFFSET - Updating Tx Offset Dither PD to ", period_dither_tx_offsets);
 						break;
 
@@ -909,6 +905,8 @@ int main() //int argc, char** argv
 			}
 		}		
 		// END of STANDBY loop
+		duration<double> period_tx_offset(period_calculate_tx_offsets); //wait time in between calculation of tx offsets
+		duration<double> period_dither(period_dither_tx_offsets); //wait time in between dithering
 		
 		// START Main PAT Loop
 		while(OPERATIONAL && !STANDBY) 
