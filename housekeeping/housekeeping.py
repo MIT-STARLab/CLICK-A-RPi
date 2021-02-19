@@ -226,6 +226,8 @@ class Housekeeping:
         # Handle FPGA packet format
         for i in range(0, len(answer_pkt)):
             pkt += struct.pack('!'+FPGA_TELEM_TYPE[i], answer_pkt[i])
+
+        self.fpga_hk_count += 1
         return pkt
 
     def check_sys(self):
@@ -275,17 +277,45 @@ class Housekeeping:
             # Error if journal file can't be opened
             pkt += struct.pack('!L', 0xFFFFFFFF)
 
-        # 13-16: Disk usage
-        # TODO: Update path if necessary
-        disk = psutil.disk_usage('/')
+        # 13-16: /dev/run disk usage
+        disk = psutil.disk_usage('/dev')
         pkt += struct.pack('!L', (disk.used % 2**32))
-
         # 17-20: Disk free
         pkt += struct.pack('!L', (disk.free % 2**32))
 
-        # 21-24: Available virtual memory
+        # 13-16: /dev/shm disk usage
+        disk = psutil.disk_usage('/dev/shm')
+        pkt += struct.pack('!L', (disk.used % 2**32))
+        # 17-20: Disk free
+        pkt += struct.pack('!L', (disk.free % 2**32))
+
+        # 13-16: /dev/run disk usage
+        disk = psutil.disk_usage('/run')
+        pkt += struct.pack('!L', (disk.used % 2**32))
+        # 17-20: Disk free
+        pkt += struct.pack('!L', (disk.free % 2**32))
+
+        # 13-16: /dev/run disk usage
+        disk = psutil.disk_usage('/var')
+        pkt += struct.pack('!L', (disk.used % 2**32))
+        # 17-20: Disk free
+        pkt += struct.pack('!L', (disk.free % 2**32))
+
+        # 13-16: /dev/run disk usage
+        disk = psutil.disk_usage('/tmp')
+        pkt += struct.pack('!L', (disk.used % 2**32))
+        # 17-20: Disk free
+        pkt += struct.pack('!L', (disk.free % 2**32))
+
+        # 21-24: Total virtual memory
         vmem = psutil.virtual_memory()
+        pkt += struct.pack('!L', (vmem.total % 2**32))
+
+        # 21-24: Available virtual memory
         pkt += struct.pack('!L', (vmem.available % 2**32))
+
+        # 21-24: Used virtual memory
+        pkt += struct.pack('!L', (vmem.used % 2**32))
 
         # 25-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
@@ -300,6 +330,8 @@ class Housekeeping:
                 pkt += struct.pack('B', self.procs[p_name])
                 pkt += struct.pack('B', (p.cpu_percent() % 256))
                 pkt += struct.pack('B', (p.memory_percent('rss') % 256))
+
+        self.sys_hk_count += 1
         return pkt
 
 
@@ -346,7 +378,7 @@ class Housekeeping:
 
             os.system("systemctl --user restart commandhandler")
             ch_pid = self.get_service_pid('commandhandler')
-            
+
             old_ch_pid = self.ch_pids[instance_num]
             self.ch_pids[instance_num] = ch_pid
             removed = self.ch_heartbeat_wds.pop(old_ch_pid)
@@ -434,10 +466,12 @@ class Housekeeping:
                 message = self.ch_heartbeat_socket.recv()
                 ch_packet = CHHeartbeatPacket()
                 ch_packet.decode(message)
-
+                print(ch_packet.origin)
                 if ch_packet.origin in self.ch_heartbeat_wds:
+                    print("Recognized PID")
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
                 else:
+                    print(self.ch_heartbeat_wds)
                     # TODO: error handling of unknown PID
                     pass
 
