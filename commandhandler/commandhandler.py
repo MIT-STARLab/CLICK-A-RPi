@@ -17,7 +17,7 @@ sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 # import ipc_loadbalancer
 from options import *
-from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, CHHeartbeatPacket, HKControlPacket, PATStatusPacket
+from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HeartbeatPacket, HKControlPacket, PATStatusPacket
 from zmqTxRx import recv_zmq, separate
 import ipc_helper
 import fpga_map as mmap
@@ -243,7 +243,7 @@ while True:
 
     #send heartbeat to housekeeping
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
-        ipc_heartbeatPacket = CHHeartbeatPacket()
+        ipc_heartbeatPacket = HeartbeatPacket()
         raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
         #print(ipc_heartbeatPacket) #Debug printing
         socket_hk_heartbeat.send(raw_ipc_heartbeatPacket)
@@ -577,7 +577,7 @@ while True:
                 check_write_data = fpga.read_reg(start_addr, num_registers)
                 if(type(check_write_data) == int):
                     check_write_data = [check_write_data]
-                if(type(check_write_data) == list): 
+                if(type(check_write_data) == list):
                     addresses = range(start_addr, start_addr+num_registers)
                     return_message = ""
                     num_errors = 0
@@ -602,7 +602,7 @@ while True:
             read_data = fpga.read_reg(start_addr, num_registers)
             if(type(read_data) == int):
                 read_data = [read_data]
-            if(type(read_data) == list):  
+            if(type(read_data) == list):
                 read_data_len = len(read_data)
                 if(num_registers != read_data_len):
                     log_to_hk('ERROR CMD PL_GET_FPGA - Expected number of registers (= ' + str(num_registers) +  ' not equal to read data length (= ' + str(len(read_data)))
@@ -833,7 +833,7 @@ while True:
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
             send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
-            
+
             #else:
             #    log_to_hk('Transmit did not run b/c pat self test did not succeed.')
             #    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
@@ -884,6 +884,6 @@ while True:
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
             # TODO: Send Error Packet
-        
+
         # # Tell the router we're ready for work
         # ipc_worker.send_ready()

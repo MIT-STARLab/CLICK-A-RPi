@@ -17,7 +17,7 @@ sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 
 import ipc_helper
-from ipc_packets import TxPacket, CHHeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HKControlPacket, PATControlPacket, PATHealthPacket
+from ipc_packets import TxPacket, HeartbeatPacket, FPGAMapRequestPacket, FPGAMapAnswerPacket, HKControlPacket, PATControlPacket, PATHealthPacket
 from options import *
 from fpga_map import FPGA_TELEM, FPGA_TELEM_TYPE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
@@ -78,6 +78,7 @@ class Housekeeping:
     HK_PKT_ID = 0x03
     HK_DEPKT_ID = 0x04
     HK_SYS_ID = 0x05
+    HK_LB_ID = 0x06
     HK_CH_ID = 0x80
 
     procs = {HK_PAT_ID:'/root/bin/pat',
@@ -85,6 +86,7 @@ class Housekeeping:
              HK_FPGA_ID:'/root/fpga/fpga.py',
              HK_PKT_ID:'/root/bus/packetizer.py',
              HK_DEPKT_ID:'/root/bus/depacketizer.py',
+             HK_LB_ID: '/root/commandhandler/router.py',
              HK_SYS_ID: '/root/housekeeping/housekeeping.py'}
 
     procs.update(dict(reversed(item) for item in procs.items()))
@@ -101,12 +103,14 @@ class Housekeeping:
         self.ch_restart_enable = HK_CH_RESTART_ENABLE
         self.pat_restart_enable = HK_PAT_RESTART_ENABLE
         self.fpga_restart_enable = HK_FPGA_RESTART_ENABLE
+        self.lb_restart_enable = HK_LB_RESTART_ENABLE
 
         # Initialize timing/check-related variables
         self.fpga_check_period = HK_FPGA_CHECK_PD
         self.sys_check_period = HK_SYS_CHECK_PD
         self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD
         self.pat_health_period = HK_PAT_HEALTH_PD
+        self.lb_heartbeat_period = HK_LB_HEARTBEAT_PD
 
         # Initialize structures to keep track of command handlers and their watchdogs
         self.ch_pids = range(COMMAND_HANDLERS_COUNT)
@@ -128,17 +132,20 @@ class Housekeeping:
         self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
         self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
         self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
+        self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
 
         # Initialize objects for multithreading
         self.fpga_check_flag = threading.Event()
         self.sys_check_flag = threading.Event()
         self.missing_pat_flag = threading.Event()
         self.missing_fpga_flag = threading.Event()
+        self.missing_lb_flag = threading.Event()
 
         self.fpga_check_flag.clear()
         self.sys_check_flag.clear()
         self.missing_pat_flag.clear()
         self.missing_fpga_flag.clear()
+        self.missing_lb_flag.clear()
 
         self.missing_ch_queue = Queue.Queue()
         self.fpga_queue = Queue.Queue()
@@ -150,11 +157,13 @@ class Housekeeping:
         self.tx_socket = self.context.socket(zmq.PUB)
         self.hk_control_socket = self.context.socket(zmq.SUB)
         self.ch_heartbeat_socket = self.context.socket(zmq.SUB)
+        self.lb_heartbeat_socket = self.context.socket(zmq.SUB)
 
         self.pat_health_socket.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
         self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
         self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
+        self.lb_heartbeat_socket.connect("tcp://127.0.0.1:%s" % LB_HEARTBEAT_PORT)
 
         self.pat_health_socket.setsockopt(zmq.SUBSCRIBE, b'')
 
@@ -163,6 +172,7 @@ class Housekeeping:
         self.poller.register(self.pat_health_socket, zmq.POLLIN)
         self.poller.register(self.hk_control_socket, zmq.POLLIN)
         self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
+        self.poller.register(self.lb_heartbeat_socket, zmq.POLLIN)
 
         # Initialize FPGA client
         self.fpga_interface = ipc_helper.FPGAClientInterface(self.context)
@@ -201,6 +211,9 @@ class Housekeeping:
 
     def alert_missing_fpga(self):
         self.missing_fpga_flag.set()
+
+    def alert_missing_lb(self):
+        self.missing_lb_flag.set()
 
     def init_fpga_read(self):
         if (self.fpga_req_enable):
@@ -369,6 +382,12 @@ class Housekeeping:
             self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
             self.pat_health_wd.start()
 
+        if (process_id == self.HK_LB_ID and self.lb_restart_enable):
+            print("Restart load balancer")
+            os.system("systemctl --user restart loadbalancer.service")
+            self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
+            self.lb_heartbeat_wd.start()
+
         if (process_id == self.HK_FPGA_ID and self.fpga_restart_enable):
             print("Restart fpga")
             os.system("systemctl --user restart fpga.service")
@@ -400,6 +419,7 @@ class Housekeeping:
         self.fpga_check_timer.start()
         self.sys_check_timer.start()
         self.pat_health_wd.start()
+        self.lb_heartbeat_wd.start()
 
         for i in self.ch_heartbeat_wds:
             self.ch_heartbeat_wds[i].start()
@@ -428,6 +448,10 @@ class Housekeeping:
                 self.restart_process(self.HK_FPGA_ID, 0)
                 self.missing_fpga_flag.clear()
 
+            if (self.missing_lb_flag.is_set()):
+                self.restart_process(self.HK_LB_ID, 0)
+                self.missing_lb_flag.clear()
+
             if(self.fpga_queue.qsize() > 0):
                 pkt = self.check_fpga(self.fpga_queue.get())
                 self.handle_hk_pkt(pkt, self.HK_FPGA_ID)
@@ -439,9 +463,15 @@ class Housekeeping:
                 self.handle_hk_pkt(message, self.HK_PAT_ID)
                 self.pat_health_wd.kick()
 
+            if self.lb_heartbeat_socket in sockets and sockets[self.lb_heartbeat_socket] == zmq.POLLIN:
+                message = self.lb_heartbeat_socket.recv()
+                lb_packet = HeartbeatPacket()
+                lb_packet.decode(message)
+                self.lb_heartbeat_wd.kick()
+
             elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
                 message = self.ch_heartbeat_socket.recv()
-                ch_packet = CHHeartbeatPacket()
+                ch_packet = HeartbeatPacket()
                 ch_packet.decode(message)
                 print(ch_packet.origin)
                 if ch_packet.origin in self.ch_heartbeat_wds:

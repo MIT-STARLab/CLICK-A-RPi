@@ -11,7 +11,7 @@ import sys
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
 from options import *
-from ipc_packets import RxCommandPacket, HandlerHeartbeatPacket
+from ipc_packets import RxCommandPacket, HeartbeatPacket
 import ipc_loadbalancer
 
 # use PID as unique identifier for this progress
@@ -70,7 +70,7 @@ while True:
 
     #send heartbeat to housekeeping (HK_LB_HEARTBEAT_PD = every 10 seconds)
     if(elapsed_time >= HK_LB_HEARTBEAT_PD*counter_heartbeat):
-        ipc_heartbeatPacket = HandlerHeartbeatPacket()
+        ipc_heartbeatPacket = HeartbeatPacket()
         raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
         print(ipc_heartbeatPacket) #Debug printing
         socket_housekeeping.send(raw_ipc_heartbeatPacket)

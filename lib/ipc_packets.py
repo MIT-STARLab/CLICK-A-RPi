@@ -107,7 +107,7 @@ class RxPATPacket(RxCommandPacket):
         else:
             return 'IPC RX_PAT_PACKET, APID:0x%02X, time:%d.%d s, size:%d' % (self.APID, self.ts_txed_s, 2*self.ts_txed_ms, self.size)
 
-class CHHeartbeatPacket(IpcPacket):
+class HeartbeatPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
 
     def encode(self, origin=0, ts_txed_s=0):
@@ -463,10 +463,10 @@ if __name__ == '__main__':
     not_empty_ipc_rxpatpacket.decode(raw)
     print(not_empty_ipc_rxpatpacket)
 
-    ips_heartbeatpacket = CHHeartbeatPacket()
-    raw = ips_heartbeatpacket.encode(origin=123,ts_txed_s=456)
-    ips_heartbeatpacket.decode(raw)
-    print(ips_heartbeatpacket)
+    ipc_heartbeatpacket = HeartbeatPacket()
+    raw = ipc_heartbeatpacket.encode(origin=123,ts_txed_s=456)
+    ipc_heartbeatpacket.decode(raw)
+    print(ipc_heartbeatpacket)
 
     ipc_fpgarqpacket_read = FPGAMapRequestPacket()
     raw = ipc_fpgarqpacket_read.encode(return_addr=456, rq_number=123, rw_flag=0, start_addr=0x1234, size=456)

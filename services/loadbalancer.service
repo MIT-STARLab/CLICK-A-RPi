@@ -1,0 +1,10 @@
+[Unit]
+Description=Load Balancer
+Before=commandhandler.service
+
+[Service]
+Type=simple
+ExecStart=/bin/python -u /root/commandhandler/router.py
+
+[Install]
+WantedBy=default.target
