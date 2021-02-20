@@ -162,19 +162,19 @@ int main() //int argc, char** argv
 	// create the PAT_STATUS_PORT PUB socket
 	zmq::socket_t pat_status_port(context, ZMQ_PUB); 
 	//rc = zmq_setsockopt(pat_status_port, ZMQ_LINGER, &linger, sizeof(linger));
-    pat_status_port.connect(PAT_STATUS_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+    pat_status_port.bind(PAT_STATUS_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
 	//std::cout << "rc (pat_status_port): " << rc << std::endl;
 
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
 	//rc = zmq_setsockopt(pat_health_port, ZMQ_LINGER, &linger, sizeof(linger));
-    pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+    pat_health_port.bind(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
 	//std::cout << "rc (pat_health_port): " << rc << std::endl;
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
 	//rc = zmq_setsockopt(pat_control_port, ZMQ_LINGER, &linger, sizeof(linger));
-    pat_control_port.connect(PAT_CONTROL_PORT); // connect to the transport
+    pat_control_port.bind(PAT_CONTROL_PORT); // connect to the transport
     pat_control_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	//std::cout << "rc (pat_control_port): " << rc << std::endl;
 

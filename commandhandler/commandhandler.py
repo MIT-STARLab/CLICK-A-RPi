@@ -69,22 +69,20 @@ socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
 poller_rx_command_packets = zmq.Poller() #poll rx commands
 poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 
-socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
-socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
-
 socket_hk_heartbeat = context.socket(zmq.PUB) #send messages on this port
-socket_hk_heartbeat.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
+socket_hk_heartbeat.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
 
 socket_hk_control = context.socket(zmq.PUB) #send messages on this port
-socket_hk_control.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to specific address (localhost)
+socket_hk_control.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_tx_packets = context.socket(zmq.PUB)
 socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
-print ("Pulling PAT Status Packets")
-print ("on port {}".format(PAT_STATUS_PORT))
+socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
+socket_PAT_control.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
+
 socket_PAT_status = context.socket(zmq.SUB)
-socket_PAT_status.bind("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
+socket_PAT_status.connect("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
 socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_status = zmq.Poller()
 poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
