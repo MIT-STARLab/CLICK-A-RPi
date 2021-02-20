@@ -166,12 +166,14 @@ class Housekeeping:
         self.lb_heartbeat_socket.connect("tcp://127.0.0.1:%s" % LB_HEARTBEAT_PORT)
 
         self.pat_health_socket.setsockopt(zmq.SUBSCRIBE, b'')
+        self.ch_heartbeat_socket.setsockopt(zmq.SUBSCRIBE, b'')
+        self.hk_control_socket.setsockopt(zmq.SUBSCRIBE, b'')
+        self.lb_heartbeat_socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         self.poller = zmq.Poller()
-
-        self.poller.register(self.pat_health_socket, zmq.POLLIN)
-        self.poller.register(self.hk_control_socket, zmq.POLLIN)
         self.poller.register(self.ch_heartbeat_socket, zmq.POLLIN)
+        self.poller.register(self.hk_control_socket, zmq.POLLIN)
+        self.poller.register(self.pat_health_socket, zmq.POLLIN)
         self.poller.register(self.lb_heartbeat_socket, zmq.POLLIN)
 
         # Initialize FPGA client
@@ -316,7 +318,6 @@ class Housekeeping:
                 p_name = p.info['cmdline'][0]
 
             if p_name in self.procs:
-                print(p_name)
                 pkt += struct.pack('B', self.procs[p_name])
                 pkt += struct.pack('B', (p.cpu_percent() % 256))
                 pkt += struct.pack('B', (p.memory_percent('rss') % 256))
@@ -457,7 +458,7 @@ class Housekeeping:
                 self.handle_hk_pkt(pkt, self.HK_FPGA_ID)
 
             # Receive packets from the other processes
-            sockets = dict(self.poller.poll(500)) # 500 ms timeout
+            sockets = dict(self.poller.poll(100)) # 100 ms timeout
             if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
                 message = self.pat_health_socket.recv()
                 self.handle_hk_pkt(message, self.HK_PAT_ID)
@@ -469,20 +470,19 @@ class Housekeeping:
                 lb_packet.decode(message)
                 self.lb_heartbeat_wd.kick()
 
-            elif self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
+            if self.ch_heartbeat_socket in sockets and sockets[self.ch_heartbeat_socket] == zmq.POLLIN:
                 message = self.ch_heartbeat_socket.recv()
                 ch_packet = HeartbeatPacket()
                 ch_packet.decode(message)
                 print(ch_packet.origin)
                 if ch_packet.origin in self.ch_heartbeat_wds:
-                    print("Recognized PID")
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
                 else:
                     print(self.ch_heartbeat_wds)
                     # TODO: error handling of unknown PID
                     pass
 
-            elif self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
+            if self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
                 # Check if command or log or ack packet
                 hk_packet = HKControlPacket()
