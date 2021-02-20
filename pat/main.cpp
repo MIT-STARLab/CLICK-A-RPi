@@ -37,8 +37,8 @@
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
-#define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
-#define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
+#define BCN_X_REL_GUESS 0 //estimate of beacon x position on acquisition rel to center
+#define BCN_Y_REL_GUESS 0 //estimate of beacon y position on acquisition rel to center
 #define TX_OFFSET_SLOPE_X 0.3462f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
 #define TX_OFFSET_BIAS_X -22.464f //TBD, pxls - bias coeff of tx offset as a function of temperature
 #define TX_OFFSET_QUADRATIC_Y 0.0085f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
