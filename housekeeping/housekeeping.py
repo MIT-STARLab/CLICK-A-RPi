@@ -33,7 +33,6 @@ class ResetTimer:
 
     def callback(self):
         self.function(*self.args, **self.kwargs)
-        self.start()
 
     def cancel(self):
         self.timer.cancel()
@@ -64,6 +63,8 @@ class WatchdogTimer:
         self.timeout = timeout
 
     def kick(self):
+        if (self.args):
+            print("kicked! %d" % self.args)
         self.cancel()
         self.start()
 
@@ -108,9 +109,9 @@ class Housekeeping:
         # Initialize timing/check-related variables
         self.fpga_check_period = HK_FPGA_CHECK_PD
         self.sys_check_period = HK_SYS_CHECK_PD
-        self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD
-        self.pat_health_period = HK_PAT_HEALTH_PD
-        self.lb_heartbeat_period = HK_LB_HEARTBEAT_PD
+        self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD+2
+        self.pat_health_period = HK_PAT_HEALTH_PD+2
+        self.lb_heartbeat_period = HK_LB_HEARTBEAT_PD+2
 
         # Initialize structures to keep track of command handlers and their watchdogs
         self.ch_pids = range(COMMAND_HANDLERS_COUNT)
@@ -120,6 +121,7 @@ class Housekeeping:
             try:
                 # TODO: switch this for multiple commandhandlers
                 ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                print("initializing and got ch pid %d" % ch_pid)
                 # ch_pid = self.get_service_pid('commandhandler')
             except:
                 #TODO: handle error here
@@ -159,10 +161,10 @@ class Housekeeping:
         self.ch_heartbeat_socket = self.context.socket(zmq.SUB)
         self.lb_heartbeat_socket = self.context.socket(zmq.SUB)
 
-        self.pat_health_socket.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
+        self.pat_health_socket.connect("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
         self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
-        self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
-        self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
+        self.hk_control_socket.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
+        self.ch_heartbeat_socket.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
         self.lb_heartbeat_socket.connect("tcp://127.0.0.1:%s" % LB_HEARTBEAT_PORT)
 
         self.pat_health_socket.setsockopt(zmq.SUBSCRIBE, b'')
@@ -274,13 +276,13 @@ class Housekeeping:
         pkt += struct.pack('B', self.pat_health_period)
 
         # 7: Acknowledged command count
-        pkt += struct.pack('B', self.ack_cmd_count)
+        pkt += struct.pack('B', (self.ack_cmd_count % 256))
         # 8: Last acknowledged command ID
-        pkt += struct.pack('B', self.last_ack_cmd_id)
+        pkt += struct.pack('B', (self.last_ack_cmd_id & 0xFF))
         # 9: Error command count
-        pkt += struct.pack('B', self.err_cmd_count)
+        pkt += struct.pack('B', (self.err_cmd_count % 256))
         # 10: Last error command ID
-        pkt += struct.pack('B', self.last_err_cmd_id)
+        pkt += struct.pack('B', (self.last_err_cmd_id & 0xFF))
 
         # 11-12: Boot count
         try:
@@ -361,9 +363,9 @@ class Housekeeping:
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id, instance_num):
-        print("Restart process")
+        print("Restart process %x" % process_id)
         if (process_id == self.HK_CH_ID and self.ch_restart_enable):
-            print("Restart ch")
+            print("Restart ch %d" % instance_num)
             # TODO: switch this for multiple commandhandlers
             os.system("systemctl --user restart commandhandler@%d" % instance_num)
             ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
@@ -371,30 +373,38 @@ class Housekeeping:
             # os.system("systemctl --user restart commandhandler")
             # ch_pid = self.get_service_pid('commandhandler')
 
+            # Update the instance/pid list
             old_ch_pid = self.ch_pids[instance_num]
             self.ch_pids[instance_num] = ch_pid
-            removed = self.ch_heartbeat_wds.pop(old_ch_pid)
-            # TODO: if (removed is 'No Key found'): handle error
-            self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
+            print('old_ch_pid %d vs ch_pid %d' % (old_ch_pid, ch_pid))
+            self.ch_heartbeat_wds[old_ch_pid].cancel()
+            old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
+            if (old_wd is 'No Key found'):
+                print('Error removing old ch pid')
+
+            # self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
+            self.ch_heartbeat_wds[ch_pid] = old_wd
             self.ch_heartbeat_wds[ch_pid].start()
 
         if (process_id == self.HK_PAT_ID and self.pat_restart_enable):
             print("Restart pat")
             os.system("systemctl --user restart pat.service")
-            self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
+            # self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
+            self.pat_health_wd.cancel()
             self.pat_health_wd.start()
 
         if (process_id == self.HK_LB_ID and self.lb_restart_enable):
             print("Restart load balancer")
             os.system("systemctl --user restart loadbalancer.service")
-            self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
+            # self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
+            self.lb_heartbeat_wd.cancel()
             self.lb_heartbeat_wd.start()
 
         if (process_id == self.HK_FPGA_ID and self.fpga_restart_enable):
             print("Restart fpga")
             os.system("systemctl --user restart fpga.service")
-            self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
-            self.fpga_check_timer.start()
+            # self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
+            # self.fpga_check_timer.start()
 
         err_pkt = TxPacket()
         raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('!BB', process_id, instance_num))
@@ -461,6 +471,7 @@ class Housekeeping:
             # Receive packets from the other processes
             sockets = dict(self.poller.poll(100)) # 100 ms timeout
             if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
+                print('received PAT health')
                 message = self.pat_health_socket.recv()
                 self.handle_hk_pkt(message, self.HK_PAT_ID)
                 self.pat_health_wd.kick()
@@ -475,13 +486,12 @@ class Housekeeping:
                 message = self.ch_heartbeat_socket.recv()
                 ch_packet = HeartbeatPacket()
                 ch_packet.decode(message)
-                print(ch_packet.origin)
                 if ch_packet.origin in self.ch_heartbeat_wds:
+                    print('recognized pid %d' % ch_packet.origin)
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
                 else:
-                    print(self.ch_heartbeat_wds)
+                    print("didn't recognize pid %d" % ch_packet.origin)
                     # TODO: error handling of unknown PID
-                    pass
 
             if self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()

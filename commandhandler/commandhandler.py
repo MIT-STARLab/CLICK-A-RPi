@@ -15,7 +15,7 @@ import traceback
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
-# import ipc_loadbalancer
+import ipc_loadbalancer
 from options import *
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HeartbeatPacket, HKControlPacket, PATStatusPacket
 from zmqTxRx import recv_zmq, separate
@@ -56,27 +56,27 @@ pat_status_names = ['CAMERA INIT', 'STANDBY', 'STANDBY_CALIBRATED', 'STANDBY_SEL
 # ZeroMQ inter process communication
 context = zmq.Context()
 
-# #ZMQ REQ worker socket for load balancing
-# ipc_worker = ipc_loadbalancer.WorkerInterface(context)
-# # Tell the router we're ready for work
-# ipc_worker.send_ready()
+#ZMQ REQ worker socket for load balancing
+ipc_worker = ipc_loadbalancer.WorkerInterface(context)
+# Tell the router we're ready for work
+ipc_worker.send_ready()
 
-print ("Pulling Rx Cmd Packets")
-print ("on port {}".format(RX_CMD_PACKETS_PORT))
-socket_rx_command_packets = context.socket(zmq.SUB)
-socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
-socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
-poller_rx_command_packets = zmq.Poller() #poll rx commands
-poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
+#print ("Pulling Rx Cmd Packets")
+#print ("on port {}".format(RX_CMD_PACKETS_PORT))
+#socket_rx_command_packets = context.socket(zmq.SUB)
+#socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
+#socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+#poller_rx_command_packets = zmq.Poller() #poll rx commands
+#poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 
 socket_PAT_control = context.socket(zmq.PUB) #send messages on this port
-socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) #connect to specific address (localhost)
+socket_PAT_control.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT) 
 
 socket_hk_heartbeat = context.socket(zmq.PUB) #send messages on this port
-socket_hk_heartbeat.bind("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
+socket_hk_heartbeat.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT) #connect to specific address (localhost)
 
 socket_hk_control = context.socket(zmq.PUB) #send messages on this port
-socket_hk_control.bind("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to specific address (localhost)
+socket_hk_control.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT) #connect to specific address (localhost)
 
 socket_tx_packets = context.socket(zmq.PUB)
 socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
@@ -84,7 +84,7 @@ socket_tx_packets.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 print ("Pulling PAT Status Packets")
 print ("on port {}".format(PAT_STATUS_PORT))
 socket_PAT_status = context.socket(zmq.SUB)
-socket_PAT_status.bind("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
+socket_PAT_status.connect("tcp://127.0.0.1:%s" % PAT_STATUS_PORT)
 socket_PAT_status.setsockopt(zmq.SUBSCRIBE, b'')
 poller_PAT_status = zmq.Poller()
 poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
@@ -253,21 +253,21 @@ while True:
     pat_status_flag = update_pat_status(pat_status_flag)
 
     # # Check if new RxCommandPacket() workload is available from router
-    # workload = ipc_worker.poll_request(500) #500 ms timeout
-    # if workload:
+    workload = ipc_worker.poll_request(500) #500 ms timeout
+    if workload:
         # # interpret workload as RxCommandPacket
-        # ipc_rxcompacket = RxCommandPacket()
-        # ipc_rxcompacket.decode(workload)
-    #poll for received commands
-    sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds
-    if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
+        ipc_rxcompacket = RxCommandPacket()
+        ipc_rxcompacket.decode(workload)
+        #poll for received commands
+        #sockets = dict(poller_rx_command_packets.poll(10)) #poll for 10 milliseconds
+        #if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
         # get commands
         # print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
-        message = recv_zmq(socket_rx_command_packets)
+        #message = recv_zmq(socket_rx_command_packets)
 
         # decode the package
-        ipc_rxcompacket = RxCommandPacket()
-        ipc_rxcompacket.decode(message)
+        #ipc_rxcompacket = RxCommandPacket()
+        #ipc_rxcompacket.decode(message)
         CMD_ID = ipc_rxcompacket.APID
 
         if(CMD_ID != APID_TIME_AT_TONE):
@@ -541,10 +541,7 @@ while True:
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             elif(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                if(PAT_MODE_ID == PAT_CMD_BCN_ALIGN):
-                    send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
-                else:
-                    send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_DO_CALIB_FLAG))
+                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_DO_CALIB_FLAG))
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
@@ -889,4 +886,4 @@ while True:
             # TODO: Send Error Packet
 
         # # Tell the router we're ready for work
-        # ipc_worker.send_ready()
+        ipc_worker.send_ready()
