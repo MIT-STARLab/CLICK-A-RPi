@@ -159,7 +159,7 @@ class Housekeeping:
         self.ch_heartbeat_socket = self.context.socket(zmq.SUB)
         self.lb_heartbeat_socket = self.context.socket(zmq.SUB)
 
-        self.pat_health_socket.bind("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
+        self.pat_health_socket.connect("tcp://127.0.0.1:%s" % PAT_HEALTH_PORT) #pat process is not already running
         self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.hk_control_socket.connect("tcp://127.0.0.1:%s" % HK_CONTROL_PORT)
         self.ch_heartbeat_socket.connect("tcp://127.0.0.1:%s" % CH_HEARTBEAT_PORT)
