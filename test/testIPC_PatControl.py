@@ -39,7 +39,7 @@ context = zmq.Context()
 # poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 socket_PAT_control = context.socket(zmq.PUB)
-socket_PAT_control.bind("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
+socket_PAT_control.connect("tcp://127.0.0.1:%s" % PAT_CONTROL_PORT)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
