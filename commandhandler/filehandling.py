@@ -96,7 +96,7 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
 
         # Send telemetry
         txpacket = TxPacket()
-        raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!H', seq_num))
+        raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!HH', transfer_id, seq_num))
         socket_tx_packets.send(raw_packet)
 
     except:
