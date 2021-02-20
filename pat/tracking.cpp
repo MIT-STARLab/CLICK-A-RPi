@@ -551,8 +551,8 @@ int Tracking::controlExposure(int valueMax, int exposure, int maxBcnExposure)
 			else{exposure = maxBcnExposure;} //set to limit if necessary
 		}
 
-		log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
-		"(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
+		// log(pat_health_port, fileStream, "In Tracking::controlExposure - Adjusting beacon exposure to: ", exposure, " b/c ",
+		// "(abs(brightnessDifference) = ", abs(brightnessDifference), ") > (TRACK_EXP_CONTROL_TOLERANCE = ", TRACK_EXP_CONTROL_TOLERANCE, "). ");
 	}
 	//else{
 	//	log(pat_health_port, fileStream, "In Tracking::controlExposure - Brightness difference within tolerance: ",

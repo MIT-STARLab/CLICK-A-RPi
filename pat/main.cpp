@@ -37,8 +37,8 @@
 #define CALIB_EXPOSURE_SELF_TEST 25 //microseconds, default if autoexposure fails for self tests
 #define CALIB_OFFSET_TOLERANCE 100 //maximum acceptable calibration offset for self tests
 #define CALIB_SENSITIVITY_RATIO_TOL 0.1 //maximum acceptable deviation from 1/sqrt(2) for sensitivity ratio = s00/s11
-#define BCN_X_REL_GUESS -26 //estimate of beacon x position on acquisition rel to center
-#define BCN_Y_REL_GUESS 71 //estimate of beacon y position on acquisition rel to center
+#define BCN_X_REL_GUESS 0 //estimate of beacon x position on acquisition rel to center
+#define BCN_Y_REL_GUESS 0 //estimate of beacon y position on acquisition rel to center
 #define TX_OFFSET_SLOPE_X 0.3462f //TBD, pxls/C - linear coeff of tx offset as a function of temperature
 #define TX_OFFSET_BIAS_X -22.464f //TBD, pxls - bias coeff of tx offset as a function of temperature
 #define TX_OFFSET_QUADRATIC_Y 0.0085f //TBD, pxls/C^2 - quadratic coeff of tx offset as a function of temperature
@@ -162,19 +162,19 @@ int main() //int argc, char** argv
 	// create the PAT_STATUS_PORT PUB socket
 	zmq::socket_t pat_status_port(context, ZMQ_PUB); 
 	//rc = zmq_setsockopt(pat_status_port, ZMQ_LINGER, &linger, sizeof(linger));
-    pat_status_port.connect(PAT_STATUS_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+    pat_status_port.bind(PAT_STATUS_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
 	//std::cout << "rc (pat_status_port): " << rc << std::endl;
 
 	// create the PAT_HEALTH_PORT PUB socket
 	zmq::socket_t pat_health_port(context, ZMQ_PUB); 
 	//rc = zmq_setsockopt(pat_health_port, ZMQ_LINGER, &linger, sizeof(linger));
-    pat_health_port.connect(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
+    pat_health_port.bind(PAT_HEALTH_PORT); // connect to the transport bind(PAT_HEALTH_PORT)
 	//std::cout << "rc (pat_health_port): " << rc << std::endl;
     
     // create the PAT_CONTROL_PORT SUB socket
     zmq::socket_t pat_control_port(context, ZMQ_SUB); 
 	//rc = zmq_setsockopt(pat_control_port, ZMQ_LINGER, &linger, sizeof(linger));
-    pat_control_port.connect(PAT_CONTROL_PORT); // connect to the transport
+    pat_control_port.bind(PAT_CONTROL_PORT); // connect to the transport
     pat_control_port.set(zmq::sockopt::subscribe, ""); // set the socket options such that we receive all messages. we can set filters here. this "filter" ("" and 0) subscribes to all messages.	
 	//std::cout << "rc (pat_control_port): " << rc << std::endl;
 
