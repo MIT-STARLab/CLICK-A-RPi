@@ -11,6 +11,9 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
 	uint16_t command;
 
+	// Skip pre-queued old frames
+	camera.ignoreNextFrames(skip);
+
 	camera.setCenteredWindow(beacon.x, beacon.y, beaconWindow.w); //camera.setFullWindow();
 	beaconWindow.x = camera.config->aoiStartX.read();
 	beaconWindow.y = camera.config->aoiStartY.read();
@@ -19,9 +22,6 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	camera.config->expose_us.write(exposure);
 	camera.config->gain_dB.write(gain);
 	camera.requestFrame();
-
-	// Skip pre-queued old frames
-	camera.ignoreNextFrames(skip);
 
 	// Try guessed value
 	log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure, "at ", beacon.x - CAMERA_WIDTH/2, beacon.y - CAMERA_HEIGHT/2, " rel-to-center w/ size ", beaconWindow.w);
