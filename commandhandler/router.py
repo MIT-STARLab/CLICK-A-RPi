@@ -13,6 +13,7 @@ sys.path.append('../lib/')
 from options import *
 from ipc_packets import RxCommandPacket, HeartbeatPacket
 import ipc_loadbalancer
+from zmqTxRx import recv_zmq
 
 # use PID as unique identifier for this progress
 pid = os.getpid()
@@ -23,10 +24,10 @@ socket_housekeeping = context.socket(zmq.PUB) #send messages on this port
 socket_housekeeping.bind("tcp://127.0.0.1:%s" % LB_HEARTBEAT_PORT) #connect to specific address (localhost)
 
 print ("Pulling Rx Cmd Packets")
-print ("on port {}".format(RX_CMD_PACKETS_PORT))
+print ("on port {}".format(LOAD_BALANCER_PORT))
 socket_rx_command_packets = context.socket(zmq.SUB)
 socket_rx_command_packets.setsockopt(zmq.SUBSCRIBE, b'')
-socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+socket_rx_command_packets.connect("tcp://127.0.0.1:%s" % LOAD_BALANCER_PORT)
 poller_rx_command_packets = zmq.Poller() #poll rx commands
 poller_rx_command_packets.register(socket_rx_command_packets, zmq.POLLIN)
 

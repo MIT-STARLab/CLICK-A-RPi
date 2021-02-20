@@ -66,7 +66,7 @@ class ClientInterface:
 
         # Client ROUTER socket
         self.socket_client = context.socket(zmq.ROUTER)
-        self.socket_client.bind("tcp://*:%s" % RX_CMD_PACKETS_PORT)
+        self.socket_client.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
 
         # socket needs some time to set up. give it a second - else the first message will be lost
         time.sleep(1)
