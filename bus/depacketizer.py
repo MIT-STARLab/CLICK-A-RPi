@@ -10,9 +10,9 @@ import binascii
 from crccheck.crc import Crc16CcittFalse as crc16
 
 sys.path.append('/root/CLICK-A-RPi/lib/')
-sys.path.append('/root/lib/') #flight path 
+sys.path.append('/root/lib/') #flight path
 from ipc_packets import RxCommandPacket, RxPATPacket
-from options import RX_CMD_PACKETS_PORT, RX_PAT_PACKETS_PORT, APID_TIME_AT_TONE
+from options import *
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
@@ -37,7 +37,7 @@ class Depacketizer:
     ipc_pkts_buffer = []
 
     def __init__(self):
-        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % RX_CMD_PACKETS_PORT)
+        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % LOAD_BALANCER_PORT)
         # #ZMQ REQ worker socket for load balancing
         # ipc_client = ipc_loadbalancer.ClientInterface(context)
         self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
@@ -197,6 +197,18 @@ class Depacketizer:
         # #send payload to idle worker (this will wait until a worker becomes idle)
         # ipc_client.send_request(raw)
 
+    def send_noop(self):
+        print("Depacketizer No-op test")
+        while True:
+            apid = CMD_PL_NOOP
+            ts_sec = 0
+            ts_subsec = 0
+            data = []
+            ipc_pkt = RxCommandPacket()
+            raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+            self.ipc_pkts_buffer.append(raw_ipc_pkt)
+            self.send_ipc_pkts()
+            sleep(5)
 
     def run(self):
         print("Start Depacketizer")
@@ -244,4 +256,5 @@ class Depacketizer:
 
 if __name__ == '__main__':
     depacketizer = Depacketizer()
-    depacketizer.run()
+    #depacketizer.run()
+    depacketizer.send_noop()
