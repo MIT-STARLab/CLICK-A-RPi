@@ -541,7 +541,10 @@ while True:
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             elif(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_DO_CALIB_FLAG))
+                if(PAT_MODE_ID == PAT_CMD_BCN_ALIGN):
+                    send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
+                else:
+                    send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_DO_CALIB_FLAG))
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
