@@ -10,15 +10,10 @@ from crccheck.crc import Crc16CcittFalse as crc16
 
 sys.path.append('/root/lib/')
 from ipc_packets import TxPacket
-from options import TX_PACKETS_PORT
+from options import *
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
 SPI_DEV = '/dev/bct'
-
-BUS_DATA_LEN = 4082
-
-TEST_PKT_DATA_LEN = 105
-TEST_PKT_APID = 0x305
 
 class Packetizer:
     context = zmq.Context()
@@ -37,35 +32,6 @@ class Packetizer:
 
         self.tx_socket.bind("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
         self.tx_socket.subscribe("")
-
-    def send_test_pkt(self):
-
-        pkt_data = [i for i in range(SPI_XFER_LEN)]
-
-        sync = []
-        sync.append(0x35)
-        sync.append(0x2E)
-        sync.append(0xF8)
-        sync.append(0x53)
-
-        pkt = [0 for i in range(TEST_PKT_DATA_LEN)]
-        pkt.append((apid >> 8) & 0b00000111)
-        pkt.append(apid & 0xFF)
-        pkt.append(0b11000000) #sequence count is 0
-        pkt.append(0x00) #sequence count is 0
-        pkt.append(((len(pkt_data) + 1) >> 8) & 0xFF)
-        pkt.append((len(pkt_data) + 1) & 0xFF)
-
-        pkt.extend(bytearray(pkt_data))
-
-        crc = crc16.calc(pkt)
-        pkt.extend([crc >> 8, crc & 0xFF])
-
-        bus_tx_pkt = []
-        bus_tx_pkt.extend(sync)
-        bus_tx_pkt.extend(pkt)
-
-        self.spi.write(bytearray(bus_tx_pkt))
 
     def handle_tx_pkts(self):
         try:
