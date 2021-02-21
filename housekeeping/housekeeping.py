@@ -21,6 +21,7 @@ from ipc_packets import TxPacket, HeartbeatPacket, FPGAMapRequestPacket, FPGAMap
 from options import *
 from fpga_map import FPGA_TELEM, FPGA_TELEM_TYPE
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
+from errors import *
 
 class ResetTimer:
     def __init__(self, interval, function, *args, **kwargs):
@@ -73,7 +74,6 @@ class WatchdogTimer:
         self.timer.start()
 
 class Housekeeping:
-    # TODO: Update if necessary
     HK_PAT_ID = 0x01
     HK_FPGA_ID = 0x02
     HK_PKT_ID = 0x03
@@ -118,14 +118,11 @@ class Housekeeping:
         self.ch_heartbeat_wds = {}
 
         for i in range(COMMAND_HANDLERS_COUNT):
-            try:
-                # TODO: switch this for multiple commandhandlers
-                ch_pid = self.get_service_pid('commandhandler@%d' % i)
-                print("initializing and got ch pid %d" % ch_pid)
-                # ch_pid = self.get_service_pid('commandhandler')
-            except:
-                #TODO: handle error here
-                ch_pid = 0
+            # TODO: switch this for multiple commandhandlers
+            ch_pid = self.get_service_pid('commandhandler@%d' % i)
+            print("initializing and got ch pid %d" % ch_pid)
+            # ch_pid = self.get_service_pid('commandhandler')
+
 
             self.ch_pids[i] = ch_pid
             self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
@@ -195,10 +192,14 @@ class Housekeeping:
         self.last_err_cmd_id = 0
 
     def get_service_pid(self, service):
-        p = os.popen('systemctl show --user --property MainPID --value '+service)
-        pid = int(p.read()[:-1])
-        if (pid == 0):
-            raise ValueError
+        try:
+            p = os.popen('systemctl show --user --property MainPID --value '+service)
+            pid = int(p.read()[:-1])
+            if (pid == 0):
+                raise ValueError
+        except Exception as e:
+            send_exception(self.tx_socket, e)
+            pid = 0
         return pid
 
     def alert_fpga_check(self):
@@ -290,8 +291,12 @@ class Housekeeping:
                 for count, l in enumerate(boot_id_list, 1):
                     pass
             pkt += struct.pack('!L', count)
-        except:
-            # Error if journal file can't be opened
+        except Exception as e:
+            # Don't raise regardless of RAISE_ENABLE
+            try:
+                send_exception(self.tx_socket, e)
+            except:
+                pass
             pkt += struct.pack('!L', 0xFFFFFFFF)
 
         # 13-16: Disk usage
@@ -364,51 +369,52 @@ class Housekeeping:
 
     def restart_process(self, process_id, instance_num):
         print("Restart process %x" % process_id)
-        if (process_id == self.HK_CH_ID and self.ch_restart_enable):
-            print("Restart ch %d" % instance_num)
-            # TODO: switch this for multiple commandhandlers
-            os.system("systemctl --user restart commandhandler@%d" % instance_num)
-            ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
+        try:
+            if (process_id == self.HK_CH_ID and self.ch_restart_enable):
+                print("Restart ch %d" % instance_num)
+                # TODO: switch this for multiple commandhandlers
+                os.system("systemctl --user restart commandhandler@%d" % instance_num)
+                ch_pid = self.get_service_pid('commandhandler@%d' % instance_num)
 
-            # os.system("systemctl --user restart commandhandler")
-            # ch_pid = self.get_service_pid('commandhandler')
+                # os.system("systemctl --user restart commandhandler")
+                # ch_pid = self.get_service_pid('commandhandler')
 
-            # Update the instance/pid list
-            old_ch_pid = self.ch_pids[instance_num]
-            self.ch_pids[instance_num] = ch_pid
-            print('old_ch_pid %d vs ch_pid %d' % (old_ch_pid, ch_pid))
-            self.ch_heartbeat_wds[old_ch_pid].cancel()
-            old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
-            if (old_wd is 'No Key found'):
-                print('Error removing old ch pid')
+                # Update the instance/pid list
+                old_ch_pid = self.ch_pids[instance_num]
+                self.ch_pids[instance_num] = ch_pid
+                print('old_ch_pid %d vs ch_pid %d' % (old_ch_pid, ch_pid))
+                self.ch_heartbeat_wds[old_ch_pid].cancel()
+                old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
+                # self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
+                self.ch_heartbeat_wds[ch_pid] = old_wd
+                self.ch_heartbeat_wds[ch_pid].start()
 
-            # self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
-            self.ch_heartbeat_wds[ch_pid] = old_wd
-            self.ch_heartbeat_wds[ch_pid].start()
+            if (process_id == self.HK_PAT_ID and self.pat_restart_enable):
+                print("Restart pat")
+                os.system("systemctl --user restart pat.service")
+                # self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
+                self.pat_health_wd.cancel()
+                self.pat_health_wd.start()
 
-        if (process_id == self.HK_PAT_ID and self.pat_restart_enable):
-            print("Restart pat")
-            os.system("systemctl --user restart pat.service")
-            # self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
-            self.pat_health_wd.cancel()
-            self.pat_health_wd.start()
+            if (process_id == self.HK_LB_ID and self.lb_restart_enable):
+                print("Restart load balancer")
+                os.system("systemctl --user restart loadbalancer.service")
+                # self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
+                self.lb_heartbeat_wd.cancel()
+                self.lb_heartbeat_wd.start()
 
-        if (process_id == self.HK_LB_ID and self.lb_restart_enable):
-            print("Restart load balancer")
-            os.system("systemctl --user restart loadbalancer.service")
-            # self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
-            self.lb_heartbeat_wd.cancel()
-            self.lb_heartbeat_wd.start()
+            if (process_id == self.HK_FPGA_ID and self.fpga_restart_enable):
+                print("Restart fpga")
+                os.system("systemctl --user restart fpga.service")
+                # self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
+                # self.fpga_check_timer.start()
 
-        if (process_id == self.HK_FPGA_ID and self.fpga_restart_enable):
-            print("Restart fpga")
-            os.system("systemctl --user restart fpga.service")
-            # self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
-            # self.fpga_check_timer.start()
+            err_pkt = TxPacket()
+            raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('!BB', process_id, instance_num))
+            self.packet_buf.append(raw_err_pkt)
 
-        err_pkt = TxPacket()
-        raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('!BB', process_id, instance_num))
-        self.packet_buf.append(raw_err_pkt)
+        except Exception as e:
+                send_exception(self.tx_socket, e)
 
     def handle_hk_command(self, command):
         flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!BBBBB', command)
@@ -487,12 +493,15 @@ class Housekeeping:
                 message = self.ch_heartbeat_socket.recv()
                 ch_packet = HeartbeatPacket()
                 ch_packet.decode(message)
-                if ch_packet.origin in self.ch_heartbeat_wds:
-                    print('recognized pid %d' % ch_packet.origin)
+                try:
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
-                else:
+                except Exception as e:
                     print("didn't recognize pid %d" % ch_packet.origin)
-                    # TODO: error handling of unknown PID
+                    # Don't raise regardless of RAISE_ENABLE
+                    try:
+                        send_exception(self.tx_socket, e)
+                    except:
+                        pass
 
             if self.hk_control_socket in sockets and sockets[self.hk_control_socket] == zmq.POLLIN:
                 message = self.hk_control_socket.recv()
@@ -524,7 +533,6 @@ class Housekeeping:
                 if (self.all_pkts_send_enable):
                     self.tx_socket.send(current_pkt)
 
-            # print("HK is running")
 
 if __name__ == '__main__':
     housekeeper = Housekeeping()
