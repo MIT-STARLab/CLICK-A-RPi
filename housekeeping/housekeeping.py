@@ -477,6 +477,7 @@ class Housekeeping:
                 self.pat_health_wd.kick()
 
             if self.lb_heartbeat_socket in sockets and sockets[self.lb_heartbeat_socket] == zmq.POLLIN:
+                print('received LB health')
                 message = self.lb_heartbeat_socket.recv()
                 lb_packet = HeartbeatPacket()
                 lb_packet.decode(message)

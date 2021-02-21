@@ -18,6 +18,7 @@ sys.path.append('../lib/') #test path
 from ipc_packets import TxPacket, RxCommandPacket
 from options import FL_ERR_EMPTY_DIR, FL_ERR_FILE_NAME, FL_ERR_SEQ_LEN, FL_ERR_MISSING_CHUNK, FL_SUCCESS
 from options import TX_PACKETS_PORT, TLM_DL_FILE, TLM_ASSEMBLE_FILE, TLM_DISASSEMBLE_FILE
+from errors import *
 
 class FileError(Exception):
     def __init__(self, flag):
@@ -57,13 +58,13 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
     transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!HHH%ds'%req_raw_size, ipc_rxcompacket.payload)
     file_name = file_name_payload[0:file_name_len]
     try:
-        # TODO: Error handling for file not found (send error packet)
         hash_func = hashlib.md5()
         with open(file_name, "rb") as source_file:
             buf = source_file.read(1024) # Hash block size is 1024, change if necessary
             while (len(buf) > 0):
                 hash_func.update(buf)
                 buf = source_file.read(1024)
+
         file_hash = hash_func.digest()
 
         hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
@@ -72,7 +73,6 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
         with safe_open_w(hash_file_name) as hash_file:
             hash_file.write(file_hash)
 
-        # TODO: Better to handle with only looping once...
         with open(file_name, 'rb') as source_file:
             file_len = os.stat(file_name).st_size
             seq_len = int(math.ceil(float(file_len)/chunk_size))
@@ -99,9 +99,8 @@ def disassemble_file(ipc_rxcompacket, socket_tx_packets):
         raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!HH', transfer_id, seq_num))
         socket_tx_packets.send(raw_packet)
 
-    except:
-        raise
-        #TODO error handling telemetry
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
 def request_file(ipc_rxcompacket, socket_tx_packets):
     transfer_id, all_flag, chunk_start_index, num_chunks = struct.unpack('!HBHH', ipc_rxcompacket.payload)
@@ -129,7 +128,7 @@ def request_file(ipc_rxcompacket, socket_tx_packets):
 
         # Check that you're not requesting out of bounds
         if (chunk_start_index + num_chunks - 1 > seq_len):
-            raise FileError(0x00) # TODO
+            raise FileError(FL_ERR_OUT_OF_BOUNDS)
 
         # Retrieve hash
         hash_file_name = '/root/file_staging/'+str(transfer_id)+'/'+'md5.hash'
@@ -151,20 +150,26 @@ def request_file(ipc_rxcompacket, socket_tx_packets):
             txpacket = TxPacket()
             raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
             socket_tx_packets.send(raw_packet)
-    except:
-        raise
-        #TODO error handling telemetry
+
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
 def uplink_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 8
     transfer_id, seq_num, seq_len, chunk_len, chunk_payload = struct.unpack('!HHHH%ds'%req_raw_size, ipc_rxcompacket.payload)
 
     chunk_data = chunk_payload[0:chunk_len]
-    # FOR TEST:
-    # file_name = 'test_file_staging/'+str(transfer_id)+'/'+('%05d' % seq_num)+'_'+('%05d' % seq_len)+'.chunk'
-    file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
-    with safe_open_w(file_name) as chunk_file:
-        chunk_file.write(chunk_data)
+
+    try:
+        if (seq_num > seq_len):
+            raise FileError(FL_ERR_SEQ_LEN)
+        # FOR TEST:
+        # file_name = 'test_file_staging/'+str(transfer_id)+'/'+('%05d' % seq_num)+'_'+('%05d' % seq_len)+'.chunk'
+        file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
+        with safe_open_w(file_name) as chunk_file:
+            chunk_file.write(chunk_data)
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
 def assemble_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 4
@@ -234,6 +239,10 @@ def assemble_file(ipc_rxcompacket, socket_tx_packets):
         print('transfer_id: ', transfer_id)
         print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
+
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
+
     else:
         print('assemble_file - else')
         pkt_data = format_success_response(transfer_id)
@@ -270,20 +279,28 @@ def validate_file(ipc_rxcompacket, socket_tx_packets):
 
     file_name = file_name_payload[0:file_name_len]
 
-    # TODO: Error handling for file not found (send error packet)
-    hash_func = hashlib.md5()
-    with open(file_name, 'rb') as source_file:
-        buf = source_file.read(1024) # Hash block size is 1024, change if necessary
-        while (len(buf) > 0):
-            hash_func.update(buf)
-            buf = source_file.read(1024)
-    check_hash = hash_func.digest()
+    try:
+        hash_func = hashlib.md5()
+        with open(file_name, 'rb') as source_file:
+            buf = source_file.read(1024) # Hash block size is 1024, change if necessary
+            while (len(buf) > 0):
+                hash_func.update(buf)
+                buf = source_file.read(1024)
+        check_hash = hash_func.digest()
 
-    if (check_hash != file_hash):
-        # TODO: handle incorrect hash error
-        print('Hash Check Failed!')
-    else:
-        pass
+        if (check_hash != file_hash):
+            print('Hash Check Failed!')
+            err_pkt = TxPacket()
+            err_pkt_payload = ''
+            pkt_payload += struct.pack('!16s', check_hash)
+            pkt_payload += struct.pack('!16s', file_hash)
+            pkt_payload += struct.pack('!H', file_name_len)
+            pkt_payload += struct.pack('!%ds' % file_name_len, file_name)
+            raw_err_pkt = err_pkt.encode(ERR_FL_FILE_INVALID, pkt_payload)
+            socket_tx_packets.send(err_pkt)
+
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
 def move_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 4
@@ -291,11 +308,11 @@ def move_file(ipc_rxcompacket, socket_tx_packets):
 
     src_file_name = file_names[:src_file_name_len]
     dest_file_name = file_names[src_file_name_len:src_file_name_len+dest_file_name_len]
-    # TODO: handle file/directory doesn't exist error
-    if os.path.exists(src_file_name):
+
+    try:
         shutil.move(src_file_name, dest_file_name)
-    else:
-        pass
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
 
 def del_file(ipc_rxcompacket, socket_tx_packets):
@@ -303,14 +320,14 @@ def del_file(ipc_rxcompacket, socket_tx_packets):
     recursive, file_name_len, file_name_payload = struct.unpack('!BH%ds'% (req_raw_size), ipc_rxcompacket.payload)
     file_name = file_name_payload[0:file_name_len]
 
-    # TODO: handle file doesn't exist error, other errors
-    if os.path.exists(file_name):
+    try:
         if (recursive == 0xFF):
             shutil.rmtree(file_name)
         else:
             os.remove(file_name)
-    else:
-        print('File Name Does Not Exist: ' + file_name)
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
+
 
 def auto_assemble_file(ipc_rxcompacket, socket_tx_packets):
     req_raw_size = ipc_rxcompacket.size - 20
