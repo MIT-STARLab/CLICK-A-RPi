@@ -5,13 +5,14 @@ from time import sleep
 import sys
 import os
 import zmq
+import struct
 
 import binascii
 from crccheck.crc import Crc16CcittFalse as crc16
 
 sys.path.append('/root/CLICK-A-RPi/lib/')
 sys.path.append('/root/lib/') #flight path
-from ipc_packets import RxCommandPacket, RxPATPacket
+from ipc_packets import RxCommandPacket, RxPATPacket, TxPacket
 from options import *
 from zmqTxRx import push_zmq, send_zmq, recv_zmq
 
@@ -20,27 +21,28 @@ SPI_DEV = '/dev/bct'
 CCSDS_HEADER_LEN = 6
 APID_INDEX = 1
 PKT_LEN_INDEX = 4
-APID_NOOP = 0xFF
 
 class Depacketizer:
     ccsds_sync = bytearray([0x35, 0x2E, 0xF8, 0x53])
-    context = zmq.Context()
-
-    rx_cmd_socket = context.socket(zmq.PUB)
-    rx_pat_socket = context.socket(zmq.PUB)
-
-    #spi = spidev.SpiDev()
-    # spi = open(SPI_DEV, os.O_RDWR)
-    spi = open(SPI_DEV, 'rb', buffering=0)
-
-    bus_pkts_buffer = []
-    ipc_pkts_buffer = []
 
     def __init__(self):
-        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % LOAD_BALANCER_PORT)
+
+        self.context = zmq.Context()
+
+        self.rx_cmd_socket = self.context.socket(zmq.PUB)
+        self.rx_pat_socket = self.context.socket(zmq.PUB)
+        self.tx_socket = self.context.socket(zmq.PUB)
+
+        self.spi = open(SPI_DEV, 'rb', buffering=0)
+
+        self.bus_pkts_buffer = []
+        self.ipc_pkts_buffer = []
+
         # #ZMQ REQ worker socket for load balancing
         # ipc_client = ipc_loadbalancer.ClientInterface(context)
+        self.rx_cmd_socket.bind("tcp://127.0.0.1:%s" % LOAD_BALANCER_PORT)
         self.rx_pat_socket.bind("tcp://127.0.0.1:%s" % RX_PAT_PACKETS_PORT)
+        self.tx_socket.connect("tcp://127.0.0.1:%s" % TX_PACKETS_PORT)
 
     def read_data(self, n_bytes):
         buf = []
@@ -76,33 +78,36 @@ class Depacketizer:
         buf = self.read_data(CCSDS_HEADER_LEN)
 
         apid =  buf[APID_INDEX]
-        if(apid != APID_NOOP):
-            pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
-            # Read payload data bytes and crc bytes
-            pkt = self.read_data(pkt_len)
-            # Assuming crc is included in the packet length
 
-            buf.extend(pkt)
+        pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
+        # Read payload data bytes and crc bytes
+        pkt = self.read_data(pkt_len)
+        # Assuming crc is included in the packet length
 
-            # Check crc
-            crc_index = CCSDS_HEADER_LEN + pkt_len - 2
-            crc = (buf[crc_index] << 8) | buf[crc_index + 1]
+        buf.extend(pkt)
 
-            #Calculate CRC over the entire packet
-            crcinst = crc16()
-            crc_check = crc16.calc(buf[:crc_index])
+        # Check crc
+        crc_index = CCSDS_HEADER_LEN + pkt_len - 2
+        crc = (buf[crc_index] << 8) | buf[crc_index + 1]
 
-            if (crc == crc_check):
-                self.bus_pkts_buffer.append(buf)
-            else:
-                print('crc did not work')
-                #do some error handling
+        #Calculate CRC over the entire packet
+        crcinst = crc16()
+        crc_check = crc16.calc(buf[:crc_index])
+
+        if (crc == crc_check):
+            self.bus_pkts_buffer.append(buf)
+        else:
+            print('crc did not work')
+            err_pkt = TxPacket()
+            err_pkt_pl = struct.pack('!H%dB' % len(buf), len(buf), *buf)
+            raw_err_pkt = err_pkt.encode(ERR_DPKT_CRC_INVALID, err_pkt_pl)
+            self.tx_socket.send(raw_err_pkt)
 
     def handle_bus_pkts(self):
 
         try:
             pkt = self.bus_pkts_buffer[0]
-        except IndexError as e:
+        except IndexError:
             # Empty buffer, but that's ok
             return
         # Check if pkt is part of a sequence
@@ -213,10 +218,6 @@ class Depacketizer:
     def run(self):
         print("Start Depacketizer")
         while True:
-            # b = bytearray(self.spi.read(103)) #python 2.7 default is ascii
-            # print(binascii.hexlify(b))
-            # sleep(1)
-
 
             self.acquire_bus_pkt() # BLOCKS
 
