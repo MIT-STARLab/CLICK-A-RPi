@@ -351,47 +351,47 @@ while True:
             socket_tx_packets.send(raw) #send packet
 
         elif(CMD_ID == CMD_PL_AUTO_DOWNLINK_FILE):
-            auto_downlink_file(ipc_rxcompacket, socket_tx_packets)
+            auto_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_AUTO_DOWNLINK_FILE')
             ack_to_hk(CMD_PL_AUTO_DOWNLINK_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
-            disassemble_file(ipc_rxcompacket, socket_tx_packets)
+            disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_DISASSEMBLE_FILE')
             ack_to_hk(CMD_PL_DISASSEMBLE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_REQUEST_FILE):
-            request_file(ipc_rxcompacket, socket_tx_packets)
+            request_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_REQUEST_FILE')
             ack_to_hk(CMD_PL_REQUEST_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_UPLINK_FILE):
-            uplink_file(ipc_rxcompacket, socket_tx_packets)
+            uplink_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_UPLINK_FILE')
             ack_to_hk(CMD_PL_UPLINK_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_ASSEMBLE_FILE):
-            assemble_file(ipc_rxcompacket, socket_tx_packets)
+            assemble_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_ASSEMBLE_FILE')
             ack_to_hk(CMD_PL_ASSEMBLE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_VALIDATE_FILE):
-            validate_file(ipc_rxcompacket, socket_tx_packets)
+            validate_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_VALIDATE_FILE')
             ack_to_hk(CMD_PL_VALIDATE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_MOVE_FILE):
-            move_file(ipc_rxcompacket, socket_tx_packets)
+            move_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_MOVE_FILE')
             ack_to_hk(CMD_PL_MOVE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_DELETE_FILE):
-            del_file(ipc_rxcompacket, socket_tx_packets)
+            del_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_DELETE_FILE')
             ack_to_hk(CMD_PL_DELETE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_AUTO_ASSEMBLE_FILE):
-            auto_assemble_file(ipc_rxcompacket, socket_tx_packets)
+            auto_assemble_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')
             ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ACK)
 
