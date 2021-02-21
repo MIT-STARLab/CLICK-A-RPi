@@ -13,7 +13,7 @@ sys.path.append('/root/lib/') #flight path
 sys.path.append('/home/pi/CLICK-A-RPi/') #testpath
 sys.path.append('../lib/') #test path
 
-RAISE_ENABLE = 0
+RAISE_ENABLE = 1
 ERR_BUILTIN = 0x44
 FULL_TRACE_ENABLE = 1
 
@@ -33,7 +33,7 @@ def send_exception(tx_socket, err):
         errno = err.errno
     except:
         errno = 0
-        
+
     err_pkt = TxPacket()
 
     pkt_payload = ''
@@ -48,7 +48,7 @@ def send_exception(tx_socket, err):
         pkt_payload += struct.pack('!H', full_trace_len)
         pkt_payload += struct.pack('%ds' % full_trace_len, full_trace)
 
-    raw_err_pkt = err_pkt.encode(ERR_BUILTIN, error.payload)
-    tx_socket.send(err_pkt)
+    raw_err_pkt = err_pkt.encode(ERR_BUILTIN, pkt_payload)
+    tx_socket.send(raw_err_pkt)
     if (RAISE_ENABLE):
         raise
