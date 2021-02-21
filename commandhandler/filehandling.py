@@ -301,7 +301,7 @@ def validate_file(rx_pkt_payload, socket_tx_packets):
             pkt_payload += struct.pack('!H', file_name_len)
             pkt_payload += struct.pack('!%ds' % file_name_len, file_name)
             raw_err_pkt = err_pkt.encode(ERR_FL_FILE_INVALID, pkt_payload)
-            socket_tx_packets.send(err_pkt)
+            socket_tx_packets.send(raw_err_pkt)
 
     except Exception as e:
         send_exception(socket_tx_packets, e)
