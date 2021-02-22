@@ -254,40 +254,39 @@ class Housekeeping:
         # 0: HK counter
         pkt += struct.pack('B', self.sys_hk_count % 256)
 
-        # 1-2: Enable flags
+        # 1: Enable flags
         enables = 0
-        enables |= (self.all_pkts_send_enable & 1) << 8
-        enables |= (self.fpga_req_enable & 1) << 7
-        enables |= (self.sys_hk_send_enable & 1) << 6
-        enables |= (self.fpga_hk_send_enable & 1) << 5
+        enables |= (self.all_pkts_send_enable & 1) << 7
+        enables |= (self.fpga_req_enable & 1) << 6
+        enables |= (self.sys_hk_send_enable & 1) << 5
         enables |= (self.pat_hk_send_enable & 1) << 4
         enables |= (self.ch_restart_enable & 1) << 3
         enables |= (self.pat_restart_enable & 1) << 2
         enables |= (self.fpga_restart_enable & 1) << 1
         enables |= (self.lb_restart_enable & 1) << 0
 
-        pkt += struct.pack('!H', enables)
+        pkt += struct.pack('B', enables)
 
-        # 3: FPGA housekeeping period
+        # 2: FPGA housekeeping period
         pkt += struct.pack('B', self.fpga_check_period)
-        # 4: System housekeeping period
+        # 3: System housekeeping period
         pkt += struct.pack('B', self.sys_check_period)
-        # 5: Command handler heartbeat period
+        # 4: Command handler heartbeat period
         pkt += struct.pack('B', self.ch_heartbeat_period)
-        # 6: Loadbalancer heartbeat period
+        # 5: Loadbalancer heartbeat period
         pkt += struct.pack('B', self.lb_heartbeat_period)
-        # 7: PAT health period
+        # 6: PAT health period
         pkt += struct.pack('B', self.pat_health_period)
-        # 8: Acknowledged command count
+        # 7: Acknowledged command count
         pkt += struct.pack('B', (self.ack_cmd_count % 256))
-        # 9: Last acknowledged command ID
+        # 8: Last acknowledged command ID
         pkt += struct.pack('B', (self.last_ack_cmd_id & 0xFF))
-        # 10: Error command count
+        # 9: Error command count
         pkt += struct.pack('B', (self.err_cmd_count % 256))
-        # 11: Last error command ID
+        # 10: Last error command ID
         pkt += struct.pack('B', (self.last_err_cmd_id & 0xFF))
 
-        # 12-15: Boot count
+        # 11-14: Boot count
         try:
             with open('/mnt/journal/id.txt', 'r') as boot_id_list:
                 for count, l in enumerate(boot_id_list, 1):
@@ -301,24 +300,24 @@ class Housekeeping:
                 pass
             pkt += struct.pack('!L', 0xFFFFFFFF)
 
-        # 16-19: Disk usage
+        # 15-18: Disk usage
         disk = psutil.disk_usage('/root')
         pkt += struct.pack('!L', (disk.used % 2**32))
 
-        # 20-23: Disk free
+        # 19-22: Disk free
         pkt += struct.pack('!L', (disk.free % 2**32))
 
-        # 24-27: Total virtual memory
+        # 23-26: Total virtual memory
         vmem = psutil.virtual_memory()
         pkt += struct.pack('!L', (vmem.total % 2**32))
 
-        # 28-31: Available virtual memory
+        # 27-30: Available virtual memory
         pkt += struct.pack('!L', (vmem.available % 2**32))
 
-        # 32-35: Used virtual memory
+        # 31-34: Used virtual memory
         pkt += struct.pack('!L', (vmem.used % 2**32))
 
-        # 36-N: Process info
+        # 35-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
             p_name = ''
             if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
@@ -419,12 +418,11 @@ class Housekeeping:
                 send_exception(self.tx_socket, e)
 
     def handle_hk_command(self, command):
-        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_lb_heartbeat_pd, new_pat_health_pd = struct.unpack('!HBBBB', command)
+        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_lb_heartbeat_pd, new_pat_health_pd = struct.unpack('!BBBBBB', command)
 
-        self.all_pkts_send_enable = (flags >> 8) & 1
-        self.fpga_req_enable = (flags >> 7) & 1
-        self.sys_hk_send_enable  = (flags >> 6) & 1
-        self.fpga_hk_send_enable = (flags >> 5) & 1
+        self.all_pkts_send_enable = (flags >> 7) & 1
+        self.fpga_req_enable = (flags >> 6) & 1
+        self.sys_hk_send_enable  = (flags >> 5) & 1
         self.pat_hk_send_enable = (flags >> 4) & 1
         self.ch_restart_enable = (flags >> 3) & 1
         self.pat_restart_enable = (flags >> 2) & 1
