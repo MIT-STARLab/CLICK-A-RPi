@@ -3,4 +3,5 @@ Description=PAT
 
 [Service]
 Type=simple
+StandardOutput=null
 ExecStart=/root/bin/pat
