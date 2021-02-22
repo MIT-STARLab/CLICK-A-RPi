@@ -42,8 +42,8 @@ class Packetizer:
 
         ipc_pkt = TxPacket()
         apid, pkt_data = ipc_pkt.decode(raw_ipc_pkt)
-        print('apid: ', apid)
-        print('pkt_data: ', pkt_data)
+        # print('apid: ', apid)
+        # print('pkt_data: ', pkt_data)
 
         # 0b00 - continuation, 0b01 - first of group, 0b10 - last of group, 0b11 - standalone
         seq_cnt = 0
@@ -72,7 +72,7 @@ class Packetizer:
             bus_tx_pkt.extend(sync)
             bus_tx_pkt.extend(pkt)
 
-            print('bus_tx_pkt: ', bus_tx_pkt) #for debug
+            # print('bus_tx_pkt: ', bus_tx_pkt) #for debug
             self.bus_pkts_buffer.append(bus_tx_pkt)
 
             del pkt_data[:BUS_DATA_LEN]
@@ -107,7 +107,7 @@ class Packetizer:
         bus_tx_pkt = []
         bus_tx_pkt.extend(sync)
         bus_tx_pkt.extend(pkt)
-        print('bus_tx_pkt: ', bus_tx_pkt) #for debug
+        # print('bus_tx_pkt: ', bus_tx_pkt) #for debug
         ###End Revised Packet Definition###
 
         self.bus_pkts_buffer.append(bus_tx_pkt)
@@ -127,7 +127,7 @@ class Packetizer:
 
             ipc_pkt = self.tx_socket.recv() # BLOCKS
 
-            print('RECEIVED ipc_pkt: ', ipc_pkt)
+            # print('RECEIVED ipc_pkt: ', ipc_pkt)
             self.ipc_pkts_buffer.append(ipc_pkt)
 
             self.handle_tx_pkts()

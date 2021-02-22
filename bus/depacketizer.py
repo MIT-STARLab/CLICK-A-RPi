@@ -97,7 +97,7 @@ class Depacketizer:
         if (crc == crc_check):
             self.bus_pkts_buffer.append(buf)
         else:
-            print('crc did not work')
+            # print('crc did not work')
             err_pkt = TxPacket()
             err_pkt_pl = struct.pack('!H%dB' % len(buf), len(buf), *buf)
             raw_err_pkt = err_pkt.encode(ERR_DPKT_CRC_INVALID, err_pkt_pl)
