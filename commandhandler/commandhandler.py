@@ -102,13 +102,13 @@ def send_pat_command(socket_PAT_control, command, payload = ''):
 
     ipc_patControlPacket = PATControlPacket()
     raw_patControlPacket = ipc_patControlPacket.encode(command,CMD_PAYLOAD)
-    print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
-    print(ipc_patControlPacket) #debug print
+    #print('SENDING on %s' % (socket_PAT_control.get_string(zmq.LAST_ENDPOINT))) #debug print
+    #print(ipc_patControlPacket) #debug print
     socket_PAT_control.send(raw_patControlPacket)
     return ipc_patControlPacket
 
 def log_to_hk(payload):
-    print(payload) #debug printing
+    #print(payload) #debug printing
     ipc_HKPacket = HKControlPacket()
     raw = ipc_HKPacket.encode(pid, HK_CONTROL_LOG, payload)
     socket_hk_control.send(raw)
