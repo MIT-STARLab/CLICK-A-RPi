@@ -99,8 +99,8 @@ class Housekeeping:
         self.all_pkts_send_enable = HK_ALLPKTS_SEND_ENABLE
         self.fpga_req_enable = HK_FPGA_REQ_ENABLE
         self.sys_hk_send_enable  = HK_SYS_HK_SEND_ENABLE
-        self.fpga_hk_send_enable = HK_FPGA_HK_SEND_ENABLE
         self.pat_hk_send_enable = HK_PAT_HK_SEND_ENABLE
+        self.ch_hk_send_enable = HK_CH_HK_SEND_ENABLE
         self.ch_restart_enable = HK_CH_RESTART_ENABLE
         self.pat_restart_enable = HK_PAT_RESTART_ENABLE
         self.fpga_restart_enable = HK_FPGA_RESTART_ENABLE
@@ -254,38 +254,40 @@ class Housekeeping:
         # 0: HK counter
         pkt += struct.pack('B', self.sys_hk_count % 256)
 
-        # 1: Enable flags
+        # 1-2: Enable flags
         enables = 0
-        enables |= (self.all_pkts_send_enable & 1) << 7
-        enables |= (self.fpga_req_enable & 1) << 6
-        enables |= (self.sys_hk_send_enable & 1) << 5
-        enables |= (self.fpga_hk_send_enable & 1) << 4
-        enables |= (self.pat_hk_send_enable & 1) << 3
-        enables |= (self.ch_restart_enable & 1) << 2
-        enables |= (self.pat_restart_enable & 1) << 1
-        enables |= (self.fpga_restart_enable & 1) << 0
+        enables |= (self.all_pkts_send_enable & 1) << 8
+        enables |= (self.fpga_req_enable & 1) << 7
+        enables |= (self.sys_hk_send_enable & 1) << 6
+        enables |= (self.fpga_hk_send_enable & 1) << 5
+        enables |= (self.pat_hk_send_enable & 1) << 4
+        enables |= (self.ch_restart_enable & 1) << 3
+        enables |= (self.pat_restart_enable & 1) << 2
+        enables |= (self.fpga_restart_enable & 1) << 1
+        enables |= (self.lb_restart_enable & 1) << 0
 
-        pkt += struct.pack('B', enables)
+        pkt += struct.pack('!H', enables)
 
-        # 2: FPGA housekeeping period
+        # 3: FPGA housekeeping period
         pkt += struct.pack('B', self.fpga_check_period)
-        # 3: System housekeeping period
+        # 4: System housekeeping period
         pkt += struct.pack('B', self.sys_check_period)
-        # 4: Command handler heartbeat period
+        # 5: Command handler heartbeat period
         pkt += struct.pack('B', self.ch_heartbeat_period)
-        # 5: PAT health period
+        # 6: Loadbalancer heartbeat period
+        pkt += struct.pack('B', self.lb_heartbeat_period)
+        # 7: PAT health period
         pkt += struct.pack('B', self.pat_health_period)
-
-        # 7: Acknowledged command count
+        # 8: Acknowledged command count
         pkt += struct.pack('B', (self.ack_cmd_count % 256))
-        # 8: Last acknowledged command ID
+        # 9: Last acknowledged command ID
         pkt += struct.pack('B', (self.last_ack_cmd_id & 0xFF))
-        # 9: Error command count
+        # 10: Error command count
         pkt += struct.pack('B', (self.err_cmd_count % 256))
-        # 10: Last error command ID
+        # 11: Last error command ID
         pkt += struct.pack('B', (self.last_err_cmd_id & 0xFF))
 
-        # 11-12: Boot count
+        # 12-15: Boot count
         try:
             with open('/mnt/journal/id.txt', 'r') as boot_id_list:
                 for count, l in enumerate(boot_id_list, 1):
@@ -299,24 +301,24 @@ class Housekeeping:
                 pass
             pkt += struct.pack('!L', 0xFFFFFFFF)
 
-        # 13-16: Disk usage
+        # 16-19: Disk usage
         disk = psutil.disk_usage('/root')
         pkt += struct.pack('!L', (disk.used % 2**32))
 
-        # 17-20: Disk free
+        # 20-23: Disk free
         pkt += struct.pack('!L', (disk.free % 2**32))
 
-        # 21-24: Total virtual memory
+        # 24-27: Total virtual memory
         vmem = psutil.virtual_memory()
         pkt += struct.pack('!L', (vmem.total % 2**32))
 
-        # 25-28: Available virtual memory
+        # 28-31: Available virtual memory
         pkt += struct.pack('!L', (vmem.available % 2**32))
 
-        # 29-32: Used virtual memory
+        # 32-35: Used virtual memory
         pkt += struct.pack('!L', (vmem.used % 2**32))
 
-        # 33-N: Process info
+        # 36-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
             p_name = ''
             if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
@@ -417,21 +419,23 @@ class Housekeeping:
                 send_exception(self.tx_socket, e)
 
     def handle_hk_command(self, command):
-        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_pat_health_pd = struct.unpack('!BBBBB', command)
+        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_lb_heartbeat_pd, new_pat_health_pd = struct.unpack('!HBBBB', command)
 
-        self.all_pkts_send_enable = (flags >> 7) & 1
-        self.fpga_req_enable = (flags >> 6) & 1
-        self.sys_hk_send_enable  = (flags >> 5) & 1
-        self.fpga_hk_send_enable = (flags >> 4) & 1
-        self.pat_hk_send_enable = (flags >> 3) & 1
-        self.ch_restart_enable = (flags >> 2) & 1
-        self.pat_restart_enable = (flags >> 1) & 1
-        self.fpga_restart_enable = (flags >> 0) & 1
+        self.all_pkts_send_enable = (flags >> 8) & 1
+        self.fpga_req_enable = (flags >> 7) & 1
+        self.sys_hk_send_enable  = (flags >> 6) & 1
+        self.fpga_hk_send_enable = (flags >> 5) & 1
+        self.pat_hk_send_enable = (flags >> 4) & 1
+        self.ch_restart_enable = (flags >> 3) & 1
+        self.pat_restart_enable = (flags >> 2) & 1
+        self.fpga_restart_enable = (flags >> 1) & 1
+        self.lb_restart_enable = (flags >> 0) & 1
 
         self.fpga_check_period = new_fpga_check_pd
         self.sys_check_period = new_sys_check_pd
         self.ch_heartbeat_period = new_ch_heartbeat_pd
         self.pat_health_period = new_pat_health_pd
+        self.lb_heartbeat_period = new_lb_heartbeat_pd
 
     def run(self):
         self.fpga_check_timer.start()
@@ -450,8 +454,9 @@ class Housekeeping:
 
             # Periodically generate system HK
             if (self.sys_check_flag.is_set()):
-                message = self.check_sys()
-                self.handle_hk_pkt(message, self.HK_SYS_ID)
+                if(self.sys_hk_send_enable):
+                    message = self.check_sys()
+                    self.handle_hk_pkt(message, self.HK_SYS_ID)
                 self.sys_check_flag.clear()
 
             if (self.missing_ch_queue.qsize() > 0):
@@ -479,7 +484,8 @@ class Housekeeping:
             if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
                 print('received PAT health')
                 message = self.pat_health_socket.recv()
-                self.handle_hk_pkt(message, self.HK_PAT_ID)
+                if (self.pat_hk_send_enable):
+                    self.handle_hk_pkt(message, self.HK_PAT_ID)
                 self.pat_health_wd.kick()
 
             if self.lb_heartbeat_socket in sockets and sockets[self.lb_heartbeat_socket] == zmq.POLLIN:
@@ -521,7 +527,8 @@ class Housekeeping:
 
                 elif (hk_packet.command == HK_CONTROL_LOG):
                     # TODO: Potentially update handling log packet
-                    self.handle_hk_pkt(message, self.HK_CH_ID)
+                    if (self.ch_hk_send_enable):
+                        self.handle_hk_pkt(message, self.HK_CH_ID)
 
                 elif (hk_packet.command == CMD_PL_SET_HK):
                     # handle command packet
