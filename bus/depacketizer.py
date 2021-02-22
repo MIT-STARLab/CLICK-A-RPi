@@ -95,7 +95,7 @@ class Depacketizer:
             if (crc == crc_check):
                 self.bus_pkts_buffer.append(buf)
             else:
-                print('crc did not work')
+                # print('crc did not work')
                 #do some error handling
 
     def handle_bus_pkts(self):
