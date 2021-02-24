@@ -51,9 +51,13 @@ class Depacketizer:
                 data = self.spi.read(n_bytes - len(buf))
                 if len(data) > 0:
                     buf.extend(bytearray(data))
-            except Exception, err:
-                print(str(err))
-                pass
+            except Exception as err:
+                # print(str(err))
+                # Don't raise
+                try:
+                    send_exception(self.tx_socket, err)
+                except:
+                    pass
 
         return buf
 
@@ -193,9 +197,10 @@ class Depacketizer:
 
         ipc_pkt = RxCommandPacket()
         APID,_,_,_ = ipc_pkt.decode(raw_ipc_pkt)
-        if(APID != APID_TIME_AT_TONE):
-            #don't print the time at tone packets
-            print(binascii.hexlify(raw_ipc_pkt))
+
+        # Don't print the time at tone packets
+        # if(APID != APID_TIME_AT_TONE):
+        #     print(binascii.hexlify(raw_ipc_pkt))
 
         # in the future, consider the pat packets and send those separately
         self.rx_cmd_socket.send(raw_ipc_pkt)
@@ -322,6 +327,6 @@ class Depacketizer:
 
 if __name__ == '__main__':
     depacketizer = Depacketizer()
-    #depacketizer.run()
+    depacketizer.run()
     # depacketizer.send_noop()
-    depacketizer.run_test()
+    # depacketizer.run_test()
