@@ -1,6 +1,6 @@
 [Unit]
 Description=Housekeeping
-After=packetizer.service depacketizer.service fpga.service commandhandler.service
+After=packetizer.service depacketizer.service fpga.service commandhandlers.target
 Before=default.target
 
 [Service]

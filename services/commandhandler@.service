@@ -1,10 +1,7 @@
 [Unit]
 Description=Command Handler, Instance %i
-After=packetizer.service fpga.service
+PartOf=commandhandlers.target
 
 [Service]
 Type=simple
 ExecStart=/bin/python -u /root/commandhandler/commandhandler.py
-
-[Install]
-WantedBy=default.target

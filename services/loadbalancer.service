@@ -1,6 +1,6 @@
 [Unit]
 Description=Load Balancer
-Before=commandhandler.service
+Before=housekeeping.service
 
 [Service]
 Type=simple

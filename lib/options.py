@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 CHECK_ASSERTS = 1
 
-COMMAND_HANDLERS_COUNT = 2
+COMMAND_HANDLERS_COUNT = 3
 MESSAGE_TIMEOUT = 5000 # wait 5 seconds for ZeroMQ response
 
 # File management
