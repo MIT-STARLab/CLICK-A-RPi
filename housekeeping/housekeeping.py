@@ -64,8 +64,6 @@ class WatchdogTimer:
         self.timeout = timeout
 
     def kick(self):
-        if (self.args):
-            print("kicked! %d" % self.args)
         self.cancel()
         self.start()
 
@@ -120,7 +118,6 @@ class Housekeeping:
         for i in range(COMMAND_HANDLERS_COUNT):
             # TODO: switch this for multiple commandhandlers
             ch_pid = self.get_service_pid('commandhandler@%d' % i)
-            print("initializing and got ch pid %d" % ch_pid)
             # ch_pid = self.get_service_pid('commandhandler')
 
 
@@ -480,14 +477,12 @@ class Housekeeping:
             # Receive packets from the other processes
             sockets = dict(self.poller.poll(100)) # 100 ms timeout
             if self.pat_health_socket in sockets and sockets[self.pat_health_socket] == zmq.POLLIN:
-                print('received PAT health')
                 message = self.pat_health_socket.recv()
                 if (self.pat_hk_send_enable):
                     self.handle_hk_pkt(message, self.HK_PAT_ID)
                 self.pat_health_wd.kick()
 
             if self.lb_heartbeat_socket in sockets and sockets[self.lb_heartbeat_socket] == zmq.POLLIN:
-                print('received LB health')
                 message = self.lb_heartbeat_socket.recv()
                 lb_packet = HeartbeatPacket()
                 lb_packet.decode(message)
