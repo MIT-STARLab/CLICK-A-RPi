@@ -220,42 +220,68 @@ class Depacketizer:
         while True:
 
             self.acquire_bus_pkt() # BLOCKS
-
             # Parse packet from buffer
             self.handle_bus_pkts()
             self.send_ipc_pkts()
 
 
     def run_test(self):
-        print("Start depacketizer test")
+        print("Start Depacketizer-based Test")
+        sleep(10)
+        for i in range(0, 6):
+            apid = CMD_PL_NOOP
+            ts_sec = 0
+            ts_subsec = 0
+            data = []
+            ipc_pkt = RxCommandPacket()
+            raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+            self.ipc_pkts_buffer.append(raw_ipc_pkt)
+            self.send_ipc_pkts()
+            sleep(5)
 
-        sync_index = 0
-        while (sync_index < (len(self.ccsds_sync))):
-            b = self.read_data(1)
-            if(b[0] == self.ccsds_sync[sync_index]):
-                # buf.append(b)
-                sync_index += 1
-            elif (b[0] == self.ccsds_sync[0]):
-                # buf = [b]
-                sync_index = 1
-            else:
-                sync_index = 0
-        print('found sync!')
-        # Read 6 CCSDS header bytes
-        buf = self.read_data(CCSDS_HEADER_LEN)
-        pkt_len = (buf[PKT_LEN_INDEX] << 8) | buf[PKT_LEN_INDEX + 1] + 1
-        # Read payload data bytes and crc bytes
-        pkt = self.read_data(pkt_len)
-        buf.extend(pkt)
+        apid = CMD_PL_AUTO_DOWNLINK_FILE
+        transfer_id = 0x87
+        chunk_size = 1000
+        file_name = '/root/commandhandler/test_file.txt'
+        file_name_len = len(file_name)
+        ts_sec = 0
+        ts_subsec = 0
+        data = []
+        data.append((transfer_id >> 8) & 0xFF)
+        data.append((transfer_id) & 0xFF)
+        data.append((chunk_size >> 8) & 0xFF)
+        data.append((chunk_size) & 0xFF)
+        data.append((file_name_len >> 8) & 0xFF)
+        data.append((file_name_len) & 0xFF)
+        data.extend(list(struct.unpack('!%dB' % (file_name_len), file_name)))
+        ipc_pkt = RxCommandPacket()
+        raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+        self.ipc_pkts_buffer.append(raw_ipc_pkt)
+        self.send_ipc_pkts()
 
-        print(binascii.hexlify(buf))
+        apid = CMD_PL_ECHO
+        ts_sec = 0
+        ts_subsec = 0
+        data = [0x01]
+        ipc_pkt = RxCommandPacket()
+        raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+        self.ipc_pkts_buffer.append(raw_ipc_pkt)
+        self.send_ipc_pkts()
 
-        while(True):
-            b = self.read_data(103)
-            print(binascii.hexlify(b))
+        apid = CMD_PL_ECHO
+        ts_sec = 0
+        ts_subsec = 0
+        data = [0x02]
+        ipc_pkt = RxCommandPacket()
+        raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+        self.ipc_pkts_buffer.append(raw_ipc_pkt)
+        self.send_ipc_pkts()
 
+        while True:
+            pass
 
 if __name__ == '__main__':
     depacketizer = Depacketizer()
     #depacketizer.run()
-    depacketizer.send_noop()
+    # depacketizer.send_noop()
+    depacketizer.run_test()

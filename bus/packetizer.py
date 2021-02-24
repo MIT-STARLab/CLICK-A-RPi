@@ -42,6 +42,9 @@ class Packetizer:
 
         ipc_pkt = TxPacket()
         apid, pkt_data = ipc_pkt.decode(raw_ipc_pkt)
+        print("received: %x" % apid)
+        if (apid == 0x387):
+            print(pkt_data)
         # print('apid: ', apid)
         # print('pkt_data: ', pkt_data)
 
