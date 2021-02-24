@@ -259,6 +259,46 @@ class Depacketizer:
         self.ipc_pkts_buffer.append(raw_ipc_pkt)
         self.send_ipc_pkts()
 
+        apid = CMD_PL_AUTO_DOWNLINK_FILE
+        transfer_id = 0x123
+        chunk_size = 1000
+        file_name = '/root/commandhandler/test_file.txt'
+        file_name_len = len(file_name)
+        ts_sec = 0
+        ts_subsec = 0
+        data = []
+        data.append((transfer_id >> 8) & 0xFF)
+        data.append((transfer_id) & 0xFF)
+        data.append((chunk_size >> 8) & 0xFF)
+        data.append((chunk_size) & 0xFF)
+        data.append((file_name_len >> 8) & 0xFF)
+        data.append((file_name_len) & 0xFF)
+        data.extend(list(struct.unpack('!%dB' % (file_name_len), file_name)))
+        ipc_pkt = RxCommandPacket()
+        raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+        self.ipc_pkts_buffer.append(raw_ipc_pkt)
+        self.send_ipc_pkts()
+
+        apid = CMD_PL_AUTO_DOWNLINK_FILE
+        transfer_id = 0x45
+        chunk_size = 1000
+        file_name = '/root/commandhandler/test_file.txt'
+        file_name_len = len(file_name)
+        ts_sec = 0
+        ts_subsec = 0
+        data = []
+        data.append((transfer_id >> 8) & 0xFF)
+        data.append((transfer_id) & 0xFF)
+        data.append((chunk_size >> 8) & 0xFF)
+        data.append((chunk_size) & 0xFF)
+        data.append((file_name_len >> 8) & 0xFF)
+        data.append((file_name_len) & 0xFF)
+        data.extend(list(struct.unpack('!%dB' % (file_name_len), file_name)))
+        ipc_pkt = RxCommandPacket()
+        raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
+        self.ipc_pkts_buffer.append(raw_ipc_pkt)
+        self.send_ipc_pkts()
+
         apid = CMD_PL_ECHO
         ts_sec = 0
         ts_subsec = 0
