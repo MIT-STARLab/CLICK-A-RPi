@@ -228,7 +228,7 @@ class Housekeeping:
             read = self.fpga_interface.read_reg(FPGA_TELEM)
             self.fpga_queue.put(read)
         except:
-            print("Message missing fpga")
+            # print("Message missing fpga")
             self.alert_missing_fpga()
 
     def check_fpga(self, answer_pkt):
@@ -359,14 +359,14 @@ class Housekeeping:
             # TODO: Maybe format this better
             payload = str(origin)+": "+data
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
-            print('Handling CH pkt w/ payload: ', payload)
+            # print('Handling CH pkt w/ payload: ', payload)
 
         pkt = TxPacket()
         raw_pkt = pkt.encode(apid, payload) #payload needs to be a single packed byte string e.g. '\x00\x01'
         self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id, instance_num):
-        print("Restart process %x" % process_id)
+        # print("Restart process %x" % process_id)
         try:
             if (process_id == self.HK_CH_ID and self.ch_restart_enable):
                 print("Restart ch %d" % instance_num)
@@ -380,7 +380,7 @@ class Housekeeping:
                 # Update the instance/pid list
                 old_ch_pid = self.ch_pids[instance_num]
                 self.ch_pids[instance_num] = ch_pid
-                print('old_ch_pid %d vs ch_pid %d' % (old_ch_pid, ch_pid))
+                # print('old_ch_pid %d vs ch_pid %d' % (old_ch_pid, ch_pid))
                 self.ch_heartbeat_wds[old_ch_pid].cancel()
                 old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
                 # self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
@@ -495,7 +495,7 @@ class Housekeeping:
                 try:
                     self.ch_heartbeat_wds[ch_packet.origin].kick()
                 except Exception as e:
-                    print("didn't recognize pid %d" % ch_packet.origin)
+                    # print("didn't recognize pid %d" % ch_packet.origin)
                     # Don't raise regardless of RAISE_ENABLE
                     try:
                         send_exception(self.tx_socket, e)

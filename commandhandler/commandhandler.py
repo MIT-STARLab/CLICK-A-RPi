@@ -271,17 +271,15 @@ while True:
         if(CMD_ID != APID_TIME_AT_TONE):
             #don't print the time at tone receives
             print (ipc_rxcompacket)
-            print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
+            # print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
 
         if(CMD_ID == APID_TIME_AT_TONE):
             if (TIME_SET_ENABLE > 0):
                 #print('len(ipc_rxcompacket.payload): ', len(ipc_rxcompacket.payload))
                 #print('ipc_rxcompacket.payload: ', ipc_rxcompacket.payload)
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
-                print(tai_secs)
                 # Epoch starts Jan 1 2000 (or 946684800 s)
                 set_time = time.gmtime(946684800+tai_secs)
-                print(set_time)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
                                                                                     set_time.tm_mon,
                                                                                     set_time.tm_mday,
@@ -346,8 +344,8 @@ while True:
 
             list_file_txpacket = TxPacket()
             raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
-            print (list_file_txpacket) #Debug printing
-            print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
+            # print (list_file_txpacket) #Debug printing
+            # print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
 
         elif(CMD_ID == CMD_PL_AUTO_DOWNLINK_FILE):
@@ -630,8 +628,8 @@ while True:
             echo_payload = struct.unpack('!%ds'%echo_raw_size, ipc_rxcompacket.payload)[0] #decode the raw payload bytes; since there's only one return type, take the first element of the return tuple
             echo_txpacket = TxPacket()
             raw_echo_txpacket = echo_txpacket.encode(APID = TLM_ECHO, payload = echo_payload)
-            print (echo_payload) #debug printing
-            print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
+            # print (echo_payload) #debug printing
+            # print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw_echo_txpacket) #send packet
             log_to_hk('ACK CMD PL_ECHO')
             ack_to_hk(CMD_PL_ECHO, CMD_ACK)
