@@ -1,7 +1,6 @@
 [Unit]
 Description=Packetizer
-After=spi-driver-load.service
-Before=default.target
+Before=commandhandlers.target housekeeping.service
 
 [Service]
 Type=simple
