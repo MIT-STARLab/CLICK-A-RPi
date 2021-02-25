@@ -28,7 +28,7 @@ DEFAULT_CW_FTEC_LSB = 107
 PPM4_THRESHOLDS = [-1.9, -2.9, -5,-7]
 
 #HIGH/LOW for Payload/flatsat
-CW_THRESHOLDS = [4.8, 4.15, -1,-2.3]
+CW_THRESHOLDS = [4.5, 3.8, -1,-2.3]
 
 TRANSMIT_MESSAGE = "Hello I'm Mr. Meeseeks!"
 TRANSMIT_TIME = 900

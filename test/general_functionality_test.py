@@ -626,10 +626,6 @@ def check_CW_power(fo):
     if (input_power < ppm_input[1] or input_power > ppm_input[0]):
         success = False
 
-    power.edfa_off()
-    power.bias_off()
-    power.tec_off()
-
     if success:
         pass_test(fo)
     else:
@@ -639,6 +635,10 @@ def check_CW_power(fo):
         fpga.read_reg(1),fpga.read_reg(2), fpga.read_reg(3), fpga.read_reg(4)))
         fail_test(fo)
         print("EDFA Input Power outside of expected range: "+str(input_power)+" dbm")
+
+    power.edfa_off()
+    power.bias_off()
+    power.tec_off()
 
     return success
 
@@ -784,7 +784,7 @@ def seed_align(default_settings, cw = False):
     
     time.sleep(2)
     power_inputs = []
-    window = 1
+    window = 3
     for i in range(total_tec-window, total_tec+window):
         tec_msb = i//256
         tec_lsb = i%256
