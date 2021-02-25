@@ -52,7 +52,7 @@ while True:
     elapsed_time = curr_time - start_time
 
     #poll for received commands
-    sockets = dict(poller_rx_command_packets.poll(1000)) #poll for 1000 milliseconds
+    sockets = dict(poller_rx_command_packets.poll(1100)) #poll for 1100 milliseconds
     if socket_rx_command_packets in sockets and sockets[socket_rx_command_packets] == zmq.POLLIN:
         # get commands
         # print ('RECEIVING on %s with TIMEOUT %d' % (socket_rx_command_packets.get_string(zmq.LAST_ENDPOINT), socket_rx_command_packets.get(zmq.RCVTIMEO)))
@@ -60,19 +60,19 @@ while True:
 
         #relay message to idle worker (this will wait until a worker becomes idle and block heartbeats from being sent out if all workers are blocked)
 
-        ipc_rxcompacket = RxCommandPacket() #Debug printing
-        ipc_rxcompacket.decode(message) #Debug printing
-        print(ipc_rxcompacket) #Debug printing
+        # ipc_rxcompacket = RxCommandPacket() #Debug printing
+        # ipc_rxcompacket.decode(message) #Debug printing
+        # print(ipc_rxcompacket) #Debug printing
 
         ipc_client.send_request(message)
 
-    else:
-        print('no RxCommandPacket received for the last 1000 ms') #Debug printing
+    # else:
+        # print('no RxCommandPacket received for the last 1000 ms') #Debug printing
 
     #send heartbeat to housekeeping (HK_LB_HEARTBEAT_PD = every 10 seconds)
     if(elapsed_time >= HK_LB_HEARTBEAT_PD*counter_heartbeat):
         ipc_heartbeatPacket = HeartbeatPacket()
         raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
-        print(ipc_heartbeatPacket) #Debug printing
+        # print(ipc_heartbeatPacket) #Debug printing
         socket_housekeeping.send(raw_ipc_heartbeatPacket)
         counter_heartbeat += 1
