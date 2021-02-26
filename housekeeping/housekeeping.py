@@ -34,6 +34,7 @@ class ResetTimer:
 
     def callback(self):
         self.function(*self.args, **self.kwargs)
+        self.start()
 
     def cancel(self):
         self.timer.cancel()
@@ -111,41 +112,6 @@ class Housekeeping:
         self.pat_health_period = HK_PAT_HEALTH_PD+2
         self.lb_heartbeat_period = HK_LB_HEARTBEAT_PD+2
 
-        # Initialize structures to keep track of command handlers and their watchdogs
-        self.ch_pids = range(COMMAND_HANDLERS_COUNT)
-        self.ch_heartbeat_wds = {}
-
-        for i in range(COMMAND_HANDLERS_COUNT):
-            # TODO: switch this for multiple commandhandlers
-            ch_pid = self.get_service_pid('commandhandler@%d' % i)
-            # ch_pid = self.get_service_pid('commandhandler')
-
-
-            self.ch_pids[i] = ch_pid
-            self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
-
-        # Initailize other watchdogs and timers
-        self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
-        self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
-        self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
-        self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
-
-        # Initialize objects for multithreading
-        self.fpga_check_flag = threading.Event()
-        self.sys_check_flag = threading.Event()
-        self.missing_pat_flag = threading.Event()
-        self.missing_fpga_flag = threading.Event()
-        self.missing_lb_flag = threading.Event()
-
-        self.fpga_check_flag.clear()
-        self.sys_check_flag.clear()
-        self.missing_pat_flag.clear()
-        self.missing_fpga_flag.clear()
-        self.missing_lb_flag.clear()
-
-        self.missing_ch_queue = Queue.Queue()
-        self.fpga_queue = Queue.Queue()
-
         # Initialize zmq-related objects and sockets
         # TODO: Update zmq connections, use library
         self.context = zmq.Context()
@@ -174,6 +140,40 @@ class Housekeeping:
 
         # Initialize FPGA client
         self.fpga_interface = ipc_helper.FPGAClientInterface(self.context)
+
+        # Initialize structures to keep track of command handlers and their watchdogs
+        self.ch_pids = range(COMMAND_HANDLERS_COUNT)
+        self.ch_heartbeat_wds = {}
+
+        for i in range(COMMAND_HANDLERS_COUNT):
+            # TODO: switch this for multiple commandhandlers
+            ch_pid = self.get_service_pid('commandhandler@%d' % i)
+            # ch_pid = self.get_service_pid('commandhandler')
+
+            self.ch_pids[i] = ch_pid
+            self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, i)
+
+        # Initailize other watchdogs and timers
+        self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
+        self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
+        self.sys_check_timer = ResetTimer(self.sys_check_period, self.alert_sys_check)
+        self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
+
+        # Initialize objects for multithreading
+        self.fpga_check_flag = threading.Event()
+        self.sys_check_flag = threading.Event()
+        self.missing_pat_flag = threading.Event()
+        self.missing_fpga_flag = threading.Event()
+        self.missing_lb_flag = threading.Event()
+
+        self.fpga_check_flag.clear()
+        self.sys_check_flag.clear()
+        self.missing_pat_flag.clear()
+        self.missing_fpga_flag.clear()
+        self.missing_lb_flag.clear()
+
+        self.missing_ch_queue = Queue.Queue()
+        self.fpga_queue = Queue.Queue()
 
         # Initialize packet buffer
         self.packet_buf = []
@@ -340,17 +340,17 @@ class Housekeeping:
             apid = TLM_HK_PAT
             payload, _, _, _ = pat_pkt.decode(data)
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
-            #print('Handling PAT pkt w/ payload: ', payload)
+            # print('Handling PAT pkt w/ payload: ', payload)
 
         elif (process_id == self.HK_FPGA_ID):
             apid = TLM_HK_FPGA_MAP
             payload = data #data is already a packed byte string
-            #print('Handling FPGA pkt w/ payload: ', payload)
+            # print('Handling FPGA pkt w/ payload: ', payload)
 
         elif (process_id == self.HK_SYS_ID):
             apid = TLM_HK_SYS
             payload = data #data is already a packed byte string
-            #print('Handling SYS pkt w/ payload: ', payload)
+            # print('Handling SYS pkt w/ payload: ', payload)
 
         elif (process_id == self.HK_CH_ID):
             apid = TLM_HK_CH
