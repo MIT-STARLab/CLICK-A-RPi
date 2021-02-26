@@ -1,7 +1,10 @@
 [Unit]
 Description=Command Handler, Instance %i
 PartOf=commandhandlers.target
+After=packetizer.service fpga.service
+Before=housekeeping.service
 
 [Service]
 Type=simple
+ExecStartPre=/bin/sleep 1
 ExecStart=/bin/python -u /root/commandhandler/commandhandler.py

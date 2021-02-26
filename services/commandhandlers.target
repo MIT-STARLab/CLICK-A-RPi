@@ -2,6 +2,7 @@
 Description=Command Handlers
 Wants=commandhandler@0.service commandhandler@1.service commandhandler@2.service
 After=packetizer.service fpga.service
+Before=housekeeping.service
 
 [Install]
 WantedBy=default.target

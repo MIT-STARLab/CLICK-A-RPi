@@ -1,7 +1,12 @@
 [Unit]
 Description=PAT
+After=camera.service housekeeping.service
+Before=default.target
 
 [Service]
 Type=simple
 StandardOutput=null
 ExecStart=/root/bin/pat
+
+[Install]
+WantedBy=default.target
