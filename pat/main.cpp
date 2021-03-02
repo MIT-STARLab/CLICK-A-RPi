@@ -156,7 +156,12 @@ bool getOffsetParams(zmq::socket_t& pat_health_port, std::ofstream& fileStream, 
 			offsetParamsIn[linenum] = offsetParam;
 			linenum++;
 		}
-		return true;
+		if(linenum != NUM_TX_OFFSET_PARAMS){
+			log(pat_health_port, fileStream, "In main.cpp - getOffsetParams: /root/lib/offsetParams.csv is missing data: ", linenum, " lines found out of ", NUM_TX_OFFSET_PARAMS);
+            return false;
+        } else{
+			return true;
+		}
 	} else{
 		log(pat_health_port, fileStream, "In main.cpp - getOffsetParams: /root/lib/offsetParams.csv did not open or doesn't exist.");
 		return false;
@@ -168,22 +173,33 @@ struct tx_offsets{
 	float x;
 	float y;
 };
-void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, tx_offsets& offsets){
+struct calculateTxOffsetsParams{
+	float tx_offset_slope_x;
+	float tx_offset_bias_x;
+	float tx_offset_quadratic_y;
+	float tx_offset_slope_y;
+	float tx_offset_bias_y;
+};
+void calculateTxOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer, tx_offsets& offsets, calculateTxOffsetsParams& params){
 	fpga_answer_temperature_struct temperature_packet = fpga_answer_temperature_struct();
 	if(get_temperature(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port, temperature_packet, (uint16_t) TEMPERATURE_CH, 0)){
-		offsets.x = TX_OFFSET_SLOPE_X*temperature_packet.temperature + TX_OFFSET_BIAS_X;
-		offsets.y = TX_OFFSET_QUADRATIC_Y*temperature_packet.temperature*temperature_packet.temperature + TX_OFFSET_SLOPE_Y*temperature_packet.temperature + TX_OFFSET_BIAS_Y;
+		offsets.x = params.tx_offset_slope_x*temperature_packet.temperature + params.tx_offset_bias_x;
+		offsets.y = params.tx_offset_quadratic_y*temperature_packet.temperature*temperature_packet.temperature + params.tx_offset_slope_y*temperature_packet.temperature + params.tx_offset_bias_y;
 		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: Temperature Reading = ", temperature_packet.temperature, ", offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	} else{
 		log(pat_health_port, fileStream, "In main.cpp - calculateTxOffsets: FPGA temperature read failed. Using offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 	}
 }
-
-void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init){
-	count = count%DITHER_COUNT_PERIOD;
-	float t = (float) count / ((float) DITHER_COUNT_PERIOD);
-	offsets.x = t * TX_OFFSET_DITHER_X_RADIUS * cos(2 * M_PI * t) + offset_x_init;
-	offsets.y = t * TX_OFFSET_DITHER_Y_RADIUS * sin(2 * M_PI * t) + offset_y_init;
+struct ditherOffsetsParams{
+	int dither_count_period;
+	float tx_offset_dither_x_radius;
+	float tx_offset_dither_y_radius;
+};
+void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx_offsets& offsets, int count, float offset_x_init, float offset_y_init, ditherOffsetsParams& params){
+	count = count%params.dither_count_period;
+	float t = (float) count / ((float) params.dither_count_period);
+	offsets.x = t * params.tx_offset_dither_x_radius * cos(2 * M_PI * t) + offset_x_init;
+	offsets.y = t * params.tx_offset_dither_y_radius * sin(2 * M_PI * t) + offset_y_init;
 	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 }
 
@@ -320,9 +336,33 @@ int main() //int argc, char** argv
 	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
 	float period_calculate_tx_offsets = PERIOD_CALCULATE_TX_OFFSETS;
 	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
+	calculateTxOffsetsParams params_calculateTxOffsets;
+	params_calculateTxOffsets.tx_offset_slope_x = TX_OFFSET_SLOPE_X;
+	params_calculateTxOffsets.tx_offset_bias_x = TX_OFFSET_BIAS_X;
+	params_calculateTxOffsets.tx_offset_quadratic_y = TX_OFFSET_QUADRATIC_Y;
+	params_calculateTxOffsets.tx_offset_slope_y = TX_OFFSET_SLOPE_Y;
+	params_calculateTxOffsets.tx_offset_bias_y = TX_OFFSET_BIAS_Y;
+	ditherOffsetsParams params_ditherOffsets;
+	params_ditherOffsets.dither_count_period = DITHER_COUNT_PERIOD;
+	params_ditherOffsets.tx_offset_dither_x_radius = TX_OFFSET_DITHER_X_RADIUS;
+	params_ditherOffsets.tx_offset_dither_y_radius = TX_OFFSET_DITHER_Y_RADIUS;
 
 	offsetParamStruct offsetParams[NUM_TX_OFFSET_PARAMS]; //array of offsetParamStruct
-    std::cout << getOffsetParams(pat_health_port, textFileOut, offsetParams) << std::endl; //get tx offset parameters from csv file
+    if(getOffsetParams(pat_health_port, textFileOut, offsetParams)){
+		//update default tx offset parameters from csv file:
+		period_calculate_tx_offsets = offsetParams[IDX_PERIOD_CALCULATE_TX_OFFSETS].parameter;
+		period_dither_tx_offsets = offsetParams[IDX_PERIOD_DITHER_TX_OFFSETS].parameter;
+		offsets.x = offsetParams[IDX_TX_OFFSET_X_DEFAULT].parameter;
+		offsets.y = offsetParams[IDX_TX_OFFSET_Y_DEFAULT].parameter;
+		params_calculateTxOffsets.tx_offset_slope_x = offsetParams[IDX_TX_OFFSET_SLOPE_X].parameter;
+		params_calculateTxOffsets.tx_offset_bias_x = offsetParams[IDX_TX_OFFSET_BIAS_X].parameter;
+		params_calculateTxOffsets.tx_offset_quadratic_y = offsetParams[IDX_TX_OFFSET_QUADRATIC_Y].parameter;
+		params_calculateTxOffsets.tx_offset_slope_y = offsetParams[IDX_TX_OFFSET_SLOPE_Y].parameter;
+		params_calculateTxOffsets.tx_offset_bias_y = offsetParams[IDX_TX_OFFSET_BIAS_Y].parameter;
+		params_ditherOffsets.tx_offset_dither_x_radius = offsetParams[IDX_TX_OFFSET_DITHER_X_RADIUS].parameter;
+		params_ditherOffsets.tx_offset_dither_y_radius = offsetParams[IDX_TX_OFFSET_DITHER_Y_RADIUS].parameter;
+		params_ditherOffsets.dither_count_period = offsetParams[IDX_DITHER_COUNT_PERIOD].parameter;
+	} 
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
@@ -499,7 +539,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT command in unknown configuration. Standing by...");
 						}
-						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;
 						
 					case CMD_START_PAT_OPEN_LOOP:
@@ -521,7 +561,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP command in unknown configuration. Standing by...");
 						}
-						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;
 					
 					case CMD_START_PAT_STATIC_POINT:
@@ -550,7 +590,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_BUS_FEEDBACK command in unknown configuration. Standing by...");
 						}
-						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;
 
 					case CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK:
@@ -574,7 +614,7 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK command in unknown configuration. Standing by...");
 						}
-						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;	
 
 					case CMD_SET_GET_IMAGE_CENTER_X:
@@ -1029,7 +1069,7 @@ int main() //int argc, char** argv
 			elapsed_time_tx_offset = check_tx_offset - time_prev_tx_offset; // Calculate time since last tx offset calculation
 			if(elapsed_time_tx_offset > period_tx_offset){
 				log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Updating Tx offsets.");
-				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+				calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 				time_prev_tx_offset = steady_clock::now();
 				if(dithering_on){
 					offset_x_init = offsets.x; offset_y_init = offsets.y; //update offsets for dithering
@@ -1354,7 +1394,7 @@ int main() //int argc, char** argv
 															offset_x_init = offsets.x; offset_y_init = offsets.y; //initialize reference point
 														} else{
 															log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
-															ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init);
+															ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init, params_ditherOffsets);
 														} 
 														dither_count++;
 														time_prev_dither = steady_clock::now();
