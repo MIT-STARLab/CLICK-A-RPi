@@ -322,7 +322,7 @@ int main() //int argc, char** argv
 	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
 
 	offsetParamStruct offsetParams[NUM_TX_OFFSET_PARAMS]; //array of offsetParamStruct
-    std::cout << getOffsetParams(offsetParams) << std::endl; //get tx offset parameters from csv file
+    std::cout << getOffsetParams(pat_health_port, textFileOut, offsetParams) << std::endl; //get tx offset parameters from csv file
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
