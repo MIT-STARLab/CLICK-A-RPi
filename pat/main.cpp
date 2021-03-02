@@ -341,7 +341,6 @@ int main() //int argc, char** argv
 	params_calculateTxOffsets.tx_offset_quadratic_y = TX_OFFSET_QUADRATIC_Y;
 	params_calculateTxOffsets.tx_offset_slope_y = TX_OFFSET_SLOPE_Y;
 	params_calculateTxOffsets.tx_offset_bias_y = TX_OFFSET_BIAS_Y;
-	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets); 
 	ditherOffsetsParams params_ditherOffsets;
 	params_ditherOffsets.dither_count_period = DITHER_COUNT_PERIOD;
 	params_ditherOffsets.tx_offset_dither_x_radius = TX_OFFSET_DITHER_X_RADIUS;
@@ -363,6 +362,7 @@ int main() //int argc, char** argv
 		params_ditherOffsets.tx_offset_dither_y_radius = offsetParams[IDX_TX_OFFSET_DITHER_Y_RADIUS].parameter;
 		params_ditherOffsets.dither_count_period = offsetParams[IDX_DITHER_COUNT_PERIOD].parameter;
 	} 
+	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets); 
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
