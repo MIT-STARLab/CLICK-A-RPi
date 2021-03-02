@@ -332,7 +332,6 @@ int main() //int argc, char** argv
 	bool self_test_passed = false, self_test_failed = false;
 	tx_offsets offsets;
 	offsets.x = TX_OFFSET_X_DEFAULT; offsets.y = TX_OFFSET_Y_DEFAULT;
-	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets); 
 	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
 	float period_calculate_tx_offsets = PERIOD_CALCULATE_TX_OFFSETS;
 	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
@@ -342,6 +341,7 @@ int main() //int argc, char** argv
 	params_calculateTxOffsets.tx_offset_quadratic_y = TX_OFFSET_QUADRATIC_Y;
 	params_calculateTxOffsets.tx_offset_slope_y = TX_OFFSET_SLOPE_Y;
 	params_calculateTxOffsets.tx_offset_bias_y = TX_OFFSET_BIAS_Y;
+	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets); 
 	ditherOffsetsParams params_ditherOffsets;
 	params_ditherOffsets.dither_count_period = DITHER_COUNT_PERIOD;
 	params_ditherOffsets.tx_offset_dither_x_radius = TX_OFFSET_DITHER_X_RADIUS;
@@ -568,7 +568,7 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
 						phase = STATIC_POINT;
 						STANDBY = false;
-						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets);
+						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;
 						
 					case CMD_START_PAT_BUS_FEEDBACK:
