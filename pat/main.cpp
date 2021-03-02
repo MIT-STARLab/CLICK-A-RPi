@@ -1564,6 +1564,21 @@ int main() //int argc, char** argv
 														time_prev_tx_adcs = steady_clock::now(); // Record time of message		
 													}
 												}
+
+												if(dithering_on){
+													check_dither = steady_clock::now(); // Record current time
+													elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
+													if(elapsed_time_dither > period_dither){
+														if(dither_count == 0){
+															offset_x_init = offsets.x; offset_y_init = offsets.y; //initialize reference point
+														} else{
+															log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
+															ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init, params_ditherOffsets);
+														} 
+														dither_count++;
+														time_prev_dither = steady_clock::now();
+													}
+												}
 											}
 											else
 											{
@@ -1685,6 +1700,32 @@ int main() //int argc, char** argv
 						//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 
 						static_pointing_initialized = true; 
+					} else{
+						if(haveCalibKnowledge){
+							if(dithering_on){
+								check_dither = steady_clock::now(); // Record current time
+								elapsed_time_dither = check_dither - time_prev_dither; // Calculate time since last tx offset calculation
+								if(elapsed_time_dither > period_dither){
+									if(dither_count == 0){
+										offset_x_init = offsets.x; offset_y_init = offsets.y; //initialize reference point
+									} else{
+										log(pat_health_port, textFileOut, "In main.cpp - MAIN - phase ", phaseNames[phase]," - Dithering Tx offsets.");
+										ditherOffsets(pat_health_port, textFileOut, offsets, dither_count, offset_x_init, offset_y_init, params_ditherOffsets);
+										
+										// Control pointing in open-loop
+										double setPointX_OL = (double) CAMERA_WIDTH/2 + (double) offsets.x;
+										double setPointY_OL = (double) CAMERA_HEIGHT/2 + (double) offsets.y;
+										calib.x = (int) setPointX_OL;
+										calib.y = (int) setPointY_OL;
+										track.controlOpenLoop(fsm, setPointX_OL, setPointY_OL);
+										log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Dithering to: ",
+										"x_pixels = ", calib.x, ", y_pixels = ", calib.y);
+									} 
+									dither_count++;
+									time_prev_dither = steady_clock::now();
+								}
+							}
+						}
 					}
 					break;
 
