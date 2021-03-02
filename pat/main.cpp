@@ -112,6 +112,57 @@ error_angles centroid2angles(double centroid_x, double centroid_y){
 	return angles;
 }
 
+//for loading tx offset parameters from external file
+enum offsetParamIndex { 
+    IDX_PERIOD_CALCULATE_TX_OFFSETS, 
+    IDX_PERIOD_DITHER_TX_OFFSETS,
+    IDX_TX_OFFSET_X_DEFAULT,
+    IDX_TX_OFFSET_Y_DEFAULT,
+    IDX_TX_OFFSET_SLOPE_X,
+    IDX_TX_OFFSET_BIAS_X,
+    IDX_TX_OFFSET_QUADRATIC_Y,
+    IDX_TX_OFFSET_SLOPE_Y,
+    IDX_TX_OFFSET_BIAS_Y,
+    IDX_TX_OFFSET_DITHER_X_RADIUS,
+    IDX_TX_OFFSET_DITHER_Y_RADIUS,
+    IDX_DITHER_COUNT_PERIOD,
+    NUM_TX_OFFSET_PARAMS
+};
+struct offsetParamStruct {
+    string name;
+    float parameter;
+};
+bool getOffsetParams(zmq::socket_t& pat_health_port, std::ofstream& fileStream, offsetParamStruct (&offsetParamsIn)[NUM_TX_OFFSET_PARAMS]){
+	offsetParamStruct offsetParam; //temp offsetParamStruct for use in the while loop
+    ifstream inFile("/root/lib/offsetParams.csv"); //our file
+    string line;
+    int linenum = 0;
+	log(pat_health_port, fileStream, "In main.cpp - getOffsetParams: Retrieving Tx Offset Parameters from /root/lib/offsetParams.csv");
+    if(inFile.is_open()){
+		while (getline (inFile, line))
+		{
+			istringstream linestream(line);
+			string item;
+			//use this to get up to the first comma
+			getline(linestream, item, ',');
+			offsetParam.name = item;
+			//convert to a string stream and then put in id.
+			getline(linestream, item, ',');
+			stringstream ss(item);
+			ss >> offsetParam.parameter;
+			//report read data
+			log(pat_health_port, fileStream, "In main.cpp - getOffsetParams: ", offsetParam.name, ": ", offsetParam.parameter);
+			//add the new data to the list
+			offsetParamsIn[linenum] = offsetParam;
+			linenum++;
+		}
+		return true;
+	} else{
+		log(pat_health_port, fileStream, "In main.cpp - getOffsetParams: /root/lib/offsetParams.csv did not open or doesn't exist.");
+		return false;
+	}
+}
+
 //Get payload temperature and compute Tx offsets
 struct tx_offsets{
 	float x;
@@ -136,7 +187,7 @@ void ditherOffsets(zmq::socket_t& pat_health_port, std::ofstream& fileStream, tx
 	log(pat_health_port, fileStream, "In main.cpp - ditherOffsets: Updating to offsets.x = ", offsets.x, ", offsets.y = ", offsets.y);
 }
 
-atomic<bool> stop(false); //not for flight
+atomic<bool> stop(false);
 
 //-----------------------------------------------------------------------------
 int main() //int argc, char** argv
@@ -223,6 +274,7 @@ int main() //int argc, char** argv
 	//Generate text telemetry file, pg
 	ofstream textFileOut; //stream for text telemetry
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
+	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid);
 
 	// Synchronization
 	enum Phase { CALIBRATION, ACQUISITION, CL_INIT, CL_BEACON, CL_CALIB, OPEN_LOOP, STATIC_POINT };
@@ -268,16 +320,18 @@ int main() //int argc, char** argv
 	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
 	float period_calculate_tx_offsets = PERIOD_CALCULATE_TX_OFFSETS;
 	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
+
+	offsetParamStruct offsetParams[NUM_TX_OFFSET_PARAMS]; //array of offsetParamStruct
+    std::cout << getOffsetParams(offsetParams) << std::endl; //get tx offset parameters from csv file
 	
 	//set up self test error buffer
 	std::stringstream self_test_stream;
 	char self_test_error_buffer[BUFFER_SIZE];	
 	self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
 
-	// Killing app handler (Enables graceful Ctrl+C exit - not for flight)
+	// Killing app handler (Enables graceful Ctrl+C exit)
 	signal(SIGINT, [](int signum) { stop = true; });
 
-	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid);
 	// Hardware init				
 	Camera camera(textFileOut, pat_health_port);	
 	//Catch camera initialization failure state in a re-initialization loop:
@@ -330,7 +384,7 @@ int main() //int argc, char** argv
 		//Try to initialize again
 		camera_initialized = camera.initialize();
 
-		// Allow graceful exit with Ctrl-C (not for flight)
+		// Allow graceful exit with Ctrl-C
 		if(stop){
 			log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Saving text file and ending process.");
 			textFileOut.close(); //close telemetry text file
@@ -396,12 +450,12 @@ int main() //int argc, char** argv
 	
 	// Enter Primary Process Loop: Standby + Main
 	while(OPERATIONAL){
-		// Allow graceful exit with Ctrl-C (not for flight)
+		// Allow graceful exit with Ctrl-C
 		if(stop){break;}
 
 		// START Standby Loop
 		while(STANDBY){
-			// Allow graceful exit with Ctrl-C (not for flight)
+			// Allow graceful exit with Ctrl-C
 			if(stop){
 				OPERATIONAL = false;
 				break;
@@ -911,7 +965,7 @@ int main() //int argc, char** argv
 		// START Main PAT Loop
 		while(OPERATIONAL && !STANDBY) 
 		{	
-			// Allow graceful exit with Ctrl-C (not for flight)
+			// Allow graceful exit with Ctrl-C
 			if(stop){
 				OPERATIONAL = false;
 				break;
