@@ -13,18 +13,47 @@ std::string timeStamp()
 	return std::string(dateTime);
 }
 
+bool is_number(const std::string& s)
+{
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it)) ++it;
+    return !s.empty() && it == s.end();
+}
+
 // Get folder number to save experiment data in
 //-----------------------------------------------------------------------------
 std::string getExperimentFolder(bool updateExpId)
 //-----------------------------------------------------------------------------
 {
 	std::ifstream fin("/root/log/id_experiment.csv");
-	std::string reader;
+	std::string line;
 	int expNum = 0;
 	std::string expId;
 	std::string directory_path;
-
-	while(getline(fin, reader)){expNum = stoi(reader);}  // get previous experiment number (or 0)
+	int expIds[10000]; //memory for reading experiment ids
+	int linenum = 0;
+	// get previous experiment number (or 0 if first experiment):
+	if(fin.is_open()){
+		while(getline(fin, line)){
+			std::istringstream linestream(line);
+			std::string item;
+			getline(linestream, item); //convert to a string stream and then put in id.
+			if(is_number(item)){
+				std::stringstream ss(item);
+				ss >> expIds[linenum];
+			} else{
+				if(linenum > 0){
+					expIds[linenum] = expIds[linenum-1] + 1; //if not a number, use previous id + 1
+				} else{
+					expIds[linenum] = 0; //if first id is not a number, use zero to initialize
+				}
+			}	
+			linenum++;
+		}  
+		expNum = expIds[linenum-1];
+	} else{
+		expNum = 0; //first experiment
+	}
 	if(updateExpId){
 		//update from previous experiment id
 		expNum += 1;
