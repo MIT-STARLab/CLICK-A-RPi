@@ -245,7 +245,6 @@ counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
-get_pat_mode() #will initialize pat mode to default if PAT_MODE_FILENAME doesn't exist or is corrupted
 
 #start command handling
 while True:
