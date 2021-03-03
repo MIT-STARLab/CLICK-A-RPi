@@ -23,6 +23,7 @@ import ipc_helper
 import fpga_map as mmap
 from filehandling import *
 import tx_packet
+from os import path
 
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
@@ -37,7 +38,6 @@ CH_MODE_GROUND_TEST = 0
 CH_MODE_DEBUG = 1
 CH_MODE_DOWNLINK = 2
 CH_MODE_ID = CH_MODE_GROUND_TEST #default for ground testing (can replace with debug for flight)
-PAT_MODE_ID = PAT_CMD_START_PAT #set PAT mode to default for execution w/o ground specified mode change
 pat_mode_list = [PAT_CMD_START_PAT, PAT_CMD_START_PAT_OPEN_LOOP, PAT_CMD_START_PAT_STATIC_POINT, PAT_CMD_START_PAT_BUS_FEEDBACK, PAT_CMD_START_PAT_OPEN_LOOP_BUS_FEEDBACK, PAT_CMD_BCN_ALIGN]
 pat_mode_names = ['Default', 'Open-Loop', 'Static Pointing', 'Default w/ Bus Feedback', 'Open-Loop w/ Bus Feedback', 'Beacon Alignment Mode']
 
@@ -143,6 +143,47 @@ def initialize_cal_laser():
 #     os.system('systemctl --user stop camera') #calls camera.service to turn off camera
 #     log_to_hk('CAMERA OFF')
 
+def set_pat_mode(mode_id):
+    if(mode_id in pat_mode_list):
+        log_to_hk("In set_pat_mode - Setting PAT mode to: " + pat_mode_names[pat_mode_list.index(mode_id)])
+        pat_mode_file = open(PAT_MODE_FILENAME,"w")
+        pat_mode_file.write(str(mode_id))
+        pat_mode_file.close()
+    else:
+        log_to_hk("In set_pat_mode - Ignoring unrecognized PAT mode input: " + str(mode_id))
+
+#for get_pat_mode checking
+def string_is_int(s):
+    try: 
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+def get_pat_mode():
+    if(path.exists(PAT_MODE_FILENAME)):
+        pat_mode_file = open(PAT_MODE_FILENAME,"r")
+        mode_id_str = pat_mode_file.read()
+        if(string_is_int(mode_id_str)):
+            mode_id = int(mode_id_str)
+            if(mode_id in pat_mode_list):
+                log_to_hk("In get_pat_mode - PAT mode is: " + pat_mode_names[pat_mode_list.index(mode_id)])
+            else:
+                log_to_hk("In get_pat_mode - Unrecognized PAT mode: " + str(mode_id))
+                pat_mode_file.close()
+                mode_id = PAT_CMD_START_PAT
+                set_pat_mode(mode_id)
+        else:
+            log_to_hk("In get_pat_mode - Unrecognized PAT mode: " + mode_id_str)
+            pat_mode_file.close()
+            mode_id = PAT_CMD_START_PAT
+            set_pat_mode(mode_id)
+    else:
+        log_to_hk("In get_pat_mode - Creating " + PAT_MODE_FILENAME)
+        mode_id = PAT_CMD_START_PAT
+        set_pat_mode(mode_id)
+    return mode_id
+
 def stop_pat():
     send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS) #this isn't necessary if PAT is running as a service
     os.system("systemctl --user stop pat") #stop the pat service
@@ -204,6 +245,7 @@ counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
+get_pat_mode() #will initialize pat mode to default if PAT_MODE_FILENAME doesn't exist or is corrupted
 
 #start command handling
 while True:
@@ -396,17 +438,13 @@ while True:
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             pat_mode_cmd = pat_mode_cmd_tuple[0]
-            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                if(pat_mode_cmd in pat_mode_list):
-                    PAT_MODE_ID = pat_mode_cmd #execute with commanded PAT mode
-                    log_to_hk('ACK CMD PL_SET_PAT_MODE: PAT mode is ' + pat_mode_names[pat_mode_list.index(PAT_MODE_ID)])
-                    ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ACK)
-                else:
-                    log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd) + '. PAT mode is ' + pat_mode_names[pat_mode_list.index(PAT_MODE_ID)])
-                    ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
+            if(pat_mode_cmd in pat_mode_list):
+                set_pat_mode(pat_mode_cmd)
+                ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ACK)
             else:
-                log_to_hk('ERROR CMD PL_SET_PAT_MODE: PAT process not in STANDBY.')
+                log_to_hk('ERROR CMD PL_SET_PAT_MODE: Unrecognized PAT mode command: ' + str(pat_mode_cmd))
                 ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
+            get_pat_mode() #print current pat mode to hk telemetry
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload) #TBR
@@ -533,11 +571,13 @@ while True:
 
         elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
             if(pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
+                pat_mode_id = get_pat_mode()
+                send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             elif(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_DO_CALIB_FLAG))
+                pat_mode_id = get_pat_mode()
+                send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_DO_CALIB_FLAG))
                 log_to_hk('ACK CMD PL_ENTER_PAT_MAIN')
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
@@ -714,113 +754,12 @@ while True:
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                time.sleep(60)
+                for i in range(60): #max test time is about 60 sec
+                    log_to_hk("Waiting for pat self test to finish")
+                    time.sleep(1)
                 log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
-                send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
-                # for i in range(60): #max test time is about 60 sec
-                #     print("Waiting for pat self test to finish")
-                #     pat_status_flag = update_pat_status(pat_status_flag)
-                #     if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
-                #         log_to_hk("Pat self test passed")
-                #         #execute pointing
-                #         send_pat_command(socket_PAT_control, PAT_MODE_ID, str(PAT_SKIP_CALIB_FLAG))
-                #         break
-                #     elif(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                #         log_to_hk("Pat self test failed")
-                #         break;
-                #     time.sleep(1)
-
-                #if(pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED)):
-                end_time = time.time()
-                log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
-
-                #log transmit start time
-                start_time = time.time()
-
-                ppm_order = 4
-                data = TRANSMIT_MESSAGE
-                tx_pkt = tx_packet.txPacket(ppm_order, data)
-                tx_pkt.pack()
-
-                control = fpga.read_reg(mmap.CTL)
-                if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-
-                transmit_time = TRANSMIT_TIME #seconds
-
-                #turn on laser
-                seed_setting = 1
-                power.edfa_on()
-                power.bias_on()
-                power.tec_on()
-                time.sleep(2)
-                log_to_hk("turned edfa on")
-
-
-                fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
-                time.sleep(0.1)
-                fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
-                time.sleep(0.1)
-                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
-                time.sleep(2)
-
-                #set points are dependent on temperature
-                payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
-                flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
-                # seed = payload_seed
-                ppm_codes = [4,8,16,32,64,128,0]
-                ppm4_input = PPM4_THRESHOLDS
-                ppm = ppm_codes[0]
-
-                if(seed_setting):
-                    seed = payload_seed
-                    ppm_input = [ppm4_input[0], ppm4_input[1]]
-                else:
-                    seed = flat_sat_seed
-                    ppm_input = [ppm4_input[2], ppm4_input[3]]
-
-                for x in range(1,5):
-                    fpga.write_reg(x, seed[x-1])
-
-                ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
-                fpga.write_reg(mmap.DATA, ppm_order)
-                log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
-                last_i = 0
-                while(abs(end_time - start_time) < transmit_time):
-
-                    i = int(abs(end_time - start_time)//150)
-                    ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
-                    if i > last_i:
-                        tx_pkt = tx_packet.txPacket(ppm_order, data)
-                        tx_pkt.pack()
-                        last_i = i
-                    #Stall Fifo
-                    fpga.write_reg(mmap.CTL, control | 0x8)
-
-                    # # #Write to FIFO
-                    tx_pkt.transmit(fpga, .1)
-
-                    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                    if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                        # success = False
-                        print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                        # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
-                        # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
-
-                    if(fifo_len < 100): time.sleep(.005)
-
-                    # #Release FIFO
-                    fpga.write_reg(mmap.CTL, 0x7)
-                    end_time = time.time()
-
-                log_to_hk("Transmit Session Complete")
-
-                power.edfa_off()
-                power.bias_off()
-                power.tec_off()
-
-                log_to_hk('Commanding PAT to return to STANDBY mode.')
-                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
-
+                pat_mode_id = get_pat_mode()
+                send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                 log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
@@ -828,22 +767,101 @@ while True:
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
-            send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+            #proceed to transmit
+            end_time = time.time()
+            log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
 
-            #else:
-            #    log_to_hk('Transmit did not run b/c pat self test did not succeed.')
-            #    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+            #log transmit start time
+            start_time = time.time()
+
+            ppm_order = 4
+            data = TRANSMIT_MESSAGE
+            tx_pkt = tx_packet.txPacket(ppm_order, data)
+            tx_pkt.pack()
+
+            control = fpga.read_reg(mmap.CTL)
+            if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+
+            transmit_time = TRANSMIT_TIME #seconds
+
+            #turn on laser
+            seed_setting = 1
+            power.edfa_on()
+            power.bias_on()
+            power.tec_on()
+            time.sleep(2)
+            log_to_hk("turned edfa on")
+
+
+            fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+            time.sleep(0.1)
+            fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
+            time.sleep(0.1)
+            fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+            time.sleep(2)
+
+            #set points are dependent on temperature
+            payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
+            flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+            # seed = payload_seed
+            ppm_codes = [4,8,16,32,64,128,0]
+            ppm4_input = PPM4_THRESHOLDS
+            ppm = ppm_codes[0]
+
+            if(seed_setting):
+                seed = payload_seed
+                ppm_input = [ppm4_input[0], ppm4_input[1]]
+            else:
+                seed = flat_sat_seed
+                ppm_input = [ppm4_input[2], ppm4_input[3]]
+
+            for x in range(1,5):
+                fpga.write_reg(x, seed[x-1])
+
+            ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
+            fpga.write_reg(mmap.DATA, ppm_order)
+            log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
+            last_i = 0
+            while(abs(end_time - start_time) < transmit_time):
+
+                i = int(abs(end_time - start_time)//150)
+                ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
+                if i > last_i:
+                    tx_pkt = tx_packet.txPacket(ppm_order, data)
+                    tx_pkt.pack()
+                    last_i = i
+                #Stall Fifo
+                fpga.write_reg(mmap.CTL, control | 0x8)
+
+                # # #Write to FIFO
+                tx_pkt.transmit(fpga, .1)
+
+                fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                    # success = False
+                    print("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                    # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+                    # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
+
+                if(fifo_len < 100): time.sleep(.005)
+
+                # #Release FIFO
+                fpga.write_reg(mmap.CTL, 0x7)
+                end_time = time.time()
+
+            log_to_hk("Transmit Session Complete")
+
+            power.edfa_off()
+            power.bias_off()
+            power.tec_off()
+
+            #reset PAT:
+            send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
             CH_MODE_ID = CH_MODE_DEBUG
             log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time)
-
-            if(not pat_status_is(PAT_STATUS_STANDBY)):
-                log_to_hk('ERROR CMD PL_DEBUG_MODE: PAT process not in STANDBY.')
-                ack_to_hk(CMD_PL_DEBUG_MODE, CMD_ERR)
-            else:
-                ack_to_hk(CMD_PL_DEBUG_MODE, CMD_ACK)
 
             ###TODO: add any other debug process start-up tasks
 
