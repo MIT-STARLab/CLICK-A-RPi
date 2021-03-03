@@ -44,6 +44,9 @@ void log(zmq::socket_t& pat_health_port, std::ofstream& fileStream, args&&... ms
 // Get date and time for telemetry file names
 std::string timeStamp();
 
+// Check if read experiment id string is a number
+bool is_number(const std::string& s);
+
 // Get folder number to save experiment data in
 std::string getExperimentFolder(bool updateExpId = false);
 
