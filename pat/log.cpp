@@ -32,24 +32,28 @@ std::string getExperimentFolder(bool updateExpId)
 	std::string directory_path;
 	int expIds[10000]; //memory for reading experiment ids
 	int linenum = 0;
-	// get previous experiment number (or 0):
-	while(getline(fin, line)){
-		std::istringstream linestream(line);
-		std::string item;
-		getline(linestream, item); //convert to a string stream and then put in id.
-		if(is_number(item)){
-			std::stringstream ss(item);
-			ss >> expIds[linenum];
-		} else{
-			if(linenum > 0){
-				expIds[linenum] = expIds[linenum-1] + 1; //if not a number, use previous id + 1
+	// get previous experiment number (or 0 if first experiment):
+	if(fin.is_open()){
+		while(getline(fin, line)){
+			std::istringstream linestream(line);
+			std::string item;
+			getline(linestream, item); //convert to a string stream and then put in id.
+			if(is_number(item)){
+				std::stringstream ss(item);
+				ss >> expIds[linenum];
 			} else{
-				expIds[linenum] = 0; //if first id is not a number, use zero to initialize
-			}
-		}	
-		linenum++;
-	}  
-	expNum = expIds[linenum-1];
+				if(linenum > 0){
+					expIds[linenum] = expIds[linenum-1] + 1; //if not a number, use previous id + 1
+				} else{
+					expIds[linenum] = 0; //if first id is not a number, use zero to initialize
+				}
+			}	
+			linenum++;
+		}  
+		expNum = expIds[linenum-1];
+	} else{
+		expNum = 0; //first experiment
+	}
 	if(updateExpId){
 		//update from previous experiment id
 		expNum += 1;
