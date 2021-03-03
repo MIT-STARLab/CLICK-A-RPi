@@ -1,7 +1,7 @@
 [Unit]
 Description=Command Handlers
 Wants=commandhandler@0.service commandhandler@1.service commandhandler@2.service
-After=packetizer.service fpga.service
+After=packetizer.service fpga.service loadbalancer.service
 Before=housekeeping.service
 
 [Install]

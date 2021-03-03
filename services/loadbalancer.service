@@ -1,6 +1,7 @@
 [Unit]
 Description=Load Balancer
-Before=housekeeping.service
+After=fpga.service
+Before=commandhandlers.target housekeeping.service
 
 [Service]
 Type=simple
