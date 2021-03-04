@@ -171,6 +171,8 @@ CAMERA_WIDTH = 2592
 CAMERA_HEIGHT = 1944
 CAMERA_MAX_EXP = 10000000
 CAMERA_MIN_EXP = 10
+#PAT mode file name
+PAT_MODE_FILENAME = "/root/lib/patMode.txt"
 
 #Calibration Laser DAC setting
 CAL_LASER_DAC_SETTING = 6700
