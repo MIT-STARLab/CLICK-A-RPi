@@ -5,6 +5,7 @@ Before=default.target
 
 [Service]
 Type=simple
+ExecStartPre=/bin/sleep 5
 ExecStart=/bin/python -u /root/housekeeping/housekeeping.py
 
 [Install]

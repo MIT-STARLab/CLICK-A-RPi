@@ -380,32 +380,40 @@ class Housekeeping:
                 # Update the instance/pid list
                 old_ch_pid = self.ch_pids[instance_num]
                 self.ch_pids[instance_num] = ch_pid
-                # print('old_ch_pid %d vs ch_pid %d' % (old_ch_pid, ch_pid))
                 self.ch_heartbeat_wds[old_ch_pid].cancel()
                 old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
-                # self.ch_heartbeat_wds[ch_pid] = WatchdogTimer(self.ch_heartbeat_period, self.alert_missing_ch, instance_num)
                 self.ch_heartbeat_wds[ch_pid] = old_wd
                 self.ch_heartbeat_wds[ch_pid].start()
 
             if (process_id == self.HK_PAT_ID and self.pat_restart_enable):
                 print("Restart pat")
                 os.system("systemctl --user restart pat.service")
-                # self.pat_health_wd = WatchdogTimer(self.pat_health_period, self.alert_missing_pat)
                 self.pat_health_wd.cancel()
                 self.pat_health_wd.start()
 
             if (process_id == self.HK_LB_ID and self.lb_restart_enable):
                 print("Restart load balancer")
                 os.system("systemctl --user restart loadbalancer.service")
-                # self.lb_heartbeat_wd = WatchdogTimer(self.lb_heartbeat_period, self.alert_missing_lb)
+
                 self.lb_heartbeat_wd.cancel()
                 self.lb_heartbeat_wd.start()
+
+                os.system("systemctl --user restart commandhandlers.target")
+                for i in range(COMMAND_HANDLERS_COUNT):
+                    # TODO: switch this for multiple commandhandlers
+                    ch_pid = self.get_service_pid('commandhandler@%d' % i)
+                    # ch_pid = self.get_service_pid('commandhandler')
+                    old_ch_pid = self.ch_pids[i]
+                    self.ch_pids[i] = ch_pid
+                    self.ch_heartbeat_wds[old_ch_pid].cancel()
+                    old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
+                    self.ch_heartbeat_wds[ch_pid] = old_wd
+                    self.ch_heartbeat_wds[ch_pid].start()
+
 
             if (process_id == self.HK_FPGA_ID and self.fpga_restart_enable):
                 print("Restart fpga")
                 os.system("systemctl --user restart fpga.service")
-                # self.fpga_check_timer = ResetTimer(self.fpga_check_period, self.alert_fpga_check)
-                # self.fpga_check_timer.start()
 
             err_pkt = TxPacket()
             raw_err_pkt = err_pkt.encode(ERR_HK_RESTART, struct.pack('!BB', process_id, instance_num))
@@ -426,7 +434,6 @@ class Housekeeping:
         self.fpga_restart_enable = (flags >> 1) & 1
         self.lb_restart_enable = (flags >> 0) & 1
 
-        self.fpga_check_period = new_fpga_check_pd
         self.sys_check_period = new_sys_check_pd
         self.ch_heartbeat_period = new_ch_heartbeat_pd
         self.pat_health_period = new_pat_health_pd
@@ -441,6 +448,7 @@ class Housekeeping:
         for i in self.ch_heartbeat_wds:
             self.ch_heartbeat_wds[i].start()
 
+        print("Start Housekeeping")
         while True:
             # Periodically send FPGA request
             if (self.fpga_check_flag.is_set()):

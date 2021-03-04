@@ -1,7 +1,7 @@
 [Unit]
 Description=Command Handler, Instance %i
 PartOf=commandhandlers.target
-After=packetizer.service fpga.service
+After=packetizer.service fpga.service loadbalancer.service
 Before=housekeeping.service
 
 [Service]
