@@ -784,17 +784,26 @@ def seed_align(default_settings, cw = False):
     
     time.sleep(2)
     power_inputs = []
-    window = 3
+    window = 6
+    avg = 3
     for i in range(total_tec-window, total_tec+window):
         tec_msb = i//256
         tec_lsb = i%256
         fpga.write_reg(mmap.LTSa, tec_msb)
         fpga.write_reg(mmap.LTSb, tec_lsb)
         time.sleep(.1)
-        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(1)])/1
+        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
         power_inputs.append(avg_input_power)
 
-    new_tec = total_tec+power_inputs.index(max(power_inputs))-window
+    pwr_index = 256*tec_msb + tec_lsb
+    for pwr in power_inputs:
+        if options.PPM4_THRESHOLDS[0] < pwr < options.PPM4_THRESHOLDS[1] and not cw:
+            pwr_index = pwr
+        elif options.CW_THRESHOLDS[0] < pwr <options.CW_THRESHOLDS[1] and cw:
+            pwr_index = pwr
+        else:
+
+    new_tec = total_tec+power_inputs.index(pwr_index)-window
     tec_msb = new_tec//256
     tec_lsb = new_tec%256
     fpga.write_reg(mmap.LTSa, tec_msb)
