@@ -611,7 +611,7 @@ Seed setting 0 for flatsat and 1 for payload
 def check_CW_power(fo):
     print_test(fo, "CW Power test")
 
-
+    fpga.write_reg(mmap.DATA,0)
     if(seed_setting):
         ppm_input = [options.CW_THRESHOLDS[0], options.CW_THRESHOLDS[1]]
         seed_align([options.DEFAULT_CW_TEC_MSB, options.DEFAULT_CW_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB], True)
@@ -784,7 +784,7 @@ def seed_align(default_settings, cw = False):
     
     time.sleep(2)
     power_inputs = []
-    window = 6
+    window = 4
     avg = 3
     for i in range(total_tec-window, total_tec+window):
         tec_msb = i//256
@@ -795,15 +795,19 @@ def seed_align(default_settings, cw = False):
         avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
         power_inputs.append(avg_input_power)
 
-    pwr_index = 256*tec_msb + tec_lsb
+    pwr_index = None
     for pwr in power_inputs:
-        if options.PPM4_THRESHOLDS[0] < pwr < options.PPM4_THRESHOLDS[1] and not cw:
+        if options.PPM4_THRESHOLDS[0] > pwr and pwr > options.PPM4_THRESHOLDS[1] and not cw:
             pwr_index = pwr
-        elif options.CW_THRESHOLDS[0] < pwr <options.CW_THRESHOLDS[1] and cw:
+        elif options.CW_THRESHOLDS[0] > pwr and pwr > options.CW_THRESHOLDS[1] and cw:
             pwr_index = pwr
-        else:
 
-    new_tec = total_tec+power_inputs.index(pwr_index)-window
+    if(pwr_index != None):
+        print(power_inputs.index(pwr_index))
+	new_tec = total_tec+power_inputs.index(pwr_index)-window
+    else:
+        new_tec = options.PPM4_THRESHOLDS[0]*256+options.PPM4_THRESHOLDS[1]
+   
     tec_msb = new_tec//256
     tec_lsb = new_tec%256
     fpga.write_reg(mmap.LTSa, tec_msb)
