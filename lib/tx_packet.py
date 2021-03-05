@@ -73,6 +73,8 @@ def bits2ascii(s):
 
 def seed_align(default_settings, cw = False):
 
+def seed_align(default_settings, cw = False):
+
     power.edfa_on()
     power.bias_on()
     power.tec_on()
@@ -87,7 +89,7 @@ def seed_align(default_settings, cw = False):
     
     time.sleep(2)
     power_inputs = []
-    window = 6
+    window = 4
     avg = 3
     for i in range(total_tec-window, total_tec+window):
         tec_msb = i//256
@@ -98,14 +100,18 @@ def seed_align(default_settings, cw = False):
         avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
         power_inputs.append(avg_input_power)
 
-    pwr_index = 256*tec_msb + tec_lsb
+    pwr_index = None
     for pwr in power_inputs:
-        if PPM4_THRESHOLDS[0] < pwr < PPM4_THRESHOLDS[1] and not cw:
+        if PPM4_THRESHOLDS[0] > pwr > PPM4_THRESHOLDS[1] and not cw:
             pwr_index = pwr
-        elif CW_THRESHOLDS[0] < pwr < CW_THRESHOLDS[1] and cw:
+        elif CW_THRESHOLDS[0] > pwr > .CW_THRESHOLDS[1] and cw:
             pwr_index = pwr
-    
-    new_tec = total_tec+power_inputs.index(pwr_index)-window
+
+    if(pwr_index != None):
+	    new_tec = total_tec+power_inputs.index(pwr_index)-window
+    else:
+        new_tec = options.PPM4_THRESHOLDS[0]*256+options.PPM4_THRESHOLDS[1]
+   
     tec_msb = new_tec//256
     tec_lsb = new_tec%256
     fpga.write_reg(mmap.LTSa, tec_msb)
@@ -113,5 +119,6 @@ def seed_align(default_settings, cw = False):
     time.sleep(1)
 
     return tec_msb, tec_lsb
+
 
 
