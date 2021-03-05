@@ -1,9 +1,10 @@
 #!/usr/bin/python
 import sys
-sys.path.append('/root/test/')
+sys.path.append('/root/lib/')
 import math
 import fpga_map as mmap
 import time
+import ipc_helper
 from options import *
 
 fpga = ipc_helper.FPGAClientInterface()
