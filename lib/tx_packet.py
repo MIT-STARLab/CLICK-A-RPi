@@ -73,8 +73,6 @@ def bits2ascii(s):
 
 def seed_align(default_settings, cw = False):
 
-def seed_align(default_settings, cw = False):
-
     power.edfa_on()
     power.bias_on()
     power.tec_on()
@@ -104,13 +102,13 @@ def seed_align(default_settings, cw = False):
     for pwr in power_inputs:
         if PPM4_THRESHOLDS[0] > pwr > PPM4_THRESHOLDS[1] and not cw:
             pwr_index = pwr
-        elif CW_THRESHOLDS[0] > pwr > .CW_THRESHOLDS[1] and cw:
+        elif CW_THRESHOLDS[0] > pwr > CW_THRESHOLDS[1] and cw:
             pwr_index = pwr
 
     if(pwr_index != None):
 	    new_tec = total_tec+power_inputs.index(pwr_index)-window
     else:
-        new_tec = options.PPM4_THRESHOLDS[0]*256+options.PPM4_THRESHOLDS[1]
+        new_tec = PPM4_THRESHOLDS[0]*256+ PPM4_THRESHOLDS[1]
    
     tec_msb = new_tec//256
     tec_lsb = new_tec%256
