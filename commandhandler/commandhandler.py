@@ -745,7 +745,7 @@ while True:
 
             fpga.write_reg(mmap.PO3, 15)
             fpga.write_reg(mmap.HE1, 15)
-            fpga.write_reg(mmap.HE1, 15)
+            fpga.write_reg(mmap.HE2, 15)
 
             os.system('python ~/test/general_functionality_test.py') #starts self test script
 
