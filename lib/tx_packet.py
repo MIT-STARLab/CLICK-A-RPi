@@ -6,6 +6,11 @@ import fpga_map as mmap
 import time
 from options import *
 
+fpga = ipc_helper.FPGAClientInterface()
+power = mmap.Power(fpga)
+edfa = mmap.EDFA(fpga)
+seed_setting = 1 #0 for flat_sat 1 for payload
+
 class txPacket():
 
     def __init__(self, ppm_order, data, ascii=True):
