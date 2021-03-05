@@ -5,7 +5,7 @@ After=depacketizer.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/python -u /root/bus/time.py
+ExecStart=/bin/python -u /root/bus/timeset.py
 
 [Install]
 WantedBy=default.target
