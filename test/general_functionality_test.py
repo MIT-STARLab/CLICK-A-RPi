@@ -357,7 +357,7 @@ def test_EDFA_IF(fo):
         pass_test(fo)
     else:
         fail_test(fo)
-        print('EDFA Case temp: %s Off Current: %s On Current: %s Power In: %s Power Out: %s' % (edfa_temp, off_current, on_current, power_in, power_out))
+        print('EDFA Case temp: %s On Current: %s Power In: %s Power Out: %s' % (edfa_temp, on_current, power_in, power_out))
 
     return success 
 
