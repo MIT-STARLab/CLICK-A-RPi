@@ -13,6 +13,7 @@ sys.path.append('/root/fpga/')
 import dac
 import math
 import hashlib
+from tx_packet import seed_align
 
 
 fpga = ipc_helper.FPGAClientInterface()
@@ -768,49 +769,7 @@ def test_mod_FIFO(fo):
     return success
 
 
-def seed_align(default_settings, cw = False):
 
-    power.edfa_on()
-    power.bias_on()
-    power.tec_on()
-
-    tec_msb, tec_lsb, ld_msb, ld_lsb = default_settings
-    total_tec = tec_msb*256 + tec_lsb
-
-    for i in range(1,5):
-        fpga.write_reg(i, default_settings[i-1])
-    if(not cw):
-        fpga.write_reg(mmap.DATA, 131)
-    
-    time.sleep(2)
-    power_inputs = []
-    window = 6
-    avg = 3
-    for i in range(total_tec-window, total_tec+window):
-        tec_msb = i//256
-        tec_lsb = i%256
-        fpga.write_reg(mmap.LTSa, tec_msb)
-        fpga.write_reg(mmap.LTSb, tec_lsb)
-        time.sleep(.1)
-        avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
-        power_inputs.append(avg_input_power)
-
-    pwr_index = 256*tec_msb + tec_lsb
-    for pwr in power_inputs:
-        if options.PPM4_THRESHOLDS[0] < pwr < options.PPM4_THRESHOLDS[1] and not cw:
-            pwr_index = pwr
-        elif options.CW_THRESHOLDS[0] < pwr <options.CW_THRESHOLDS[1] and cw:
-            pwr_index = pwr
-        else:
-
-    new_tec = total_tec+power_inputs.index(pwr_index)-window
-    tec_msb = new_tec//256
-    tec_lsb = new_tec%256
-    fpga.write_reg(mmap.LTSa, tec_msb)
-    fpga.write_reg(mmap.LTSb, tec_lsb)
-    time.sleep(1)
-
-    return tec_msb, tec_lsb
 
 def run_all(origin):
 
