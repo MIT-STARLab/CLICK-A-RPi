@@ -785,21 +785,7 @@ while True:
 
             #turn on laser
             seed_setting = 1
-            power.edfa_on()
-            power.bias_on()
-            power.tec_on()
-            time.sleep(2)
-            log_to_hk("turned edfa on")
-
-
-            fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
-            time.sleep(0.1)
-            fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
-            time.sleep(0.1)
-            fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
-            time.sleep(2)
-
-            #set points are dependent on temperature
+            
             payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
             flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
             # seed = payload_seed
@@ -813,12 +799,21 @@ while True:
             else:
                 seed = flat_sat_seed
                 ppm_input = [ppm4_input[2], ppm4_input[3]]
+            
+            #Align seed to FGBG
+            tx_packet.seed_align(seed)
 
-            for x in range(1,5):
-                fpga.write_reg(x, seed[x-1])
+            log_to_hk("turned edfa on")
 
+            fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+            time.sleep(0.1)
+            fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
+            time.sleep(0.1)
+            fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+            time.sleep(2)
+
+            #set points are dependent on temperature
             ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
-            fpga.write_reg(mmap.DATA, ppm_order)
             log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
             last_i = 0
             while(abs(end_time - start_time) < transmit_time):
