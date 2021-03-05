@@ -1,6 +1,6 @@
 [Unit]
 Description=Flash FPGA
-Before=fpga.service
+Before=fpga.service default.target
 
 [Service]
 Type=oneshot

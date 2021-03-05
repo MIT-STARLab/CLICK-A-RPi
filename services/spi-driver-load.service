@@ -1,6 +1,6 @@
 [Unit]
 Description=SPI kernel driver
-Before=depacketizer.service
+Before=packetizer.service depacketizer.service default.target
 
 [Service]
 Type=oneshot

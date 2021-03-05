@@ -1,0 +1,11 @@
+[Unit]
+Description=Set Time
+Before=default.target loadbalancer.service
+After=depacketizer.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/python -u /root/bus/time.py
+
+[Install]
+WantedBy=default.target

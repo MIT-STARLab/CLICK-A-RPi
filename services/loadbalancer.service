@@ -1,7 +1,7 @@
 [Unit]
 Description=Load Balancer
-After=fpga.service
-Before=commandhandlers.target housekeeping.service
+After=fpga.service set-time.service
+Before=commandhandlers.target housekeeping.service default.target
 
 [Service]
 Type=simple
