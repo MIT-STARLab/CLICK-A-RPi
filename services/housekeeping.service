@@ -1,7 +1,7 @@
 [Unit]
 Description=Housekeeping
-After=packetizer.service depacketizer.service fpga.service commandhandlers.target loadbalancer.service
-Before=default.target
+After=loadbalancer.service commandhandlers.target
+Before=pat.service default.target
 
 [Service]
 Type=simple

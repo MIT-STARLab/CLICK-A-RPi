@@ -1,6 +1,6 @@
 [Unit]
 Description=PAT
-After=camera.service housekeeping.service
+After=housekeeping.service
 Before=default.target
 
 [Service]

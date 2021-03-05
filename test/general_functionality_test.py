@@ -612,7 +612,7 @@ Seed setting 0 for flatsat and 1 for payload
 def check_CW_power(fo):
     print_test(fo, "CW Power test")
 
-
+    fpga.write_reg(mmap.DATA,0)
     if(seed_setting):
         ppm_input = [options.CW_THRESHOLDS[0], options.CW_THRESHOLDS[1]]
         seed_align([options.DEFAULT_CW_TEC_MSB, options.DEFAULT_CW_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB], True)
@@ -767,8 +767,6 @@ def test_mod_FIFO(fo):
         fail_test(fo)
 
     return success
-
-
 
 
 def run_all(origin):
