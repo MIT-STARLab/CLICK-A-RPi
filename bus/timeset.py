@@ -27,7 +27,7 @@ while True:
         if ipc_rxcompacket.APID == APID_TIME_AT_TONE:
             tot_rx += 1
             if tot_rx >= 2:
-                tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', message.payload)
+                tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
                 # Epoch starts Jan 1 2000 (or 946684800 s)
                 set_time = time.gmtime(946684800+tai_secs)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
