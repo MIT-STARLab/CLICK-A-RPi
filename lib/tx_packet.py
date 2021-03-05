@@ -98,8 +98,7 @@ def seed_align(default_settings, cw = False):
             pwr_index = pwr
         elif CW_THRESHOLDS[0] < pwr < CW_THRESHOLDS[1] and cw:
             pwr_index = pwr
-        else:
-
+    
     new_tec = total_tec+power_inputs.index(pwr_index)-window
     tec_msb = new_tec//256
     tec_lsb = new_tec%256
