@@ -1001,7 +1001,7 @@ int main() //int argc, char** argv
 		// END of STANDBY loop
 		duration<double> period_tx_offset(period_calculate_tx_offsets); //wait time in between calculation of tx offsets
 		duration<double> period_dither(period_dither_tx_offsets); //wait time in between dithering
-		
+		track.received_end_pat_cmd = false; //reset main enter/exit auxiliary variable
 		// START Main PAT Loop
 		while(OPERATIONAL && !STANDBY) 
 		{	
