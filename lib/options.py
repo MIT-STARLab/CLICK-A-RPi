@@ -28,7 +28,7 @@ DEFAULT_CW_FTEC_LSB = 107
 PPM4_THRESHOLDS = [-2.1, -3.0, -5,-7]
 
 #HIGH/LOW for Payload/flatsat
-CW_THRESHOLDS = [4.5, 3.8, -1,-2.3]
+CW_THRESHOLDS = [4.5, 3.6, -1,-2.3]
 
 TRANSMIT_MESSAGE = "Hello I'm Mr. Meeseeks!"
 TRANSMIT_TIME = 900
@@ -71,6 +71,8 @@ EDFA_VIRTUAL_REGS_GOOD_FOR = 0.5
 
 #Time at tone packet APID
 APID_TIME_AT_TONE = 0x280
+
+PAT_MODE_FILENAME = "/root/lib/patMode.txt"
 
 #Ground Command IDs
 CMD_PL_REBOOT = 0x01
