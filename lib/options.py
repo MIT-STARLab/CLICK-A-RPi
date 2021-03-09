@@ -25,14 +25,17 @@ DEFAULT_CW_FTEC_MSB = 5
 DEFAULT_CW_FTEC_LSB = 107
 
 #HIGH/LOW for Payload/flatsat
-PPM4_THRESHOLDS = [-2.1, -3, -5,-7]
+PPM4_THRESHOLDS = [-2.1, -3.0, -5,-7]
 
 #HIGH/LOW for Payload/flatsat
-CW_THRESHOLDS = [4.5, 3.6, -1,-2.3]
+CW_THRESHOLDS = [4.5, 3.8, -1,-2.3]
 
 TRANSMIT_MESSAGE = "Hello I'm Mr. Meeseeks!"
 TRANSMIT_TIME = 900
 
+TRANSMIT_PPM = 16
+#Payload = 1, flatsat = 0
+SEED_SETTING = 1
 
 #IPC Port Numbers
 TEST_RESPONSE_PORT = "5599"
@@ -171,16 +174,14 @@ CAMERA_WIDTH = 2592
 CAMERA_HEIGHT = 1944
 CAMERA_MAX_EXP = 10000000
 CAMERA_MIN_EXP = 10
-#PAT mode file name
-PAT_MODE_FILENAME = "/root/lib/patMode.txt"
 
 #Calibration Laser DAC setting
 CAL_LASER_DAC_SETTING = 6700
 
 # HK Options Settings
-HK_FPGA_REQ_ENABLE = 1
+HK_FPGA_REQ_ENABLE = 0
 HK_SYS_HK_SEND_ENABLE = 1
-HK_PAT_HK_SEND_ENABLE = 1
+HK_PAT_HK_SEND_ENABLE = 0
 HK_CH_HK_SEND_ENABLE = 1
 HK_CH_RESTART_ENABLE = 1
 HK_PAT_RESTART_ENABLE = 1
@@ -189,7 +190,7 @@ HK_LB_RESTART_ENABLE = 1
 HK_ALLPKTS_SEND_ENABLE = 1
 
 HK_FPGA_CHECK_PD = 5 #seconds
-HK_SYS_CHECK_PD = 5 #seconds
+HK_SYS_CHECK_PD = 1 #seconds
 HK_CH_HEARTBEAT_PD = 10 #seconds
 HK_LB_HEARTBEAT_PD = 10 #seconds
 HK_PAT_HEALTH_PD = 10 #seconds
@@ -203,7 +204,7 @@ FL_ERR_OUT_OF_BOUNDS = 0x05
 FL_SUCCESS = 0xFF
 
 # Set Time Flag
-TIME_SET_ENABLE = 0
+TIME_SET_ENABLE = 3
 
 FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,98), range(200,206), range(300,304), range(602,612), range(502,510)],[])
 #FPGA_TELEM_REGS = sum([range(602,612)],[])

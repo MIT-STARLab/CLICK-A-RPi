@@ -773,32 +773,22 @@ while True:
             #log transmit start time
             start_time = time.time()
 
-            ppm_order = 4
-            data = TRANSMIT_MESSAGE
-            tx_pkt = tx_packet.txPacket(ppm_order, data)
+            tx_pkt = tx_packet.txPacket(TRANSMIT_PPM, TRANSMIT_MESSAGE)
             tx_pkt.pack()
 
             control = fpga.read_reg(mmap.CTL)
             if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-
-            transmit_time = TRANSMIT_TIME #seconds
-
-            #turn on laser
-            seed_setting = 1
             
             payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
             flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+            
             # seed = payload_seed
-            ppm_codes = [4,8,16,32,64,128,0]
-            ppm4_input = PPM4_THRESHOLDS
-            ppm = ppm_codes[0]
-
-            if(seed_setting):
+            if(SEED_SETTING):
                 seed = payload_seed
-                ppm_input = [ppm4_input[0], ppm4_input[1]]
+                ppm_input = [PPM4_THRESHOLDS[0], PPM4_THRESHOLDS[1]]
             else:
                 seed = flat_sat_seed
-                ppm_input = [ppm4_input[2], ppm4_input[3]]
+                ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
             
             #Align seed to FGBG
             tx_packet.seed_align(seed)
@@ -813,17 +803,10 @@ while True:
             time.sleep(2)
 
             #set points are dependent on temperature
-            ppm_order = (128 + (255 >>(8-int(math.log(ppm)/math.log(2)))))
+            ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
             log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
-            last_i = 0
-            while(abs(end_time - start_time) < transmit_time):
+            while(abs(end_time - start_time) < TRANSMIT_TIME):
 
-                i = int(abs(end_time - start_time)//150)
-                ppm_order = (128 + (255 >>(8-int(math.log(ppm_codes[i])/math.log(2)))))
-                if i > last_i:
-                    tx_pkt = tx_packet.txPacket(ppm_order, data)
-                    tx_pkt.pack()
-                    last_i = i
                 #Stall Fifo
                 fpga.write_reg(mmap.CTL, control | 0x8)
 
