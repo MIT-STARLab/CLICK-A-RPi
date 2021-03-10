@@ -8,7 +8,7 @@
 bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
-	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount;
+	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 10;
 	uint16_t command;
 
 	// Skip pre-queued old frames
@@ -28,13 +28,14 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
+		if(verifyFrame(frame, (counter%printPeriod == 0)) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
 	int exposure_up = exposure, exposure_down = exposure; 
 	exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
 	exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
+	counter++;
 
 	while(searching_up || searching_down){
 		// Listen for CMD_END_PAT 		
@@ -62,10 +63,11 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
+				if(verifyFrame(frame, (counter%printPeriod == 0)) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
 			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
+			counter++;
 		} else{
 			searching_up = false;
 		}		
@@ -95,10 +97,11 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 			camera.requestFrame();
 			if(camera.waitForFrame()){
 				Image frame(camera, fileStream, pat_health_port);
-				if(verifyFrame(frame) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
+				if(verifyFrame(frame, (counter%printPeriod == 0)) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
-			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
+			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT;
+			counter++; 
 		} else{
 			searching_down = false;
 		}		
@@ -124,7 +127,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 
 // TODO: This should have more sophisticated checks eventually
 //-----------------------------------------------------------------------------
-bool Tracking::verifyFrame(Image& frame)
+bool Tracking::verifyFrame(Image& frame, bool printFailure = false)
 //-----------------------------------------------------------------------------
 {
 	if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
@@ -139,7 +142,7 @@ bool Tracking::verifyFrame(Image& frame)
 		}
 		else log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
 	}
-	else {
+	else if(printFailure){
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame check failed! ",
 			"histBrightest =", frame.histBrightest, "(", TRACK_ACQUISITION_BRIGHTNESS, ") and histPeak =", frame.histPeak);
 	}
