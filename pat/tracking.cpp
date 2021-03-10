@@ -28,7 +28,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(verifyFrame(frame, (counter%printPeriod == 0)) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
+		if(verifyFrame(frame, true) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 	}
 
 	bool searching_up = true, searching_down = true;
@@ -57,7 +57,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 
 		//try search up:
 		if(exposure_up <= maxExposure){
-			log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_up);
+			if(counter%printPeriod == 0){log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_up);}
 			send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 			camera.config->expose_us.write(exposure_up);
 			camera.requestFrame();
@@ -91,7 +91,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 		
 		//try search down:
 		if(exposure_down >= TRACK_MIN_EXPOSURE){
-			log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_down);
+			if(counter%printPeriod == 0){log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_down);}
 			send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 			camera.config->expose_us.write(exposure_down);
 			camera.requestFrame();
