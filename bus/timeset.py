@@ -28,8 +28,8 @@ while True:
             tot_rx += 1
             if tot_rx >= 2:
                 tai_secs,_,_,_,_,_,_,_,_,_,_,_,_ = struct.unpack('!L6QB4QB', ipc_rxcompacket.payload)
-                # Epoch starts Jan 1 2000 (or 946684800 s)
-                set_time = time.gmtime(946684800+tai_secs)
+                # tai_secs is TAI time since 1970, convert to UTC here
+                set_time = time.gmtime(tai_secs-37)
                 os.system("timedatectl set-time '%04d-%02d-%02d %02d:%02d:%02d'" % (set_time.tm_year,
                                                                                     set_time.tm_mon,
                                                                                     set_time.tm_mday,
