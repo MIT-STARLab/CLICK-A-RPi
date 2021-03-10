@@ -127,7 +127,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 
 // TODO: This should have more sophisticated checks eventually
 //-----------------------------------------------------------------------------
-bool Tracking::verifyFrame(Image& frame, bool printFailure = false)
+bool Tracking::verifyFrame(Image& frame, bool printFailure)
 //-----------------------------------------------------------------------------
 {
 	if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
