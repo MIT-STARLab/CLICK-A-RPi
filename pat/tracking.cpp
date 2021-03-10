@@ -8,7 +8,7 @@
 bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
-	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 10;
+	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 30;
 	uint16_t command;
 
 	// Skip pre-queued old frames
