@@ -550,23 +550,12 @@ class Housekeeping:
                         self.handle_hk_pkt(message, self.HK_CH_ID)
 
                 elif (hk_packet.command == HK_CONTROL_CH):
-                    #get the origin, restart the appropriate commandhandler with the new period
-                    try:
-                        self.ch_heartbeat_wds[ch_packet.origin].kick()
-                    except Exception as e:
-                        # print("didn't recognize pid %d" % ch_packet.origin)
-                        # Don't raise regardless of RAISE_ENABLE
-                        try:
-                            send_exception(self.tx_socket, e)
-                        except:
-                            pass
+                    ch_pid = hk_packet.origin
+                    ch_period = struct.unpack('I', hk_packet.payload)[0]
 
-                        old_ch_pid = self.ch_pids[instance_num]
-                        self.ch_pids[instance_num] = ch_pid
-                        self.ch_heartbeat_wds[old_ch_pid].cancel()
-                        old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
-                        self.ch_heartbeat_wds[ch_pid] = old_wd
-                        self.ch_heartbeat_wds[ch_pid].start()
+                    self.ch_heartbeat_wds[ch_pid].cancel()
+                    self.ch_heartbeat_wds[ch_pid].set_timeout(ch_period)
+                    self.ch_heartbeat_wds[ch_pid].start()
 
                 elif (hk_packet.command == CMD_PL_SET_HK):
                     # handle command packet
