@@ -435,9 +435,27 @@ class Housekeeping:
         self.lb_restart_enable = (flags >> 0) & 1
 
         self.sys_check_period = new_sys_check_pd
+        self.sys_check_timer.cancel()
+        self.sys_check_timer.set_interval(self.sys_check_period)
+        self.sys_check_timer.start()
+
         self.ch_heartbeat_period = new_ch_heartbeat_pd
+        for i in range(len(self.ch_pids)):
+            ch_pid = self.ch_pids[i]
+            self.ch_heartbeat_wds[ch_pid].cancel()
+            self.ch_heartbeat_wds[ch_pid].set_timeout(self.ch_heartbeat_period)
+            self.ch_heartbeat_wds[ch_pid].start()
+
         self.pat_health_period = new_pat_health_pd
+        self.pat_health_wd.cancel()
+        self.pat_health_wd.set_timeout(self.pat_health_period)
+        self.pat_health_wd.start()
+
         self.lb_heartbeat_period = new_lb_heartbeat_pd
+        self.lb_heartbeat_wd.cancel()
+        self.lb_heartbeat_wd.set_timeout(self.lb_heartbeat_period)
+        self.lb_heartbeat_wd.start()
+
 
     def run(self):
         self.fpga_check_timer.start()
@@ -530,6 +548,25 @@ class Housekeeping:
                     # TODO: Potentially update handling log packet
                     if (self.ch_hk_send_enable):
                         self.handle_hk_pkt(message, self.HK_CH_ID)
+
+                elif (hk_packet.command == HK_CONTROL_CH):
+                    #get the origin, restart the appropriate commandhandler with the new period
+                    try:
+                        self.ch_heartbeat_wds[ch_packet.origin].kick()
+                    except Exception as e:
+                        # print("didn't recognize pid %d" % ch_packet.origin)
+                        # Don't raise regardless of RAISE_ENABLE
+                        try:
+                            send_exception(self.tx_socket, e)
+                        except:
+                            pass
+
+                        old_ch_pid = self.ch_pids[instance_num]
+                        self.ch_pids[instance_num] = ch_pid
+                        self.ch_heartbeat_wds[old_ch_pid].cancel()
+                        old_wd = self.ch_heartbeat_wds.pop(old_ch_pid)
+                        self.ch_heartbeat_wds[ch_pid] = old_wd
+                        self.ch_heartbeat_wds[ch_pid].start()
 
                 elif (hk_packet.command == CMD_PL_SET_HK):
                     # handle command packet
