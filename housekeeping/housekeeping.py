@@ -555,6 +555,7 @@ class Housekeeping:
 
                     self.ch_heartbeat_wds[ch_pid].cancel()
                     self.ch_heartbeat_wds[ch_pid].set_timeout(ch_period)
+                    print('Set %d heartbeat as %d' % (ch_pid, ch_period))
                     self.ch_heartbeat_wds[ch_pid].start()
 
                 elif (hk_packet.command == CMD_PL_SET_HK):

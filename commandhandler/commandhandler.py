@@ -119,6 +119,12 @@ def ack_to_hk(cmd_id, status):
     raw = ipc_HKPacket.encode(pid, HK_CONTROL_ACK, payload)
     socket_hk_control.send(raw)
 
+def set_hk_ch_period(new_period):
+    ipc_HKPacket = HKControlPacket()
+    payload = struct.pack('I', new_period)
+    raw = ipc_HKPacket.encode(pid, HK_CONTROL_CH, payload)
+    socket_hk_control.send(raw)
+
 def initialize_cal_laser():
     #Make sure heaters are on
     if(fpga.read_reg(mmap.PO3) != 85):
@@ -154,7 +160,7 @@ def set_pat_mode(mode_id):
 
 #for get_pat_mode checking
 def string_is_int(s):
-    try: 
+    try:
         int(s)
         return True
     except ValueError:
@@ -676,6 +682,11 @@ while True:
         elif(CMD_ID == CMD_PL_NOOP):
             log_to_hk('ACK CMD PL_NOOP')
             ack_to_hk(CMD_PL_NOOP, CMD_ACK)
+            #TEST
+            set_hk_ch_period(20)
+            time.sleep(16)
+
+
 
         elif(CMD_ID == CMD_PL_SELF_TEST):
             test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
@@ -778,10 +789,10 @@ while True:
 
             control = fpga.read_reg(mmap.CTL)
             if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-            
+
             payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
             flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
-            
+
             # seed = payload_seed
             if(SEED_SETTING):
                 seed = payload_seed
@@ -789,7 +800,7 @@ while True:
             else:
                 seed = flat_sat_seed
                 ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
-            
+
             #Align seed to FGBG
             tx_packet.seed_align(seed)
 

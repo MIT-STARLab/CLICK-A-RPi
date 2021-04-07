@@ -218,7 +218,7 @@ class Depacketizer:
             raw_ipc_pkt = ipc_pkt.encode(apid, ts_sec, ts_subsec, data)
             self.ipc_pkts_buffer.append(raw_ipc_pkt)
             self.send_ipc_pkts()
-            sleep(5)
+            sleep(30)
 
     def run(self):
         print("Start Depacketizer")
@@ -327,6 +327,6 @@ class Depacketizer:
 
 if __name__ == '__main__':
     depacketizer = Depacketizer()
-    depacketizer.run()
-    # depacketizer.send_noop()
+    # depacketizer.run()
+    depacketizer.send_noop()
     # depacketizer.run_test()
