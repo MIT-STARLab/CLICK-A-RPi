@@ -682,11 +682,6 @@ while True:
         elif(CMD_ID == CMD_PL_NOOP):
             log_to_hk('ACK CMD PL_NOOP')
             ack_to_hk(CMD_PL_NOOP, CMD_ACK)
-            #TEST
-            set_hk_ch_period(20)
-            time.sleep(16)
-
-
 
         elif(CMD_ID == CMD_PL_SELF_TEST):
             test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)

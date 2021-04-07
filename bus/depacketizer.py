@@ -327,6 +327,6 @@ class Depacketizer:
 
 if __name__ == '__main__':
     depacketizer = Depacketizer()
-    # depacketizer.run()
-    depacketizer.send_noop()
+    depacketizer.run()
+    # depacketizer.send_noop()
     # depacketizer.run_test()
