@@ -423,7 +423,7 @@ class Housekeeping:
                 send_exception(self.tx_socket, e)
 
     def handle_hk_command(self, command):
-        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_lb_heartbeat_pd, new_pat_health_pd = struct.unpack('!BBBBBB', command)
+        flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_lb_heartbeat_pd, new_pat_health_pd = struct.unpack('BBBBBB', command)
 
         self.all_pkts_send_enable = (flags >> 7) & 1
         self.fpga_req_enable = (flags >> 6) & 1

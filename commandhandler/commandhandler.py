@@ -662,8 +662,9 @@ while True:
                 ack_to_hk(CMD_PL_GET_FPGA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SET_HK):
+            set_hk_payload = struct.unpack('!6s', ipc_rxcompacket.payload)[0]
             ipc_HKControlPacket = HKControlPacket()
-            raw_HKControlPacket = ipc_HKControlPacket.encode(pid, CMD_ID, ipc_rxcompacket.payload)
+            raw_HKControlPacket = ipc_HKControlPacket.encode(pid, CMD_ID, set_hk_payload)
             socket_hk_control.send(raw_HKControlPacket)
             log_to_hk('ACK CMD PL_SET_HK')
             ack_to_hk(CMD_PL_SET_HK, CMD_ACK)
