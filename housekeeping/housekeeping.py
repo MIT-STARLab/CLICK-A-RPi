@@ -434,6 +434,11 @@ class Housekeeping:
         self.fpga_restart_enable = (flags >> 1) & 1
         self.lb_restart_enable = (flags >> 0) & 1
 
+        self.fpga_check_period = new_fpga_check_pd
+        self.fpga_check_timer.cancel()
+        self.fpga_check_timer.set_interval(self.fpga_check_period)
+        self.fpga_check_timer.start()
+
         self.sys_check_period = new_sys_check_pd
         self.sys_check_timer.cancel()
         self.sys_check_timer.set_interval(self.sys_check_period)
