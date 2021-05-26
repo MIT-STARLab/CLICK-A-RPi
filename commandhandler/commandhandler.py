@@ -252,7 +252,7 @@ counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
 
-set_hk_ch_period(10) #test
+set_hk_ch_period(15) #test
 
 #start command handling
 while True:
