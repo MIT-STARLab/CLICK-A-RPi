@@ -563,6 +563,10 @@ class Housekeeping:
                 elif (hk_packet.command == HK_CONTROL_CH):
                     ch_pid = hk_packet.origin
                     ch_period = struct.unpack('I', hk_packet.payload)[0]
+                    print('ch_pid ',ch_pid)
+                    print('ch_period ',ch_pid)
+                    for i in range(len(self.ch_pids)):
+                        print('self.ch_pid ',self.ch_pids[i])
 
                     self.ch_heartbeat_wds[ch_pid].cancel()
                     self.ch_heartbeat_wds[ch_pid].set_timeout(ch_period)

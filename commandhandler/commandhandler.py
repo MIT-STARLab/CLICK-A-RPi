@@ -124,6 +124,8 @@ def set_hk_ch_period(new_period):
     payload = struct.pack('I', new_period)
     raw = ipc_HKPacket.encode(pid, HK_CONTROL_CH, payload)
     socket_hk_control.send(raw)
+    print('pid ',pid)
+    print('new_period ',new_period)
 
 def initialize_cal_laser():
     #Make sure heaters are on
