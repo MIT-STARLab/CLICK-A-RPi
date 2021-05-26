@@ -108,9 +108,9 @@ class Housekeeping:
         # Initialize timing/check-related variables
         self.fpga_check_period = HK_FPGA_CHECK_PD
         self.sys_check_period = HK_SYS_CHECK_PD
-        self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD+2
-        self.pat_health_period = HK_PAT_HEALTH_PD+2
-        self.lb_heartbeat_period = HK_LB_HEARTBEAT_PD+2
+        self.ch_heartbeat_period = HK_CH_CHECK_PD
+        self.pat_health_period = HK_PAT_CHECK_PD
+        self.lb_heartbeat_period = HK_LB_CHECK_PD
 
         # Initialize zmq-related objects and sockets
         # TODO: Update zmq connections, use library

@@ -193,9 +193,11 @@ HK_ALLPKTS_SEND_ENABLE = 1
 
 HK_FPGA_CHECK_PD = 5 #seconds
 HK_SYS_CHECK_PD = 1 #seconds
-HK_CH_HEARTBEAT_PD = 10 #seconds
-HK_LB_HEARTBEAT_PD = 10 #seconds
-HK_PAT_HEALTH_PD = 10 #seconds
+HK_CH_CHECK_PD = 10 #seconds
+HK_LB_CHECK_PD = 10 #seconds
+HK_PAT_CHECK_PD = 10 #seconds
+HK_CH_HEARTBEAT_PD = 0.5 #seconds
+HK_LB_HEARTBEAT_PD = 0.5 #seconds
 
 # File Handling Options Settings
 FL_ERR_EMPTY_DIR = 0x01
