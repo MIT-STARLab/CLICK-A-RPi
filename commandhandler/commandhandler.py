@@ -252,7 +252,7 @@ counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
 
-set_hk_ch_bool = false
+set_hk_ch_bool = False
 
 #start command handling
 while True:
@@ -261,7 +261,7 @@ while True:
 
     if((elapsed_time > 5) and not set_hk_ch_bool):
         set_hk_ch_period(15) #test
-        set_hk_ch_bool = true 
+        set_hk_ch_bool = True  
 
     # check for timeouts and do any repetitive process tasks
     if((CH_MODE_ID == CH_MODE_GROUND_TEST) and (elapsed_time >= UPDATE_PD_GROUND_TEST*counter_ground_test)): #no timeout for ground testing
