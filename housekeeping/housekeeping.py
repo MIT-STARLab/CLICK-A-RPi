@@ -434,6 +434,12 @@ class Housekeeping:
         self.fpga_restart_enable = (flags >> 1) & 1
         self.lb_restart_enable = (flags >> 0) & 1
 
+        new_fpga_check_pd = max(new_fpga_check_pd, HK_FPGA_CHECK_PD_MIN)
+        new_sys_check_pd = max(new_sys_check_pd, HK_SYS_CHECK_PD_MIN)
+        new_ch_heartbeat_pd = max(new_ch_heartbeat_pd, HK_CH_CHECK_PD_MIN)
+        new_lb_heartbeat_pd = max(new_lb_heartbeat_pd, HK_LB_CHECK_PD_MIN)
+        new_pat_health_pd = max(new_pat_health_pd, HK_PAT_CHECK_PD_MIN)
+
         self.fpga_check_period = new_fpga_check_pd
         self.fpga_check_timer.cancel()
         self.fpga_check_timer.set_interval(self.fpga_check_period)
