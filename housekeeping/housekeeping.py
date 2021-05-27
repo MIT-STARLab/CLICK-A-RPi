@@ -108,9 +108,9 @@ class Housekeeping:
         # Initialize timing/check-related variables
         self.fpga_check_period = HK_FPGA_CHECK_PD
         self.sys_check_period = HK_SYS_CHECK_PD
-        self.ch_heartbeat_period = HK_CH_HEARTBEAT_PD+2
-        self.pat_health_period = HK_PAT_HEALTH_PD+2
-        self.lb_heartbeat_period = HK_LB_HEARTBEAT_PD+2
+        self.ch_heartbeat_period = HK_CH_CHECK_PD
+        self.pat_health_period = HK_PAT_CHECK_PD
+        self.lb_heartbeat_period = HK_LB_CHECK_PD
 
         # Initialize zmq-related objects and sockets
         # TODO: Update zmq connections, use library
@@ -433,6 +433,12 @@ class Housekeeping:
         self.pat_restart_enable = (flags >> 2) & 1
         self.fpga_restart_enable = (flags >> 1) & 1
         self.lb_restart_enable = (flags >> 0) & 1
+
+        new_fpga_check_pd = max(new_fpga_check_pd, HK_FPGA_CHECK_PD_MIN)
+        new_sys_check_pd = max(new_sys_check_pd, HK_SYS_CHECK_PD_MIN)
+        new_ch_heartbeat_pd = max(new_ch_heartbeat_pd, HK_CH_CHECK_PD_MIN)
+        new_lb_heartbeat_pd = max(new_lb_heartbeat_pd, HK_LB_CHECK_PD_MIN)
+        new_pat_health_pd = max(new_pat_health_pd, HK_PAT_CHECK_PD_MIN)
 
         self.fpga_check_period = new_fpga_check_pd
         self.fpga_check_timer.cancel()
