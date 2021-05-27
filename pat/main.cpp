@@ -348,6 +348,7 @@ int main() //int argc, char** argv
 	params_ditherOffsets.dither_count_period = DITHER_COUNT_PERIOD;
 	params_ditherOffsets.tx_offset_dither_x_radius = TX_OFFSET_DITHER_X_RADIUS;
 	params_ditherOffsets.tx_offset_dither_y_radius = TX_OFFSET_DITHER_Y_RADIUS;
+	int test_centroid_x_sign, test_centroid_y_sign, test_centroid_x, test_centroid_y; //ADCS Feedback Unit Test
 
 	offsetParamStruct offsetParams[NUM_TX_OFFSET_PARAMS]; //array of offsetParamStruct
     if(getOffsetParams(pat_health_port, textFileOut, offsetParams)){
@@ -840,8 +841,7 @@ int main() //int argc, char** argv
 
 					case CMD_TEST_BUS_FEEDBACK:
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_TEST_BUS_FEEDBACK.");
-						int test_centroid_x_sign = 0, test_centroid_y_sign = 0;
-						int test_centroid_x, test_centroid_y;
+						test_centroid_x_sign = 0; test_centroid_y_sign = 0;
 						for(int i = 0; i < ADCS_FEEDBACK_TEST_DURATION-1; i++){
 							if(i < ADCS_FEEDBACK_TEST_DURATION/2){
 								test_centroid_x_sign = ((test_centroid_x_sign + 2) % 3) - 1;
