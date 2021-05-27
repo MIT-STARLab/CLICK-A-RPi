@@ -47,7 +47,7 @@
 #define TX_OFFSET_DITHER_X_RADIUS 4.0f //pxls
 #define TX_OFFSET_DITHER_Y_RADIUS 1.0f //pxls
 #define DITHER_COUNT_PERIOD 10 //1 full period after 10 ditherings
-#define ADCS_FEEDBACK_TEST_DURATION 60 //seconds, duration of ADCS feedback test
+#define ADCS_FEEDBACK_TEST_DURATION 90 //seconds, duration of ADCS feedback test
 #define ADCS_FEEDBACK_TEST_DITHER_RADIUS 5 //pxls, radius of dither during ADCS feedback test
 #define ADCS_FEEDBACK_TEST_DITHER_PERIOD 1 //seconds, rate of dithering during ADCS feedback test
 
@@ -843,11 +843,24 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_TEST_BUS_FEEDBACK.");
 						test_centroid_x_sign = 0; test_centroid_y_sign = 0;
 						for(int i = 0; i < ADCS_FEEDBACK_TEST_DURATION-1; i++){
-							if(i < ADCS_FEEDBACK_TEST_DURATION/2){
-								test_centroid_x_sign = ((test_centroid_x_sign + 2) % 3) - 1;
+							if(i < ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 1; test_centroid_y_sign = 0;
+							}else if(i < 2*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 1; test_centroid_y_sign = 1;
+							}else if(i < 3*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 0; test_centroid_y_sign = 1;
+							}else if(i < 4*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = -1; test_centroid_y_sign = 1;
+							}else if(i < 5*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = -1; test_centroid_y_sign = 0;
+							}else if(i < 6*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = -1; test_centroid_y_sign = -1;
+							}else if(i < 7*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 0; test_centroid_y_sign = -1;	
+							}else if(i < 8*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 1; test_centroid_y_sign = -1;																																						
 							}else{
-								test_centroid_x_sign = 0;
-								test_centroid_y_sign = ((test_centroid_y_sign + 2) % 3) - 1;
+								test_centroid_x_sign = 0; test_centroid_y_sign = 0;
 							}
 							test_centroid_x = test_centroid_x_sign*ADCS_FEEDBACK_TEST_DITHER_RADIUS + CAMERA_WIDTH/2;
 							test_centroid_y = test_centroid_y_sign*ADCS_FEEDBACK_TEST_DITHER_RADIUS + CAMERA_HEIGHT/2;
