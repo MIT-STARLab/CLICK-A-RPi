@@ -107,6 +107,14 @@ def send_pat_command(socket_PAT_control, command, payload = ''):
     socket_PAT_control.send(raw_patControlPacket)
     return ipc_patControlPacket
 
+counter_heartbeat = 0 #used to count the number of repetitive process tasks
+def send_heartbeat(current_time):
+    ipc_heartbeatPacket = HeartbeatPacket()
+    raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, current_time)
+    #print(ipc_heartbeatPacket) #Debug printing
+    socket_hk_heartbeat.send(raw_ipc_heartbeatPacket)
+    counter_heartbeat += 1
+
 def log_to_hk(payload):
     #print(payload) #debug printing
     ipc_HKPacket = HKControlPacket()
@@ -124,8 +132,6 @@ def set_hk_ch_period(new_period):
     payload = struct.pack('I', new_period)
     raw = ipc_HKPacket.encode(pid, HK_CONTROL_CH, payload)
     socket_hk_control.send(raw)
-    print('pid ',pid)
-    print('new_period ',new_period)
 
 def initialize_cal_laser():
     #Make sure heaters are on
@@ -248,22 +254,15 @@ def pat_status_is(pat_status_check):
         return False
 
 #initialization
-start_time = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
+start_time_ch = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
 counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
-counter_heartbeat = 0 #used to count the number of repetitive process tasks
-
-set_hk_ch_bool = False
 
 #start command handling
 while True:
     curr_time = time.time()
-    elapsed_time = curr_time - start_time
-
-    if((elapsed_time > 5) and not set_hk_ch_bool):
-        set_hk_ch_period(15) #test
-        set_hk_ch_bool = True  
+    elapsed_time = curr_time - start_time_ch
 
     # check for timeouts and do any repetitive process tasks
     if((CH_MODE_ID == CH_MODE_GROUND_TEST) and (elapsed_time >= UPDATE_PD_GROUND_TEST*counter_ground_test)): #no timeout for ground testing
@@ -278,7 +277,7 @@ while True:
         #     stop_pat()
         #     break #exit main loop
         if(elapsed_time >= UPDATE_PD_DEBUG*counter_debug):
-            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(start_time))
+            log_to_hk('CH_MODE_ID = CH_MODE_DEBUG. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(curr_time))
             #TODO: do any repetitive process tasks
             counter_debug += 1
 
@@ -290,17 +289,13 @@ while True:
         #     stop_pat()
         #     break #exit main loop
         if(elapsed_time >= UPDATE_PD_DOWNLINK*counter_downlink):
-            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(start_time))
+            log_to_hk('CH_MODE_ID = CH_MODE_DOWNLINK. Elapsed Time (sec): ' + str(elapsed_time) + '. Start Time: ' + str(curr_time))
             #TODO: do any repetitive process tasks
             counter_downlink += 1
 
     #send heartbeat to housekeeping
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
-        ipc_heartbeatPacket = HeartbeatPacket()
-        raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, curr_time)
-        #print(ipc_heartbeatPacket) #Debug printing
-        socket_hk_heartbeat.send(raw_ipc_heartbeatPacket)
-        counter_heartbeat += 1
+        send_heartbeat(curr_time)
 
     #update PAT status
     pat_status_flag = update_pat_status(pat_status_flag)
@@ -712,7 +707,8 @@ while True:
                 #execute test
                 if(test_id == GENERAL_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is GENERAL_SELF_TEST')
-
+                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                    send_heartbeat(time.time())
                     #Execute general self test script
                     run_test_script = 'python /root/test/general_functionality_test.py'
                     try:
@@ -720,9 +716,13 @@ while True:
                         #file management...
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
+                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                    send_heartbeat(time.time())
 
                 elif(test_id == LASER_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
+                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (TBR, test is TBD min)
+                    send_heartbeat(time.time())
                     #Execute laser self test script
                     run_test_script = 'python /root/test/automated_laser_checks.py'
                     try:
@@ -730,6 +730,8 @@ while True:
                         #file management...
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
+                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                    send_heartbeat(time.time())
 
                 elif(test_id == PAT_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
@@ -746,6 +748,7 @@ while True:
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             print("Received command")
             start_time = time.time()
+            send_heartbeat(start_time)
             # CH_MODE_ID = CH_MODE_DOWNLINK
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
             temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
@@ -755,30 +758,39 @@ while True:
                 fpga.write_reg(mmap.HE1, 85)
                 fpga.write_reg(mmap.HE2, 85)
             else:
-                print("Avg payload temperature is above 0C")
+                log_to_hk("Avg payload temperature is above 0C")
 
             #Poll temps once per 5 seconds, hang until the average is above 0C stop
+            temp_sleep_time = 15 #seconds
+            set_hk_ch_period(2*temp_sleep_time) #delay heartbeat period from default 10 sec to twice the sleep time
+            send_heartbeat(time.time())
             begin_time = time.time()
             while(temps < 0):
                 temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
-                time.sleep(15)
+                send_heartbeat(time.time())
+                time.sleep(temp_sleep_time)
                 print(temps)
                 if ((time.time() - begin_time) > 1200):
-                    print("Heater time reched 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
+                    log_to_hk("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
+                    print("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
 
 
             fpga.write_reg(mmap.PO3, 15)
             fpga.write_reg(mmap.HE1, 15)
             fpga.write_reg(mmap.HE2, 15)
-
+            set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+            send_heartbeat(time.time())
             os.system('python ~/test/general_functionality_test.py') #starts self test script
 
+            set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+            send_heartbeat(time.time())
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                 for i in range(60): #max test time is about 60 sec
                     log_to_hk("Waiting for pat self test to finish")
+                    send_heartbeat(time.time())
                     time.sleep(1)
                 log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
                 pat_mode_id = get_pat_mode()
@@ -792,6 +804,7 @@ while True:
 
             #proceed to transmit
             end_time = time.time()
+            send_heartbeat(time.time())
             log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
 
             #log transmit start time
@@ -815,9 +828,9 @@ while True:
                 ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
 
             #Align seed to FGBG
+            send_heartbeat(time.time())
             tx_packet.seed_align(seed)
-
-            log_to_hk("turned edfa on")
+            log_to_hk("turned edfa on")            
 
             fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
             time.sleep(0.1)
@@ -827,6 +840,7 @@ while True:
             time.sleep(2)
 
             #set points are dependent on temperature
+            send_heartbeat(time.time())
             ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
             log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
             while(abs(end_time - start_time) < TRANSMIT_TIME):
@@ -849,7 +863,9 @@ while True:
                 # #Release FIFO
                 fpga.write_reg(mmap.CTL, 0x7)
                 end_time = time.time()
-
+                if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): send_heartbeat(end_time)
+            
+            send_heartbeat(time.time())
             log_to_hk("Transmit Session Complete")
 
             power.edfa_off()
