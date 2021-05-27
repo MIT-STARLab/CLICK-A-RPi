@@ -726,7 +726,7 @@ while True:
                     #Execute laser self test script
                     run_test_script = 'python /root/test/automated_laser_checks.py'
                     try:
-                        os.system(run_test_script + ' > /root/log/' + str(file_out_num) + '.log') #TBR output file
+                        os.system(run_test_script) #TBR output file
                         #file management...
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
