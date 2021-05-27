@@ -47,6 +47,9 @@
 #define TX_OFFSET_DITHER_X_RADIUS 4.0f //pxls
 #define TX_OFFSET_DITHER_Y_RADIUS 1.0f //pxls
 #define DITHER_COUNT_PERIOD 10 //1 full period after 10 ditherings
+#define ADCS_FEEDBACK_TEST_DURATION 90 //seconds, duration of ADCS feedback test
+#define ADCS_FEEDBACK_TEST_DITHER_RADIUS 5 //pxls, radius of dither during ADCS feedback test
+#define ADCS_FEEDBACK_TEST_DITHER_PERIOD 1 //seconds, rate of dithering during ADCS feedback test
 
 using namespace std;
 using namespace std::chrono;
@@ -107,7 +110,7 @@ struct error_angles{
 };
 error_angles centroid2angles(double centroid_x, double centroid_y){
 	error_angles angles = error_angles();
-	angles.angle_x_radians = (float) TX_OFFSET_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
+	angles.angle_x_radians = (float) CENTROID2ANGLE_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
 	angles.angle_y_radians = (float) CENTROID2ANGLE_SLOPE_Y*centroid_y + CENTROID2ANGLE_BIAS_Y;
 	return angles;
 }
@@ -345,6 +348,7 @@ int main() //int argc, char** argv
 	params_ditherOffsets.dither_count_period = DITHER_COUNT_PERIOD;
 	params_ditherOffsets.tx_offset_dither_x_radius = TX_OFFSET_DITHER_X_RADIUS;
 	params_ditherOffsets.tx_offset_dither_y_radius = TX_OFFSET_DITHER_Y_RADIUS;
+	int test_centroid_x_sign, test_centroid_y_sign, test_centroid_x, test_centroid_y; //ADCS Feedback Unit Test
 
 	offsetParamStruct offsetParams[NUM_TX_OFFSET_PARAMS]; //array of offsetParamStruct
     if(getOffsetParams(pat_health_port, textFileOut, offsetParams)){
@@ -833,6 +837,44 @@ int main() //int argc, char** argv
 						} else{
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_UPDATE_FSM_X - Do not have calibration knowledge. Run CMD_CALIB_TEST first."); 
 						}
+						break;
+
+					case CMD_TEST_BUS_FEEDBACK:
+						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_TEST_BUS_FEEDBACK.");
+						test_centroid_x_sign = 0; test_centroid_y_sign = 0;
+						for(int i = 0; i < ADCS_FEEDBACK_TEST_DURATION-1; i++){
+							if(i < ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 1; test_centroid_y_sign = 0;
+							}else if(i < 2*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 1; test_centroid_y_sign = 1;
+							}else if(i < 3*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 0; test_centroid_y_sign = 1;
+							}else if(i < 4*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = -1; test_centroid_y_sign = 1;
+							}else if(i < 5*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = -1; test_centroid_y_sign = 0;
+							}else if(i < 6*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = -1; test_centroid_y_sign = -1;
+							}else if(i < 7*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 0; test_centroid_y_sign = -1;	
+							}else if(i < 8*ADCS_FEEDBACK_TEST_DURATION/9){
+								test_centroid_x_sign = 1; test_centroid_y_sign = -1;																																						
+							}else{
+								test_centroid_x_sign = 0; test_centroid_y_sign = 0;
+							}
+							test_centroid_x = test_centroid_x_sign*ADCS_FEEDBACK_TEST_DITHER_RADIUS + CAMERA_WIDTH/2;
+							test_centroid_y = test_centroid_y_sign*ADCS_FEEDBACK_TEST_DITHER_RADIUS + CAMERA_HEIGHT/2;
+							error_angles bus_feedback = centroid2angles(test_centroid_x, test_centroid_y);
+							log(pat_health_port, textFileOut, "In main.cpp executing CMD_TEST_BUS_FEEDBACK - Sending Bus Feedback Error Angles: ",
+							"(X,Y) = (",bus_feedback.angle_x_radians,", ",bus_feedback.angle_y_radians,"), ",
+							"from artificial beacon centroid: (cx,cy) = (",test_centroid_x_sign*ADCS_FEEDBACK_TEST_DITHER_RADIUS,
+							", ",test_centroid_y_sign*ADCS_FEEDBACK_TEST_DITHER_RADIUS,") rel-to-ctr");
+							send_packet_tx_adcs(tx_packets_port, bus_feedback.angle_x_radians, bus_feedback.angle_y_radians);
+							std::this_thread::sleep_for(std::chrono::seconds(1));
+						}
+						log(pat_health_port, textFileOut, "In main.cpp ending CMD_TEST_BUS_FEEDBACK - Sending Bus Feedback Error Angles: ",
+						"(X,Y) = (",0,", ",0,")");
+						send_packet_tx_adcs(tx_packets_port, 0, 0);
 						break;
 
 					case CMD_UPDATE_FSM_Y:

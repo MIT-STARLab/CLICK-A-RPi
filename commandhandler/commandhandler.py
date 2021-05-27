@@ -526,6 +526,15 @@ while True:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ERR)
 
+        elif(CMD_ID == CMD_PL_TEST_ADCS_FEEDBACK):
+            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                send_pat_command(socket_PAT_control, PAT_CMD_TEST_BUS_FEEDBACK)
+                log_to_hk('ACK CMD PL_TEST_ADCS_FEEDBACK')
+                ack_to_hk(CMD_PL_TEST_ADCS_FEEDBACK, CMD_ACK)
+            else:
+                log_to_hk('ERROR CMD PL_TEST_ADCS_FEEDBACK: PAT process not in STANDBY.')
+                ack_to_hk(CMD_PL_TEST_ADCS_FEEDBACK, CMD_ERR)
+
         elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
             bcn_rel_x, bcn_rel_y, bcn_window_size, bcn_max_exp = struct.unpack('!hhHI', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
