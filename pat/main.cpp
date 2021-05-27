@@ -110,7 +110,7 @@ struct error_angles{
 };
 error_angles centroid2angles(double centroid_x, double centroid_y){
 	error_angles angles = error_angles();
-	angles.angle_x_radians = (float) TX_OFFSET_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
+	angles.angle_x_radians = (float) CENTROID2ANGLE_SLOPE_X*centroid_x + CENTROID2ANGLE_BIAS_X;
 	angles.angle_y_radians = (float) CENTROID2ANGLE_SLOPE_Y*centroid_y + CENTROID2ANGLE_BIAS_Y;
 	return angles;
 }
