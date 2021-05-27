@@ -565,7 +565,7 @@ class Housekeeping:
                     ch_period = struct.unpack('I', hk_packet.payload)[0]
                     ch_period = max(ch_period,HK_CH_CHECK_PD_MIN)
                     for i in range(len(self.ch_pids)):
-                        if(self.ch_pids[i] ~= ch_pid):
+                        if(self.ch_pids[i] != ch_pid):
                             ch_hb_period_max = max(ch_period,self.ch_heartbeat_wds[self.ch_pids[i]].timeout)
 
                     self.ch_heartbeat_period = ch_hb_period_max
