@@ -112,7 +112,7 @@ def send_heartbeat(current_time,counter_hb):
     raw_ipc_heartbeatPacket = ipc_heartbeatPacket.encode(pid, current_time)
     #print(ipc_heartbeatPacket) #Debug printing
     socket_hk_heartbeat.send(raw_ipc_heartbeatPacket)
-    return (counter_hb += 1)
+    return (counter_hb + 1)
 
 def log_to_hk(payload):
     #print(payload) #debug printing
