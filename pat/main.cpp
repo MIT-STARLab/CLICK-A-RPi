@@ -27,6 +27,7 @@
 #define PERIOD_BEACON_LOSS 3.0f //seconds, time to wait after beacon loss before switching back to acquisition
 #define PERIOD_CALIB_LOSS 3.0f //seconds, time to wait after beacon loss before switching to open loop
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
+#define PERIOD_TLM_MSG 5.0f //seconds, time to wait in-between periodic telemetry messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 1000.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
@@ -349,7 +350,7 @@ int main() //int argc, char** argv
 	params_ditherOffsets.tx_offset_dither_x_radius = TX_OFFSET_DITHER_X_RADIUS;
 	params_ditherOffsets.tx_offset_dither_y_radius = TX_OFFSET_DITHER_Y_RADIUS;
 	int test_centroid_x_sign, test_centroid_y_sign, test_centroid_x, test_centroid_y; //ADCS Feedback Unit Test
-	bool acq_img_saved = false;
+	bool acq_img_saved = false, standby_msg_sent = false; 
 
 	offsetParamStruct offsetParams[NUM_TX_OFFSET_PARAMS]; //array of offsetParamStruct
     if(getOffsetParams(pat_health_port, textFileOut, offsetParams)){
@@ -470,6 +471,12 @@ int main() //int argc, char** argv
 	time_point<steady_clock> check_heartbeat; // Record current time
 	duration<double> elapsed_time_heartbeat; // time since tx adcs tlm
 
+	//Main Loop Periodic Telemetry Timing
+	time_point<steady_clock> time_prev_tlm_msg;
+	duration<double> period_tlm_msg(PERIOD_TLM_MSG); //wait time in between heartbeat messages (0.5s = 2 Hz)
+	time_point<steady_clock> check_tlm_msg; // Record current time
+	duration<double> elapsed_time_tlm_msg; // time since tx adcs tlm
+
 	//CSV Telemetry Timing
 	time_point<steady_clock> time_prev_csv_write; 
 	duration<double> period_csv_write(PERIOD_CSV_WRITE); //wait time in between csv writes (0.1s = 10 Hz)
@@ -500,6 +507,7 @@ int main() //int argc, char** argv
 		if(stop){break;}
 
 		// START Standby Loop
+		standby_msg_sent = false;
 		while(STANDBY){
 			// Allow graceful exit with Ctrl-C
 			if(stop){
@@ -515,10 +523,15 @@ int main() //int argc, char** argv
 			} else {
 				send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
 			}
-			if(haveCalibKnowledge){
-				log(pat_health_port, textFileOut, "In main.cpp - Standby - Calib is at [", calib.x, ",", calib.y, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
+			if(!standby_msg_sent){
+				if(haveCalibKnowledge){
+					log(pat_health_port, textFileOut, "In main.cpp - Standby - Calib is at [", calib.x, ",", calib.y, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
+				}
+				log(pat_health_port, textFileOut, "In main.cpp - Standby - Standing by for command..."); //also sends health heartbeat
+				standby_msg_sent = true;	
+			}else{
+				send_packet_pat_health(pat_health_port); //heartbeat
 			}
-			log(pat_health_port, textFileOut, "In main.cpp - Standby - Standing by for command..."); //health heartbeat	
 			// Listen for command 		
 			zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 			if(poll_pat_control[0].revents & ZMQ_POLLIN)
@@ -1087,6 +1100,14 @@ int main() //int argc, char** argv
 			if(elapsed_time_heartbeat > period_heartbeat) //pg
 			{
 				send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
+				send_packet_pat_health(pat_health_port);
+				time_prev_heartbeat = steady_clock::now(); // Record time of message						
+			}
+
+			check_tlm_msg = steady_clock::now(); // Record current time
+			elapsed_time_tlm_msg = check_tlm_msg - time_prev_tlm_msg; // Calculate time since last tlm message
+			if(elapsed_time_tlm_msg > period_tlm_msg) //pg
+			{		
 				if(phase == OPEN_LOOP){
 					if(haveBeaconKnowledge){
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
@@ -1107,7 +1128,7 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where calib is.");
 					}
 				}	
-				time_prev_heartbeat = steady_clock::now(); // Record time of message		
+				time_prev_tlm_msg = steady_clock::now(); // Record time of message	
 			}
 
 			check_tx_offset = steady_clock::now(); // Record current time
