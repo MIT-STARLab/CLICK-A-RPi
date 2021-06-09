@@ -157,7 +157,7 @@ class PATHealthPacket(IpcPacket):
         self.size = len(payload)
         self.payload = payload
 
-        self.raw = struct.pack('IBI%ds'%self.size,return_addr,self.transmit_flag,self.size,payload)
+        self.raw = struct.pack('III%ds'%self.size,return_addr,self.transmit_flag,self.size,payload)
 
         return self.raw
 
@@ -170,9 +170,9 @@ class PATHealthPacket(IpcPacket):
         payload: raw command contents, bytes'''
 
         self.raw = raw
-        raw_size = len(raw)-9
+        raw_size = len(raw)-12
 
-        self.return_addr, self.transmit_flag, self.size, self.payload = struct.unpack('IBI%ds'%raw_size,raw)
+        self.return_addr, self.transmit_flag, self.size, self.payload = struct.unpack('III%ds'%raw_size,raw)
 
         if options.CHECK_ASSERTS: assert self.size == raw_size
 

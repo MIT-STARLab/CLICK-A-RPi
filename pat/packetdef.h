@@ -89,7 +89,7 @@ struct fpga_request_read_packet_struct{
 
 struct pat_health_packet_struct{
 	uint32_t return_address;
-	bool transmit_flag; 
+	uint32_t transmit_flag; 
 	uint32_t data_size;
 	char data_to_write[BUFFER_SIZE];
 };
