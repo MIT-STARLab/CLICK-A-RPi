@@ -65,7 +65,12 @@ void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data)
 	pat_health_packet_struct packet_struct = pat_health_packet_struct();
 	packet_struct.return_address = (uint32_t) getpid(); //get process pid
 	packet_struct.data_size = sizeof(packet_struct.data_to_write);
-	if(data != NULL){memcpy(packet_struct.data_to_write, data, strlen(data)+1);}		
+	if(data != NULL){
+		packet_struct.transmit_flag = true; 
+		memcpy(packet_struct.data_to_write, data, strlen(data)+1);
+	}else{
+		packet_struct.transmit_flag = false; 
+	}
 	
 	char packet[sizeof(pat_health_packet_struct)];
 	memcpy(packet, &packet_struct, sizeof(packet));	

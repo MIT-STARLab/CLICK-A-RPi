@@ -153,6 +153,7 @@ class PATHealthPacket(IpcPacket):
         message bytes'''
 
         self.return_addr = return_addr
+        self.transmit_flag = True
         self.size = len(payload)
         self.payload = payload
 
@@ -171,14 +172,14 @@ class PATHealthPacket(IpcPacket):
         self.raw = raw
         raw_size = len(raw)-8
 
-        self.return_addr, self.size, self.payload = struct.unpack('II%ds'%raw_size,raw)
+        self.return_addr, self.transmit_flag, self.size, self.payload = struct.unpack('I?I%ds'%raw_size,raw)
 
         if options.CHECK_ASSERTS: assert self.size == raw_size
 
         payload_list = self.payload.split(b'\n')
         telemetry_string = payload_list[0]
 
-        return telemetry_string, self.return_addr, self.size, self.payload
+        return telemetry_string, self.return_addr, self.transmit_flag, self.size, self.payload
 
 class PATStatusPacket(IpcPacket):
     def __init__(self): IpcPacket.__init__(self)
