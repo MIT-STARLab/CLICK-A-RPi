@@ -170,7 +170,7 @@ class PATHealthPacket(IpcPacket):
         payload: raw command contents, bytes'''
 
         self.raw = raw
-        raw_size = len(raw)-8
+        raw_size = len(raw)-9
 
         self.return_addr, self.transmit_flag, self.size, self.payload = struct.unpack('IBI%ds'%raw_size,raw)
 
