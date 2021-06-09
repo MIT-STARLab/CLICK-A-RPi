@@ -338,7 +338,7 @@ class Housekeeping:
         if (process_id == self.HK_PAT_ID):
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
-            payload, _, tx_flag, _, _ = pat_pkt.decode(data)
+            payload, tx_flag, _, _, _, _ = pat_pkt.decode(data)
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling PAT pkt w/ payload: ', payload)
 

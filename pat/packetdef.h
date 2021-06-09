@@ -18,6 +18,8 @@
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
+#define SEND_PAT_HEALTH_DATA 1 //flag housekeeping to relay health message to bus
+#define DONT_SEND_PAT_HEALTH_DATA 0 //flag housekeeping to ignore health message
 #define FPGA_READ_SIZE 4
 #define CMD_PAYLOAD_SIZE 256
 //command list:
