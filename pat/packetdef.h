@@ -157,7 +157,7 @@ struct pat_self_test_packet_struct{
 // Packet Sending for PUB Processes:
 void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, bool read_write, uint8_t request_num, uint16_t channel, uint8_t data = 0);
 
-void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
+void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data = NULL);
 
 void send_packet_pat_status(zmq::socket_t& pat_status_port, uint32_t status);
 
