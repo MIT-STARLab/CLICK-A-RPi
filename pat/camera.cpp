@@ -49,7 +49,7 @@ bool Camera::initialize(std::string serialNumber)
 
 	if(device == NULL)
 	{
-		log(pat_health_port, fileStream, "In camera.cpp Camera::Initialize - Error: NULL device");
+		//log(pat_health_port, fileStream, "In camera.cpp Camera::Initialize - Error: NULL device");
 		error = ERROR_NULL_DEVICE;
 		return false;
 	}

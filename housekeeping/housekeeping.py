@@ -334,11 +334,11 @@ class Housekeeping:
 
     def handle_hk_pkt(self, data, process_id):
         # TODO: Update packet handling if necessary
-
+        tx_flag = False
         if (process_id == self.HK_PAT_ID):
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
-            payload, _, _, _ = pat_pkt.decode(data)
+            payload, tx_flag, _, _, _, _ = pat_pkt.decode(data)
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling PAT pkt w/ payload: ', payload)
 
@@ -361,9 +361,10 @@ class Housekeeping:
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling CH pkt w/ payload: ', payload)
 
-        pkt = TxPacket()
-        raw_pkt = pkt.encode(apid, payload) #payload needs to be a single packed byte string e.g. '\x00\x01'
-        self.packet_buf.append(raw_pkt)
+        if ((process_id != self.HK_PAT_ID) or tx_flag):
+            pkt = TxPacket()
+            raw_pkt = pkt.encode(apid, payload) #payload needs to be a single packed byte string e.g. '\x00\x01'
+            self.packet_buf.append(raw_pkt)
 
     def restart_process(self, process_id, instance_num):
         # print("Restart process %x" % process_id)

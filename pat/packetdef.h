@@ -18,6 +18,8 @@
 #define BUFFER_SIZE 256 //Needs to be long enough to fit all messages (I think longest one is 132)
 #define WRITE 1 //(CLICK-A CPU Software Architecture on Google Drive)
 #define READ 0 //(CLICK-A CPU Software Architecture on Google Drive)
+#define SEND_PAT_HEALTH_DATA 1 //flag housekeeping to relay health message to bus
+#define DONT_SEND_PAT_HEALTH_DATA 0 //flag housekeeping to ignore health message
 #define FPGA_READ_SIZE 4
 #define CMD_PAYLOAD_SIZE 256
 //command list:
@@ -87,6 +89,7 @@ struct fpga_request_read_packet_struct{
 
 struct pat_health_packet_struct{
 	uint32_t return_address;
+	uint32_t transmit_flag; 
 	uint32_t data_size;
 	char data_to_write[BUFFER_SIZE];
 };
@@ -157,7 +160,7 @@ struct pat_self_test_packet_struct{
 // Packet Sending for PUB Processes:
 void send_packet_fpga_map_request(zmq::socket_t& fpga_map_request_port, bool read_write, uint8_t request_num, uint16_t channel, uint8_t data = 0);
 
-void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data);
+void send_packet_pat_health(zmq::socket_t& pat_health_port, char* data = NULL);
 
 void send_packet_pat_status(zmq::socket_t& pat_status_port, uint32_t status);
 
