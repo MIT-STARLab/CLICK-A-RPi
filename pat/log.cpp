@@ -26,7 +26,6 @@ int getExperimentId()
 	std::ifstream fin("/root/log/id_experiment.csv");
 	std::string line;
 	int expId = 0;
-	std::string expId;
 	std::string directory_path;
 	int expIds[10000]; //memory for reading experiment ids
 	int linenum = 0;
