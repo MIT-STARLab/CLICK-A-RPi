@@ -10,7 +10,10 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <stdlib.h>
 #include "packetdef.h"
+
+#define MAX_LOG_NUMBER 100 //maximum number of logs to keep in memory (delete older logs on startup)
 
 // Variable argument logging function with clock timestamp
 //-----------------------------------------------------------------------------
@@ -47,7 +50,13 @@ std::string timeStamp();
 // Check if read experiment id string is a number
 bool is_number(const std::string& s);
 
-// Get folder number to save experiment data in
+//Get experiment id number
+int getExperimentId();
+
+// Get folder path to save experiment data in
 std::string getExperimentFolder(bool updateExpId = false);
+
+//Delete old logs
+void manageLogs();
 
 #endif
