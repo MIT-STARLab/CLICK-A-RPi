@@ -2,11 +2,16 @@
 from __future__ import print_function
 import sys
 sys.path.append('/root/lib/')
+sys.path.append('/root/fpga/')
 import ipc_helper
 import fpga_map as mmap
 import time
 import file_manager
 import traceback
+import options
+import dac
+import math
+import hashlib
 
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
@@ -58,7 +63,7 @@ def test_calib_laser(fo):
 
     power.calib_diode_on()
     fpga.write_reg(mmap.DAC_SETUP,1)
-    fpga.write_reg(mmap.DAC_1_D, CAL_LASER_DAC_SETTING)
+    fpga.write_reg(mmap.DAC_1_D, options.CAL_LASER_DAC_SETTING)
     time.sleep(.1)
     calib_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('Heater Circuit + Cal Laser: %f A\n' % calib_curr)
