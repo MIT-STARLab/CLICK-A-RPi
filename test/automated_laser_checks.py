@@ -8,7 +8,9 @@ import time
 import file_manager
 import traceback
 
+# define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
+power = mmap.Power(fpga) # power sub-interface
 
 len_pass_string = 100
 def print_test(fo,name): 
