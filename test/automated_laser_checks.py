@@ -75,10 +75,10 @@ def test_calib_laser(fo):
     success = True
     # Bound Checks (update as needed during ground testing)
     HEATER_OFF_UB = 0.2 #Reference temp is 26.5C, can be 110mA at 0C
-    HEATER_ONLY_LB = 0.05 #Reference temp is 26.5C
-    HEATER_ONLY_UB = 0.11 #Reference temp is 26.5C
-    CALIB_LB = 0.06 #Reference temp is 26.5C
-    CALB_UB = 0.13 #Reference temp is 26.5C
+    HEATER_ONLY_LB = 0.007 #Reference temp is 26.5C
+    HEATER_ONLY_UB = 0.117 #Reference temp is 26.5C
+    CALIB_LB = 0.022 #Reference temp is 26.5C
+    CALB_UB = 0.134 #Reference temp is 26.5C
     add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP) #Temperature variation TBR    
     if(heater_off_curr > HEATER_OFF_UB):
         success = False
