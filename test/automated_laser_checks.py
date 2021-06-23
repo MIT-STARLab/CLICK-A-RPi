@@ -73,22 +73,25 @@ def test_calib_laser(fo):
     power.heaters_off()
 
     success = True
-    #can be 110mA while off at 0C
-    if(heater_off_curr > 0.2):
+    # Bound Checks (update as needed during ground testing)
+    HEATER_OFF_UB = 0.2 #Reference temp is 26.5C, can be 110mA at 0C
+    HEATER_ONLY_LB = 0.05 #Reference temp is 26.5C
+    HEATER_ONLY_UB = 0.11 #Reference temp is 26.5C
+    CALIB_LB = 0.06 #Reference temp is 26.5C
+    CALB_UB = 0.13 #Reference temp is 26.5C
+    add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP) #Temperature variation TBR    
+    if(heater_off_curr > HEATER_OFF_UB):
         success = False
-        fo.write("Heater off current is larger than 10mA\n")
+        fo.write("Heater off current is larger than %f A\n" % (HEATER_OFF_LB))
         print(1)
-
-    ## Bounds are TBD
-    # add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP)
-    # if(not (0.7 < heater_only_curr < 0.9+add_temp)):
-    #     success = False
-    #     fo.write("Heater Circuit current is outside of bounds: %f A to %f A: %f\n" % (.7, .9, heater_only_curr))
-    #     print(2)
-    # if(not (0.4 < calib_curr < 0.6+add_temp)):
-    #     success = False
-    #     fo.write("Heater Circuit + Cal Laser current is outside of bounds: %f A to %f A: %f\n" % (.4, .6, calib_curr))
-    #     print(3)
+    if(not (HEATER_ONLY_LB < heater_only_curr < HEATER_ONLY_UB+add_temp)):
+        success = False
+        fo.write("Heater Circuit current is outside of bounds: %f A to %f A: %f\n" % (HEATER_ONLY_LB, HEATER_ONLY_UB+add_temp, heater_only_curr))
+        print(2)
+    if(not (CALIB_LB < calib_curr < CALB_UB+add_temp)):
+        success = False
+        fo.write("Heater Circuit + Cal Laser current is outside of bounds: %f A to %f A: %f\n" % (CALIB_LB, CALB_UB+add_temp, calib_curr))
+        print(3)
 
     if success:
         pass_test(fo)
@@ -127,16 +130,15 @@ def test_seed(fo):
 
     tosa_temp = fpga.read_reg(mmap.TOSA_TEMP)  
     success = True
-    ## Bounds are TBD
-    # for i in range(10):
-    #     avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
-    #     time.sleep(.1)
-
-    #     limit = .600 + .01*fpga.read_reg(mmap.TOSA_TEMP)
-    #     if(avg_on_curr > limit or avg_on_curr < 100e-3):
-    #         success = False
-    #         fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(round(limit,3)), str(100e-3), str(round(avg_on_curr,3))))
-    #         break
+    # Bound Checks (update as needed during ground testing)
+    for i in range(10):
+        avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+        time.sleep(.1)
+        limit = .600 + .01*fpga.read_reg(mmap.TOSA_TEMP) #TBR Temperature Variation (Agrees w/ 26.5C data)
+        if(avg_on_curr > limit or avg_on_curr < 100e-3):
+            success = False
+            fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(round(limit,3)), str(100e-3), str(round(avg_on_curr,3))))
+            break
 
     power.edfa_off()
     power.bias_off()
