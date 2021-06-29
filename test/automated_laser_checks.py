@@ -13,6 +13,8 @@ import dac
 import math
 import hashlib
 
+#For basic testing of calibration laser and seed laser aliveness. Can be upgraded as necessary (e.g. expected parameter values)
+
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
 power = mmap.Power(fpga) # power sub-interface
