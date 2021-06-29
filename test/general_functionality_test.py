@@ -398,7 +398,7 @@ def test_heaters(fo):
     #can be 110mA while off at 0C
     if(heater_off_curr > 0.2):
         success = False
-        fo.write("Heater off current is larger than 10mA\n")
+        fo.write("Heater off current is larger than 200mA\n")
         print(1)
     add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP)
     if(not (0.7 < heater_one_curr < 0.9+add_temp)):
