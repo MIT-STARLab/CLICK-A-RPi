@@ -110,8 +110,8 @@ def seed_align(default_settings, cw = False):
     else:
         new_tec = PPM4_THRESHOLDS[0]*256+ PPM4_THRESHOLDS[1]
    
-    tec_msb = new_tec//256
-    tec_lsb = new_tec%256
+    tec_msb = abs(int(new_tec//256))
+    tec_lsb = abs(int(new_tec%256))
     fpga.write_reg(mmap.LTSa, tec_msb)
     fpga.write_reg(mmap.LTSb, tec_lsb)
     time.sleep(1)
