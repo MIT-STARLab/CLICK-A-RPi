@@ -25,11 +25,15 @@ def send_exception(tx_socket, err):
     full_trace = traceback.format_exc()
     full_trace_len = len(full_trace)
 
-
-    try:
+    if(hasattr(err, 'errno')):
         errno = err.errno
-    except:
+    else:
         errno = 0
+        
+    # try:
+    #     errno = err.errno
+    # except:
+    #     errno = 0
 
     err_pkt = TxPacket()
 

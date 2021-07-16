@@ -195,7 +195,10 @@ class Housekeeping:
             if (pid == 0):
                 raise ValueError
         except Exception as e:
-            send_exception(self.tx_socket, e)
+            try:
+                send_exception(self.tx_socket, e)
+            except:
+                pass
             pid = 0
         return pid
 
@@ -421,7 +424,10 @@ class Housekeeping:
             self.packet_buf.append(raw_err_pkt)
 
         except Exception as e:
+            try:
                 send_exception(self.tx_socket, e)
+            except:
+                pass
 
     def handle_hk_command(self, command):
         flags, new_fpga_check_pd, new_sys_check_pd, new_ch_heartbeat_pd, new_lb_heartbeat_pd, new_pat_health_pd = struct.unpack('BBBBBB', command)
@@ -479,6 +485,15 @@ class Housekeeping:
             self.ch_heartbeat_wds[i].start()
 
         print("Start Housekeeping")
+
+        ###Temporary
+        try:
+            raise NameError('exception_test')
+        except Exception as e:
+            print(e)
+            send_exception(self.tx_socket, e)
+        ###Temporary
+
         while True:
             # Periodically send FPGA request
             if (self.fpga_check_flag.is_set()):
