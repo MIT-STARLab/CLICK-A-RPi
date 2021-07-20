@@ -264,7 +264,7 @@ def heat_to_0C(counter_heartbeat):
         fpga.write_reg(mmap.PO3, 85)
         fpga.write_reg(mmap.HE1, 85)
         fpga.write_reg(mmap.HE2, 85)
-        #Poll temps once per 5 seconds, hang until the average is above 0C stop
+        #Poll temps once per 15 seconds, hang until the average is above 0C stop
         temp_sleep_time = 15 #seconds
         set_hk_ch_period(2*temp_sleep_time) #delay heartbeat period from default 10 sec to twice the sleep time
         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
@@ -273,7 +273,7 @@ def heat_to_0C(counter_heartbeat):
             temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             time.sleep(temp_sleep_time)
-            log_to_hk("Temp = %s" % temps)
+            log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps)
             if ((time.time() - begin_time) > 1200):
                 log_to_hk("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
                 #print("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
@@ -770,8 +770,30 @@ while True:
                 elif(test_id == THERMAL_SELF_TEST):
                     start_time = time.time()
                     counter_heartbeat = send_heartbeat(start_time, counter_heartbeat)
-                    log_to_hk('ACK CMD PL_SELF_TEST: THERMAL_SELF_TEST')
-                    counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
+                    log_to_hk('ACK CMD PL_SELF_TEST: THERMAL_SELF_TEST')    
+                    #Heat Payload for up to 3 min or up to a change in temp of 10C
+                    temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
+                    temps = sum(temp_block)/6
+                    log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
+                    log_to_hk("Start Time = %s, Temp = %s" % (start_time, temps)
+                    fpga.write_reg(mmap.PO3, 85)
+                    fpga.write_reg(mmap.HE1, 85)
+                    fpga.write_reg(mmap.HE2, 85)
+                    #Poll temps once per 15 seconds, hang until the average is above 0C stop
+                    temp_sleep_time = 15 #seconds
+                    set_hk_ch_period(2*temp_sleep_time) #delay heartbeat period from default 10 sec to twice the sleep time
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    begin_time = time.time()
+                    temps_init = temps
+                    while((abs(temps - temps_init) < 10) and ((time.time() - begin_time) < 180)):
+                        temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        time.sleep(temp_sleep_time)
+                        log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps)
+                    fpga.write_reg(mmap.PO3, 15)
+                    fpga.write_reg(mmap.HE1, 15)
+                    fpga.write_reg(mmap.HE2, 15)
+                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                     ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
 
                 elif(test_id == ALL_SELF_TEST):
