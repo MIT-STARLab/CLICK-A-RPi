@@ -61,7 +61,7 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
         zip_file_name = '%s.tar.gz' % os.path.splitext(file_name)[0]
         os.system('tar -zcvf %s %s' % zip_file_name, file_name)
 
-        if(flag != 0x00) 
+        if(flag != 0x00): 
             #downlink zip file
             zip_file_name_len = len(zip_file_name)
             tx_pkt_payload = struct.pack('!HHH%ds'%(zip_file_name_len), transfer_id, chunk_size, zip_file_name_len, zip_file_name)
@@ -71,7 +71,7 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
             request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
             request_file(request_file_cmd, socket_tx_packets)
 
-            if(flag == 0xFF)
+            if(flag == 0xFF):
                 #delete zip file            
                 recursive = 0x00 #not recursive
                 del_payload = struct.pack('!BH%ds'%(zip_file_name_len), recursive, zip_file_name_len, zip_file_name)
