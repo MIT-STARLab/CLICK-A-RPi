@@ -364,7 +364,6 @@ while True:
             try:
                 if(output_to_file):
                     os.system(file_path + ' > /root/log/' + str(file_out_num) + '.log')
-                    #send file...
                 else:
                     os.system(file_path)
 
@@ -402,6 +401,11 @@ while True:
             auto_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_AUTO_DOWNLINK_FILE')
             ack_to_hk(CMD_PL_AUTO_DOWNLINK_FILE, CMD_ACK)
+
+        elif(CMD_ID == CMD_PL_ZIP_DOWNLINK_FILE):
+            zip_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)
+            log_to_hk('ACK CMD PL_ZIP_DOWNLINK_FILE')
+            ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
             disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)
