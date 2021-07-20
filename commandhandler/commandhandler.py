@@ -228,24 +228,28 @@ def update_pat_status(status_flag):
 
     return status_flag
 
-#intialize PAT status
-for i in range(10):
-    pat_received_status, pat_status_flag, pat_return_addr = get_pat_status()
-    if(pat_received_status):
-        log_to_hk('Connected to PAT process at PID = ' + str(pat_return_addr))
-        break
-if(not pat_received_status):
-    log_to_hk('WARNING: PAT process unresponsive at CH (PID = ' + str(pid) + ') startup.')
+def init_pat_status():
+    #intialize PAT status
+    for i in range(10):
+        pat_received_status, status_flag, pat_return_addr = get_pat_status()
+        if(pat_received_status):
+            log_to_hk('Connected to PAT process at PID = ' + str(pat_return_addr))
+            break
+    if(not pat_received_status):
+        log_to_hk('WARNING: PAT process unresponsive at CH (PID = ' + str(pid) + ') startup.')
+    
+    return status_flag
 
+pat_status_flag = -1 #initialize to null
 def pat_status_is(pat_status_check):
     if(pat_status_flag in pat_status_list):
-        log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+        log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
         #print('status_flag: ', pat_status_flag)
         #print('pat_status_check: ', pat_status_check)
         #print('bool: ', (pat_status_flag == pat_status_check))
         return (pat_status_flag == pat_status_check)
     else:
-        log_to_hk('PAT Process Running (PID: ' + str(pat_return_addr) + '). Status: Unrecognized')
+        log_to_hk('PAT Process Running. Status: Unrecognized')
         return False
 
 def heat_to_0C(counter_heartbeat):
@@ -287,6 +291,7 @@ counter_ground_test = 0 #used to count the number of repetitive process tasks
 counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
+pat_init = False 
 
 #start command handling
 while True:
@@ -297,8 +302,14 @@ while True:
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
         counter_heartbeat = send_heartbeat(curr_time, counter_heartbeat)
 
-    #update PAT status
-    pat_status_flag = update_pat_status(pat_status_flag)
+    if(elapsed_time >= 5):
+        #initialize PAT status
+        pat_status_flag = init_pat_status()
+        pat_init = True
+
+    if(pat_init):
+        #update PAT status
+        pat_status_flag = update_pat_status(pat_status_flag)
 
     # # Check if new RxCommandPacket() workload is available from router
     workload = ipc_worker.poll_request(500) #500 ms timeout
