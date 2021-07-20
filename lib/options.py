@@ -129,6 +129,8 @@ TLM_ECHO = 0x3FF
 GENERAL_SELF_TEST = 0x00
 LASER_SELF_TEST = 0x01
 PAT_SELF_TEST = 0x02
+THERMAL_SELF_TEST = 0x03
+ALL_SELF_TEST = 0x04
 
 #PAT IPC Command IDs [Shared Command Parameters with c-code (packetdef.h)]
 PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
