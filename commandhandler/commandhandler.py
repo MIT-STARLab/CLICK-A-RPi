@@ -703,8 +703,8 @@ while True:
         elif(CMD_ID == CMD_PL_SELF_TEST):
             test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             test_id = test_id_tuple[0]
-            test_list = [GENERAL_SELF_TEST, LASER_SELF_TEST, PAT_SELF_TEST]
-            test_names = ['GENERAL_SELF_TEST', 'LASER_SELF_TEST', 'PAT_SELF_TEST']
+            test_list = [GENERAL_SELF_TEST, LASER_SELF_TEST, PAT_SELF_TEST, THERMAL_SELF_TEST, ALL_SELF_TEST]
+            test_names = ['GENERAL_SELF_TEST', 'LASER_SELF_TEST', 'PAT_SELF_TEST', 'THERMAL_SELF_TEST', 'ALL_SELF_TEST']
             if(test_id not in test_list):
                 log_to_hk('ERROR CMD PL_SELF_TEST: Unrecognized test ID: ' + str(test_id))
             else:
