@@ -884,29 +884,29 @@ while True:
             #set points are dependent on temperature
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
-            log_to_hk("PPM: "+str(ppm_order) +'EDFA Power: '+str(fpga.read_reg(34)))
-            while(abs(end_time - start_time) < TRANSMIT_TIME):
+            log_to_hk("PPM: "+str(ppm_order) +', EDFA Power: '+str(fpga.read_reg(34)))
+            # while(abs(end_time - start_time) < TRANSMIT_TIME):
 
-                #Stall Fifo
-                fpga.write_reg(mmap.CTL, control | 0x8)
+            #     #Stall Fifo
+            #     fpga.write_reg(mmap.CTL, control | 0x8)
 
-                # # #Write to FIFO
-                tx_pkt.transmit(fpga, .1)
+            #     # # #Write to FIFO
+            #     tx_pkt.transmit(fpga, .1)
 
-                fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                    # success = False
-                    log_to_hk("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                    # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
-                    # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
+            #     fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+            #     if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+            #         # success = False
+            #         log_to_hk("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+            #         # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+            #         # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
 
-                if(fifo_len < 100): time.sleep(.005)
+            #     if(fifo_len < 100): time.sleep(.005)
 
-                # #Release FIFO
-                fpga.write_reg(mmap.CTL, 0x7)
-                end_time = time.time()
-                if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+            #     # #Release FIFO
+            #     fpga.write_reg(mmap.CTL, 0x7)
+            #     end_time = time.time()
+            #     if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
+            #         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
