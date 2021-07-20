@@ -233,7 +233,7 @@ def init_pat_status():
     for i in range(10):
         pat_received_status, status_flag, pat_return_addr = get_pat_status()
         if(pat_received_status):
-            log_to_hk('Connected to PAT process at PID = ' + str(pat_return_addr))
+            log_to_hk('CH (PID ' + str(pid) + ') connected to PAT process at PID = ' + str(pat_return_addr))
             break
     if(not pat_received_status):
         log_to_hk('WARNING: PAT process unresponsive at CH (PID = ' + str(pid) + ') startup.')
@@ -302,10 +302,11 @@ while True:
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
         counter_heartbeat = send_heartbeat(curr_time, counter_heartbeat)
 
-    if(elapsed_time >= 5):
+    if((elapsed_time >= 10) and (not pat_init)):
         #initialize PAT status
         pat_status_flag = init_pat_status()
-        pat_init = True
+        if(pat_status_flag in pat_status_list):
+            pat_init = True
 
     if(pat_init):
         #update PAT status
