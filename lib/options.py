@@ -81,6 +81,7 @@ CMD_PL_ENABLE_TIME = 0xC2
 CMD_PL_EXEC_FILE = 0x67
 CMD_PL_LIST_FILE = 0xFE
 CMD_PL_AUTO_DOWNLINK_FILE = 0xAB
+CMD_PL_ZIP_DOWNLINK_FILE = 0xAF
 CMD_PL_DISASSEMBLE_FILE = 0x15
 CMD_PL_REQUEST_FILE = 0x16
 CMD_PL_UPLINK_FILE = 0xCD
@@ -129,6 +130,8 @@ TLM_ECHO = 0x3FF
 GENERAL_SELF_TEST = 0x00
 LASER_SELF_TEST = 0x01
 PAT_SELF_TEST = 0x02
+THERMAL_SELF_TEST = 0x03
+ALL_SELF_TEST = 0x04
 
 #PAT IPC Command IDs [Shared Command Parameters with c-code (packetdef.h)]
 PAT_CMD_PAYLOAD_SIZE = 256 #Only a fixed size is allowed in the C++ code (packetdef.h): add padding if necessary
