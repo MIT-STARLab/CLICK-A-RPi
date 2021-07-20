@@ -812,18 +812,21 @@ while True:
             counter_heartbeat = heat_to_0C(counter_heartbeat) 
 
             #General self test:
+            log_to_hk("Running General Self Test...")
             set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             os.system('python ~/test/general_functionality_test.py') #starts self test script
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #Laser self test
+            log_to_hk("Running Laser Self Test...")
             #set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
             #counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             os.system('python /root/test/automated_laser_checks.py')
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #PAT self test
+            log_to_hk("Running PAT Self Test...")
             set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
@@ -831,7 +834,7 @@ while True:
                 #execute PAT self test
                 send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                 for i in range(60): #max test time is about 60 sec
-                    log_to_hk("Waiting for pat self test to finish")
+                    #log_to_hk("Waiting for pat self test to finish")
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     time.sleep(1)
                 log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
