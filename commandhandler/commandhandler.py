@@ -273,7 +273,7 @@ def heat_to_0C(counter_heartbeat):
             temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             time.sleep(temp_sleep_time)
-            log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps)
+            log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
             if ((time.time() - begin_time) > 1200):
                 log_to_hk("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
                 #print("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
@@ -775,7 +775,7 @@ while True:
                     temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
                     temps = sum(temp_block)/6
                     log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
-                    log_to_hk("Start Time = %s, Temp = %s" % (start_time, temps)
+                    log_to_hk("Start Time = %s, Temp = %s" % (start_time, temps))
                     fpga.write_reg(mmap.PO3, 85)
                     fpga.write_reg(mmap.HE1, 85)
                     fpga.write_reg(mmap.HE2, 85)
@@ -789,7 +789,7 @@ while True:
                         temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         time.sleep(temp_sleep_time)
-                        log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps)
+                        log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
                     fpga.write_reg(mmap.PO3, 15)
                     fpga.write_reg(mmap.HE1, 15)
                     fpga.write_reg(mmap.HE2, 15)
