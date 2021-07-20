@@ -295,7 +295,7 @@ int main() //int argc, char** argv
 	//Generate text telemetry file, pg
 	ofstream textFileOut; //stream for text telemetry
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
-	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid);
+	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid, ". Saving data to: ", pathName);
 
 	// Synchronization
 	enum Phase { CALIBRATION, ACQUISITION, CL_INIT, CL_BEACON, CL_CALIB, OPEN_LOOP, STATIC_POINT };
