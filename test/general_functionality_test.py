@@ -287,7 +287,6 @@ def check_temperature_init(fo):
 
     return success
 
-
 """
 Reprogram the FPGA and check to verify the all power switches are 0
 
@@ -320,6 +319,7 @@ def reflash_fpga(fo):
         print('FPGA was not reprogrammed')
 
     return success
+
 """
 Test EDFA current before/after current switch
 Read fline response to verify operation
@@ -421,6 +421,7 @@ def test_heaters(fo):
         fail_test(fo)
     print("OFF: %.03f A, Heater 1: %.03f A, Heater 2: %.03f A, Both: %.03f A" % (heater_off_curr, heater_one_curr, heater_two_curr, heater_both_curr))
 
+    return success
 
 """
 Verify TEC driver linearity, readback matches commanded value and current does not exceed 100mA
