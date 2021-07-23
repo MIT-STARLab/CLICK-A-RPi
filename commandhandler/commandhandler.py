@@ -245,7 +245,7 @@ def init_pat_status():
 pat_status_flag = -1 #initialize to null
 def pat_status_is(pat_status_check):
     if(pat_status_flag in pat_status_list):
-        log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+        #log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
         #print('status_flag: ', pat_status_flag)
         #print('pat_status_check: ', pat_status_check)
         #print('bool: ', (pat_status_flag == pat_status_check))
@@ -253,6 +253,12 @@ def pat_status_is(pat_status_check):
     else:
         log_to_hk('PAT Process Running. Status: Unrecognized')
         return False
+
+def log_pat_status():
+    if(pat_status_flag in pat_status_list):
+        log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+    else:
+        log_to_hk('PAT Process Running. Status: Unrecognized')
 
 def heat_to_0C(counter_heartbeat):
     start_time = time.time()
@@ -309,6 +315,7 @@ while True:
         pat_status_flag = init_pat_status()
         if(pat_status_flag in pat_status_list):
             pat_init = True
+            log_pat_status()
 
     if(pat_init):
         #update PAT status
@@ -488,6 +495,7 @@ while True:
                     ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
             else:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
@@ -504,9 +512,9 @@ while True:
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
                 ack_to_hk(CMD_PL_CALIB_LASER_TEST, CMD_ACK)
-                #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_CALIB_LASER_TEST: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
@@ -523,9 +531,9 @@ while True:
                 send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_FSM_TEST')
                 ack_to_hk(CMD_PL_FSM_TEST, CMD_ACK)
-                #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_FSM_TEST: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_FSM_TEST, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
@@ -534,9 +542,9 @@ while True:
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
                 log_to_hk('ACK CMD PL_RUN_CALIBRATION')
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ACK)
-                #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_TEST_ADCS_FEEDBACK):
@@ -546,6 +554,7 @@ while True:
                 ack_to_hk(CMD_PL_TEST_ADCS_FEEDBACK, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_TEST_ADCS_FEEDBACK: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_TEST_ADCS_FEEDBACK, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
@@ -571,6 +580,7 @@ while True:
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
@@ -589,6 +599,7 @@ while True:
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in STANDBY or MAIN.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
@@ -602,6 +613,7 @@ while True:
                 ack_to_hk(CMD_PL_UPDATE_FSM_ANGLES, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_FSM_ANGLES: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_UPDATE_FSM_ANGLES, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
@@ -617,6 +629,7 @@ while True:
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_ENTER_PAT_MAIN: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_EXIT_PAT_MAIN):
@@ -626,6 +639,7 @@ while True:
                 ack_to_hk(CMD_PL_EXIT_PAT_MAIN, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_EXIT_PAT_MAIN: PAT process not in MAIN')
+                log_pat_status()
                 ack_to_hk(CMD_PL_EXIT_PAT_MAIN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_END_PAT_PROCESS):
@@ -765,10 +779,12 @@ while True:
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                         #Check if camera failure is to blame and run self test in camera initialization loop
+                        log_pat_status()
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     else:
                         log_to_hk('ERROR CMD PL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
+                        log_pat_status()
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
 
                 elif(test_id == THERMAL_SELF_TEST):
@@ -836,9 +852,11 @@ while True:
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST) #Output data (text-only) is automatically sent to bus for downlink
                     elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                         #Check if camera failure is to blame and run self test in camera initialization loop
+                        log_pat_status()
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                     else:
                         log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
+                        log_pat_status()
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
                         no_test_error = False
 
@@ -885,9 +903,11 @@ while True:
                 pat_mode_id = get_pat_mode()
                 send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                log_pat_status()
                 log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
             else:
+                log_pat_status()
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
