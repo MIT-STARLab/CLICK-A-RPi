@@ -730,7 +730,6 @@ while True:
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     #Execute general self test script
                     try:
-                        #os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
                         results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
                         log_to_hk(results_summary)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
@@ -743,11 +742,10 @@ while True:
                 elif(test_id == LASER_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
                     counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
-                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (TBR, test is TBD min)
+                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     #Execute laser self test script 
                     try:
-                        #os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
                         results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
                         log_to_hk(results_summary)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
@@ -810,7 +808,6 @@ while True:
                     no_test_error = True 
                     #Execute general self test script
                     try:
-                        #os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
                         results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
                         log_to_hk(results_summary)
                     except:
@@ -820,8 +817,9 @@ while True:
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
                     #Execute laser self test script
+                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     try:
-                        #os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
                         results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
                         log_to_hk(results_summary)
                     except:
@@ -859,16 +857,14 @@ while True:
             log_to_hk("Running General Self Test...")
             set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            #os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
             results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
             log_to_hk(results_summary)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #Laser self test
             log_to_hk("Running Laser Self Test...")
-            #set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
-            #counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            #os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+            set_hk_ch_period(30) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
+            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
             log_to_hk(results_summary)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
