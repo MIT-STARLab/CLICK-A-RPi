@@ -154,6 +154,7 @@ def test_seed(fo):
     print("TOSA Temp: %0.03f, OFF: %.03f A, Standby: %.03f A, ON: %.03f A" % (tosa_temp, off_curr, standby_curr, on_curr))    
 
 def run_all(origin):
+    test_summary = "" #initialize return value
 
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
     
@@ -174,8 +175,12 @@ def run_all(origin):
             f.write('Hash failure, check script path\n')
             print('Hash failure, check script path')
         
-        test_calib_laser(f)
-        test_seed(f)
+        results = ("","")
+        results[0] = "PASS" if test_calib_laser(f) else "FAIL"
+        results[1] = "PASS" if test_seed(f) else "FAIL"
+        test_summary = "Calib Test: %s\nSeed Test: %s" % results
+    
+    return test_summary
 
 
 if __name__ == '__main__':

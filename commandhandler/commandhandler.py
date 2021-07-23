@@ -24,6 +24,8 @@ import fpga_map as mmap
 from filehandling import *
 import tx_packet
 from os import path
+import general_functionality_test
+import automated_laser_checks
 
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
@@ -728,7 +730,9 @@ while True:
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     #Execute general self test script
                     try:
-                        os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+                        #os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+                        results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
@@ -743,7 +747,9 @@ while True:
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     #Execute laser self test script 
                     try:
-                        os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+                        #os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+                        results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
@@ -804,7 +810,9 @@ while True:
                     no_test_error = True 
                     #Execute general self test script
                     try:
-                        os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+                        #os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+                        results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
@@ -813,7 +821,9 @@ while True:
 
                     #Execute laser self test script
                     try:
-                        os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+                        #os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+                        results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
@@ -849,14 +859,18 @@ while True:
             log_to_hk("Running General Self Test...")
             set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            os.system('python ~/test/general_functionality_test.py') #starts self test script
+            #os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+            results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+            log_to_hk(results_summary)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #Laser self test
             log_to_hk("Running Laser Self Test...")
             #set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
             #counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            os.system('python /root/test/automated_laser_checks.py')
+            #os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+            results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+            log_to_hk(results_summary)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #PAT self test
