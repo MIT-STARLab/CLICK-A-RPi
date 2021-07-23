@@ -146,6 +146,7 @@ bool Tracking::verifyFrame(Image& frame, bool printFailure)
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame check failed! ",
 			"histBrightest =", frame.histBrightest, "(", TRACK_ACQUISITION_BRIGHTNESS, ") and histPeak =", frame.histPeak);
 	}
+	send_packet_pat_health(pat_health_port);
 	return false;
 }
 
