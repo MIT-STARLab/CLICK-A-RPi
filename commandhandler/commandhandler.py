@@ -959,7 +959,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
-            log_to_hk('ACK CMD PL_DEBUG_MODE with start time: ' + start_time)
+            log_to_hk("ACK CMD PL_DEBUG_MODE with start time: %s" % (start_time))
 
         elif(CMD_ID == CMD_PL_UPDATE_SEED_PARAMS):
             set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
