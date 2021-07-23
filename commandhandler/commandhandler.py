@@ -14,7 +14,7 @@ import hashlib
 import traceback
 #importing options and functions
 sys.path.append('/root/lib/')
-sys.path.append('../lib/')
+sys.path.append('/root/test/')
 import ipc_loadbalancer
 from options import *
 from ipc_packets import FPGAMapRequestPacket, FPGAMapAnswerPacket, TxPacket, RxCommandPacket, PATControlPacket, HeartbeatPacket, HKControlPacket, PATStatusPacket
@@ -24,6 +24,8 @@ import fpga_map as mmap
 from filehandling import *
 import tx_packet
 from os import path
+import general_functionality_test
+import automated_laser_checks
 
 # define fpga interface
 fpga = ipc_helper.FPGAClientInterface()
@@ -243,14 +245,15 @@ def init_pat_status():
 pat_status_flag = -1 #initialize to null
 def pat_status_is(pat_status_check):
     if(pat_status_flag in pat_status_list):
-        log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
-        #print('status_flag: ', pat_status_flag)
-        #print('pat_status_check: ', pat_status_check)
-        #print('bool: ', (pat_status_flag == pat_status_check))
         return (pat_status_flag == pat_status_check)
     else:
-        log_to_hk('PAT Process Running. Status: Unrecognized')
         return False
+
+def log_pat_status():
+    if(pat_status_flag in pat_status_list):
+        log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
+    else:
+        log_to_hk('PAT Process Running. Status: Unrecognized')
 
 def heat_to_0C(counter_heartbeat):
     start_time = time.time()
@@ -307,6 +310,7 @@ while True:
         pat_status_flag = init_pat_status()
         if(pat_status_flag in pat_status_list):
             pat_init = True
+            log_pat_status()
 
     if(pat_init):
         #update PAT status
@@ -486,6 +490,7 @@ while True:
                     ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
             else:
                 log_to_hk('ERROR CMD PL_SINGLE_CAPTURE: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_CALIB_LASER_TEST):
@@ -502,9 +507,9 @@ while True:
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_LASER_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_CALIB_LASER_TEST')
                 ack_to_hk(CMD_PL_CALIB_LASER_TEST, CMD_ACK)
-                #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_CALIB_LASER_TEST: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_SINGLE_CAPTURE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_FSM_TEST):
@@ -521,9 +526,9 @@ while True:
                 send_pat_command(socket_PAT_control, PAT_CMD_FSM_TEST, str(exp_cmd))
                 log_to_hk('ACK CMD PL_FSM_TEST')
                 ack_to_hk(CMD_PL_FSM_TEST, CMD_ACK)
-                #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_FSM_TEST: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_FSM_TEST, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_RUN_CALIBRATION):
@@ -532,9 +537,9 @@ while True:
                 send_pat_command(socket_PAT_control, PAT_CMD_CALIB_TEST)
                 log_to_hk('ACK CMD PL_RUN_CALIBRATION')
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ACK)
-                #Manage image telemetry files...
             else:
                 log_to_hk('ERROR CMD PL_RUN_CALIBRATION: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_RUN_CALIBRATION, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_TEST_ADCS_FEEDBACK):
@@ -544,6 +549,7 @@ while True:
                 ack_to_hk(CMD_PL_TEST_ADCS_FEEDBACK, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_TEST_ADCS_FEEDBACK: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_TEST_ADCS_FEEDBACK, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_ACQUISITION_PARAMS):
@@ -569,6 +575,7 @@ while True:
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_TX_ALIGN: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_TX_ALIGN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_TX_OFFSETS):
@@ -587,6 +594,7 @@ while True:
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_TX_OFFSETS: PAT process not in STANDBY or MAIN.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_UPDATE_TX_OFFSETS, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_FSM_ANGLES):
@@ -600,6 +608,7 @@ while True:
                 ack_to_hk(CMD_PL_UPDATE_FSM_ANGLES, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_UPDATE_FSM_ANGLES: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_UPDATE_FSM_ANGLES, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_ENTER_PAT_MAIN):
@@ -615,6 +624,7 @@ while True:
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_ENTER_PAT_MAIN: PAT process not in STANDBY.')
+                log_pat_status()
                 ack_to_hk(CMD_PL_ENTER_PAT_MAIN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_EXIT_PAT_MAIN):
@@ -624,6 +634,7 @@ while True:
                 ack_to_hk(CMD_PL_EXIT_PAT_MAIN, CMD_ACK)
             else:
                 log_to_hk('ERROR CMD PL_EXIT_PAT_MAIN: PAT process not in MAIN')
+                log_pat_status()
                 ack_to_hk(CMD_PL_EXIT_PAT_MAIN, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_END_PAT_PROCESS):
@@ -728,7 +739,8 @@ while True:
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     #Execute general self test script
                     try:
-                        os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+                        results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
@@ -739,11 +751,12 @@ while True:
                 elif(test_id == LASER_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
                     counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
-                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (TBR, test is TBD min)
+                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     #Execute laser self test script 
                     try:
-                        os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+                        results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
@@ -761,10 +774,12 @@ while True:
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                         #Check if camera failure is to blame and run self test in camera initialization loop
+                        log_pat_status()
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
                     else:
                         log_to_hk('ERROR CMD PL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
+                        log_pat_status()
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
 
                 elif(test_id == THERMAL_SELF_TEST):
@@ -804,7 +819,8 @@ while True:
                     no_test_error = True 
                     #Execute general self test script
                     try:
-                        os.system('python /root/test/general_functionality_test.py') #Output file is automatically zipped and saved to ~/log/self_test/0
+                        results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
@@ -812,8 +828,11 @@ while True:
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
                     #Execute laser self test script
+                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     try:
-                        os.system('python /root/test/automated_laser_checks.py') #Output file is automatically zipped and saved to ~/log/laser_self_test/0
+                        results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                        log_to_hk(results_summary)
                     except:
                         log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
@@ -828,9 +847,11 @@ while True:
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST) #Output data (text-only) is automatically sent to bus for downlink
                     elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
                         #Check if camera failure is to blame and run self test in camera initialization loop
+                        log_pat_status()
                         send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
                     else:
                         log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
+                        log_pat_status()
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
                         no_test_error = False
 
@@ -849,14 +870,16 @@ while True:
             log_to_hk("Running General Self Test...")
             set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            os.system('python ~/test/general_functionality_test.py') #starts self test script
+            results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+            log_to_hk(results_summary)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #Laser self test
             log_to_hk("Running Laser Self Test...")
-            #set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
-            #counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            os.system('python /root/test/automated_laser_checks.py')
+            set_hk_ch_period(30) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
+            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+            results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+            log_to_hk(results_summary)
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
             #PAT self test
@@ -875,9 +898,11 @@ while True:
                 pat_mode_id = get_pat_mode()
                 send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
             elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                log_pat_status()
                 log_to_hk("Camera is off - pat self test failed.")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
             else:
+                log_pat_status()
                 log_to_hk("Pat was not in standby mode, pat self test will not run")
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 

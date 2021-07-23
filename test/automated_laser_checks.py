@@ -101,6 +101,8 @@ def test_calib_laser(fo):
         fail_test(fo)
     print("TOSA Temp: %0.03f, OFF: %.03f A, Heater Circuit Only: %.03f A, Heater Circuit + Cal Laser: %.03f A" % (tosa_temp, heater_off_curr, heater_only_curr, calib_curr))    
 
+    return success 
+    
 @error_to_file
 def test_seed(fo):
     #Note: seed laser and FSM circuit is on LD bias circuit current monitor
@@ -151,9 +153,12 @@ def test_seed(fo):
     else:
         fail_test(fo)
         print("LD current is out of nominal bounds: %s" % round(avg_on_curr,3))
-    print("TOSA Temp: %0.03f, OFF: %.03f A, Standby: %.03f A, ON: %.03f A" % (tosa_temp, off_curr, standby_curr, on_curr))    
+    print("TOSA Temp: %0.03f, OFF: %.03f A, Standby: %.03f A, ON: %.03f A" % (tosa_temp, off_curr, standby_curr, on_curr)) 
+
+    return success   
 
 def run_all(origin):
+    test_summary = "" #initialize return value
 
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
     
@@ -174,8 +179,12 @@ def run_all(origin):
             f.write('Hash failure, check script path\n')
             print('Hash failure, check script path')
         
-        test_calib_laser(f)
-        test_seed(f)
+        results = ["",""]
+        results[0] = "PASS" if test_calib_laser(f) else "FAIL"
+        results[1] = "PASS" if test_seed(f) else "FAIL"
+        test_summary = "Calib Test: %s\nSeed Test: %s" % tuple(results)
+    
+    return test_summary
 
 
 if __name__ == '__main__':

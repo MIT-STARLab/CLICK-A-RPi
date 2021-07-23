@@ -163,7 +163,7 @@ def test_fpga_if_performance(fo):
 @error_to_file        
 def test_BIST(fo):
     
-    print_test(fo,'BIST circuit')
+    print_test(fo,'BIST Circuit Test')
     
     fo.write('Reset BIST threshold DAC, set reference on\n')
     fpga.dac.reset_bist()
@@ -287,7 +287,6 @@ def check_temperature_init(fo):
 
     return success
 
-
 """
 Reprogram the FPGA and check to verify the all power switches are 0
 
@@ -295,7 +294,7 @@ Reprogram the FPGA and check to verify the all power switches are 0
 @error_to_file
 def reflash_fpga(fo):
     import os
-    print_test(fo, "Reflashing FPGA to start self test sequence")
+    print_test(fo, "Reflashing FPGA To Start Self Test Sequence")
 
     power.edfa_off()
     power.calib_diode_off()
@@ -320,6 +319,7 @@ def reflash_fpga(fo):
         print('FPGA was not reprogrammed')
 
     return success
+
 """
 Test EDFA current before/after current switch
 Read fline response to verify operation
@@ -327,7 +327,7 @@ Read fline response to verify operation
 @error_to_file
 def test_EDFA_IF(fo):
 
-    print_test(fo, "Testing EDFA IF & current")
+    print_test(fo, "Testing EDFA IF & Current")
 
     if(fpga.read_reg(mmap.PO2) != 85):  
         power.edfa_on()
@@ -364,7 +364,7 @@ def test_EDFA_IF(fo):
 @error_to_file 
 def test_heaters(fo):
 
-    print_test(fo, "Heater Accuation test")
+    print_test(fo, "Heater Actuation Test")
 
     #Make sure heaters are off
     power.heaters_off()
@@ -421,6 +421,7 @@ def test_heaters(fo):
         fail_test(fo)
     print("OFF: %.03f A, Heater 1: %.03f A, Heater 2: %.03f A, Both: %.03f A" % (heater_off_curr, heater_one_curr, heater_two_curr, heater_both_curr))
 
+    return success
 
 """
 Verify TEC driver linearity, readback matches commanded value and current does not exceed 100mA
@@ -428,7 +429,7 @@ Verify TEC driver linearity, readback matches commanded value and current does n
 @error_to_file 
 def test_tec_driver(fo):
 
-    print_test(fo, "TEC driver test")
+    print_test(fo, "TEC Driver Test")
     # power.edfa_off()
 
     if(fpga.read_reg(mmap.PO4) != 85):
@@ -488,13 +489,13 @@ def test_tec_driver(fo):
         fail_test(fo)
     for t in to_print: print(t)
 
-    # return success
+    return success
 
 
 @error_to_file 
 def test_bias_driver(fo):
 
-    print_test(fo, "LD Bias test")
+    print_test(fo, "LD Bias Test")
     power.edfa_off()
     power.bias_off()
     
@@ -546,7 +547,7 @@ Seed setting 0 for flatsat and 1 for payload
 @error_to_file
 def test_scan_PPM(fo):
 
-    print_test(fo, "PPM Power test")
+    print_test(fo, "PPM Power Test")
 
     ppm_codes = [4,8,16,32,64,128]
 
@@ -610,7 +611,7 @@ Seed setting 0 for flatsat and 1 for payload
 """
 @error_to_file
 def check_CW_power(fo):
-    print_test(fo, "CW Power test")
+    print_test(fo, "CW Power Test")
 
     fpga.write_reg(mmap.DATA,0)
     if(seed_setting):
@@ -671,7 +672,7 @@ def check_CW_power(fo):
 @error_to_file        
 def test_mod_FIFO(fo):
     
-    print_test(fo,'Modulator data FIFO')
+    print_test(fo,'Modulator Data FIFO Test')
 
     #SHORT FIFO
     #with open("transmit.txt") as file:
@@ -770,7 +771,7 @@ def test_mod_FIFO(fo):
 
 
 def run_all(origin):
-
+    test_summary = "" #initialize return val
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
     
     with file_manager.ManagedFileOpen('/root/log/self_test_data/%s.gz' % t_str,'w') as (f, tags):
@@ -790,19 +791,22 @@ def run_all(origin):
             f.write('Hash failure, check script path\n')
             print('Hash failure, check script path')
         
-        reflash_fpga(f)
-        test_basic_fpga_if(f)
-        test_fpga_if_performance(f)
-        test_mod_FIFO(f)
-        check_temperature_init(f)
-        test_BIST(f)
-        test_EDFA_IF(f)
-        test_tec_driver(f)
-        test_bias_driver(f)
-        test_scan_PPM(f)
-        check_CW_power(f)
-        test_heaters(f)
-
+        results = ["","","","","","","","","","","",""]
+        results[0] = "PASS" if reflash_fpga(f) else "FAIL" #"Reflashing FPGA to start self test sequence"
+        results[1] = "PASS" if test_basic_fpga_if(f) else "FAIL" #'Basic FPGA read/write'
+        results[2] = "PASS" if test_fpga_if_performance(f) else "FAIL" #'Benchmark FPGA read/write'
+        results[3] = "PASS" if test_mod_FIFO(f) else "FAIL" #'Modulator Data FIFO Test'
+        results[4] = "PASS" if check_temperature_init(f) else "FAIL" #"Temperature Sensor Init Sequence Check"
+        results[5] = "PASS" if test_BIST(f) else "FAIL" #BIST Circuit Test
+        results[6] = "PASS" if test_EDFA_IF(f) else "FAIL" # "Testing EDFA IF & Current"
+        results[7] = "PASS" if test_tec_driver(f) else "FAIL" #"TEC Driver Test"
+        results[8] = "PASS" if test_bias_driver(f) else "FAIL" #"LD Bias Test"
+        results[9] = "PASS" if test_scan_PPM(f) else "FAIL" #"PPM Power Test"
+        results[10] = "PASS" if check_CW_power(f) else "FAIL" #"CW Power Test"
+        results[11] = "PASS" if test_heaters(f) else "FAIL" #"Heater Actuation Test"
+        test_summary = "Reflash FPGA: %s\nBasic FPGA R/W: %s\nBenchmark FPGA R/W: %s\nFIFO: %s\nTemp Sensor Init: %s\nBIST Circuit: %s\nEDFA IF & Current: %s\nTEC Driver: %s\nLD Bias: %s\nPPM Pwr: %s\nCW Pwr: %s\nHeater Actuation: %s" % tuple(results)
+    
+    return test_summary
 
 if __name__ == '__main__':
     run_all(origin='command line')
