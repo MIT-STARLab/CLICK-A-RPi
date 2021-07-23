@@ -245,13 +245,8 @@ def init_pat_status():
 pat_status_flag = -1 #initialize to null
 def pat_status_is(pat_status_check):
     if(pat_status_flag in pat_status_list):
-        #log_to_hk('PAT Process Running. Status: ' + pat_status_names[pat_status_list.index(pat_status_flag)])
-        #print('status_flag: ', pat_status_flag)
-        #print('pat_status_check: ', pat_status_check)
-        #print('bool: ', (pat_status_flag == pat_status_check))
         return (pat_status_flag == pat_status_check)
     else:
-        log_to_hk('PAT Process Running. Status: Unrecognized')
         return False
 
 def log_pat_status():
