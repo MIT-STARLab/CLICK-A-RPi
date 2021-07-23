@@ -790,7 +790,7 @@ def run_all(origin):
             f.write('Hash failure, check script path\n')
             print('Hash failure, check script path')
         
-        results = ("","","","","","","","","","","","")
+        results = ["","","","","","","","","","","",""]
         results[0] = "PASS" if reflash_fpga(f) else "FAIL" #"Reflashing FPGA to start self test sequence"
         results[1] = "PASS" if test_basic_fpga_if(f) else "FAIL" #'Basic FPGA read/write'
         results[2] = "PASS" if test_fpga_if_performance(f) else "FAIL" #'Benchmark FPGA read/write'
@@ -803,7 +803,7 @@ def run_all(origin):
         results[9] = "PASS" if test_scan_PPM(f) else "FAIL" #"PPM Power Test"
         results[10] = "PASS" if check_CW_power(f) else "FAIL" #"CW Power Test"
         results[11] = "PASS" if test_heaters(f) else "FAIL" #"Heater Actuation Test"
-        test_summary = "Reflash FPGA: %s\nBasic FPGA R/W: %s\nBenchmark FPGA R/W: %s\nFIFO: %s\nTemp Sensor Init: %s\nBIST Circuit: %s\nEDFA IF & Current: %s\nTEC Driver: %s\nLD Bias: %s\nPPM Pwr: %s\nCW Pwr: %s\nHeater Actuation: %s" % results
+        test_summary = "Reflash FPGA: %s\nBasic FPGA R/W: %s\nBenchmark FPGA R/W: %s\nFIFO: %s\nTemp Sensor Init: %s\nBIST Circuit: %s\nEDFA IF & Current: %s\nTEC Driver: %s\nLD Bias: %s\nPPM Pwr: %s\nCW Pwr: %s\nHeater Actuation: %s" % tuple(results)
     
     return test_summary
 

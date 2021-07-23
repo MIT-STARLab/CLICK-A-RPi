@@ -175,10 +175,10 @@ def run_all(origin):
             f.write('Hash failure, check script path\n')
             print('Hash failure, check script path')
         
-        results = ("","")
+        results = ["",""]
         results[0] = "PASS" if test_calib_laser(f) else "FAIL"
         results[1] = "PASS" if test_seed(f) else "FAIL"
-        test_summary = "Calib Test: %s\nSeed Test: %s" % results
+        test_summary = "Calib Test: %s\nSeed Test: %s" % tuple(results)
     
     return test_summary
 
