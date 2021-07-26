@@ -8,7 +8,7 @@
 bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
-	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 300;
+	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 100;
 	uint16_t command;
 
 	// Skip pre-queued old frames
@@ -135,12 +135,14 @@ bool Tracking::verifyFrame(Image& frame, bool printFailure)
 	   frame.histBrightest - frame.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE)
 	{
 		// All checks passed and we have some good groups!
-		if(frame.performPixelGrouping() > 0)
+		if(frame.performPixelGrouping(0, false) > 0)
 		{
 			log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters");
 			return true;
 		}
-		else log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
+		else if(printFailure){
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
+		}
 	}
 	else if(printFailure){
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame check failed! ",
@@ -195,7 +197,7 @@ bool Tracking::windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int
 	// 		if(camera.waitForFrame())
 	// 		{
 	// 			Image test(camera, fileStream, pat_health_port);
-	// 			if(test.performPixelGrouping() > 0)
+	// 			if(test.performPixelGrouping(0, false) > 0)
 	// 			{
 	// 				fullX_test = test.groups[0].x * 2 + beaconWindow.x;
 	// 				fullY_test = test.groups[0].y * 2 + beaconWindow.y;
@@ -276,7 +278,7 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(frame.performPixelGrouping() > 0)
+		if(frame.performPixelGrouping(0, false) > 0)
 		{
 			//Determine smoothing
 			//beaconSmoothing = calibration.determineSmoothing(frame);

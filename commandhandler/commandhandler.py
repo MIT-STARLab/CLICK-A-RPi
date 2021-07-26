@@ -262,6 +262,7 @@ def heat_to_0C(counter_heartbeat):
     temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
     temps = sum(temp_block)/6
     log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
+    success = True #initialize return value
     if (temps<0):
         log_to_hk('Heat to 0C with start time: ' + str(start_time))
         fpga.write_reg(mmap.PO3, 85)
@@ -277,16 +278,17 @@ def heat_to_0C(counter_heartbeat):
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             time.sleep(temp_sleep_time)
             log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
-            if ((time.time() - begin_time) > 1200):
+            if ((time.time() - begin_time) > TIMEOUT_HEAT_TO_0C):
                 log_to_hk("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
-                #print("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
+                success = False
+                break 
         fpga.write_reg(mmap.PO3, 15)
         fpga.write_reg(mmap.HE1, 15)
         fpga.write_reg(mmap.HE2, 15)
         set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
     else:
         log_to_hk("Avg payload temperature is above 0C")
-    return counter_heartbeat
+    return success, counter_heartbeat
 
 #initialization
 start_time_ch = time.time() #default start_time is the execution time (debug or downlink mode commands overwrite this)
@@ -734,53 +736,62 @@ while True:
                 #execute test
                 if(test_id == GENERAL_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is GENERAL_SELF_TEST')
-                    counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
-                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                    #Execute general self test script
-                    try:
-                        results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
-                        log_to_hk(results_summary)
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
-                    except:
-                        log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
+                    success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
+                    if(success_heating or OVERRIDE_HEAT_TO_0C):
+                        set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        #Execute general self test script
+                        try:
+                            results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                            log_to_hk(results_summary)
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
+                        except:
+                            log_to_hk('ERROR CMD PL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
+                        set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    else:
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
-                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
                 elif(test_id == LASER_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
-                    counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
-                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                    #Execute laser self test script 
-                    try:
-                        results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
-                        log_to_hk(results_summary)
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
-                    except:
-                        log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
+                    success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
+                    if(success_heating or OVERRIDE_HEAT_TO_0C):
+                        set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        #Execute laser self test script 
+                        try:
+                            results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                            log_to_hk(results_summary)
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
+                        except:
+                            log_to_hk('ERROR CMD PL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
+                        set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    else:
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
-                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
                 elif(test_id == PAT_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is PAT_SELF_TEST')
-                    counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
-                    if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                        initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
-                        #execute PAT self test
-                        send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST) #Output data (text-only) is automatically sent to bus for downlink
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
-                    elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
-                        #Check if camera failure is to blame and run self test in camera initialization loop
-                        log_pat_status()
-                        send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
+                    success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
+                    if(success_heating or OVERRIDE_HEAT_TO_0C):
+                        if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                            initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
+                            #execute PAT self test
+                            send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST) #Output data (text-only) is automatically sent to bus for downlink
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
+                        elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                            #Check if camera failure is to blame and run self test in camera initialization loop
+                            log_pat_status()
+                            send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
+                        else:
+                            log_to_hk('ERROR CMD PL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
+                            log_pat_status()
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
                     else:
-                        log_to_hk('ERROR CMD PL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
-                        log_pat_status()
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
+                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)                    
 
                 elif(test_id == THERMAL_SELF_TEST):
                     start_time = time.time()
@@ -809,51 +820,58 @@ while True:
                     fpga.write_reg(mmap.HE1, 15)
                     fpga.write_reg(mmap.HE2, 15)
                     set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                    log_to_hk("Thermal Self Test Complete")
                     ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
 
                 elif(test_id == ALL_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is ALL_SELF_TEST')
-                    counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
-                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                    no_test_error = True 
-                    #Execute general self test script
-                    try:
-                        results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
-                        log_to_hk(results_summary)
-                    except:
-                        log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
-                        no_test_error = False
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
+                    if(success_heating or OVERRIDE_HEAT_TO_0C):
+                        set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        no_test_error = True 
+                        #Execute general self test script
+                        try:
+                            log_to_hk("Running General Self Test...")
+                            results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                            log_to_hk(results_summary)
+                        except:
+                            log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - GENERAL_SELF_TEST: ' + traceback.format_exc())
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
+                            no_test_error = False
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
-                    #Execute laser self test script
-                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                    try:
-                        results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
-                        log_to_hk(results_summary)
-                    except:
-                        log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
-                        no_test_error = False
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        #Execute laser self test script
+                        set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        try:
+                            log_to_hk("Running Laser Self Test...")
+                            results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                            log_to_hk(results_summary)
+                        except:
+                            log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST - LASER_SELF_TEST: ' + traceback.format_exc())
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
+                            no_test_error = False
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
-                    #Execute PAT self test
-                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
-                    if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                        initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
-                        #execute PAT self test
-                        send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST) #Output data (text-only) is automatically sent to bus for downlink
-                    elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
-                        #Check if camera failure is to blame and run self test in camera initialization loop
-                        log_pat_status()
-                        send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                        #Execute PAT self test
+                        set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                        log_to_hk("Running PAT Self Test...")
+                        if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                            initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
+                            #execute PAT self test
+                            send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST) #Output data (text-only) is automatically sent to bus for downlink
+                        elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                            #Check if camera failure is to blame and run self test in camera initialization loop
+                            log_pat_status()
+                            send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                        else:
+                            log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
+                            log_pat_status()
+                            ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
+                            no_test_error = False
                     else:
-                        log_to_hk('ERROR CMD PL_SELF_TEST - ALL_SELF_TEST: PAT process not in CAMERA INIT or STANDBY.')
-                        log_pat_status()
-                        ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
-                        no_test_error = False
+                        no_test_error = False 
 
                     if(no_test_error):
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
@@ -864,123 +882,125 @@ while True:
             log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
 
             #heat to 0C (if not already there)
-            counter_heartbeat = heat_to_0C(counter_heartbeat) 
+            success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) 
+            if(success_heating or OVERRIDE_HEAT_TO_0C):
+                #General self test:
+                log_to_hk("Running General Self Test...")
+                set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                log_to_hk(results_summary)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
-            #General self test:
-            log_to_hk("Running General Self Test...")
-            set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
-            log_to_hk(results_summary)
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                #Laser self test
+                log_to_hk("Running Laser Self Test...")
+                set_hk_ch_period(30) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                log_to_hk(results_summary)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
-            #Laser self test
-            log_to_hk("Running Laser Self Test...")
-            set_hk_ch_period(30) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
-            log_to_hk(results_summary)
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                #PAT self test
+                log_to_hk("Running PAT Self Test...")
+                set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                    initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
+                    #execute PAT self test
+                    send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                    for i in range(60): #max test time is about 60 sec
+                        #log_to_hk("Waiting for pat self test to finish")
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        time.sleep(1)
+                    log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
+                    pat_mode_id = get_pat_mode()
+                    send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
+                elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                    log_pat_status()
+                    log_to_hk("Camera is off - pat self test failed.")
+                    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+                else:
+                    log_pat_status()
+                    log_to_hk("Pat was not in standby mode, pat self test will not run")
+                    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
-            #PAT self test
-            log_to_hk("Running PAT Self Test...")
-            set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
-                #execute PAT self test
-                send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                for i in range(60): #max test time is about 60 sec
-                    #log_to_hk("Waiting for pat self test to finish")
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                    time.sleep(1)
-                log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
-                pat_mode_id = get_pat_mode()
-                send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
-            elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
-                log_pat_status()
-                log_to_hk("Camera is off - pat self test failed.")
-                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
-            else:
-                log_pat_status()
-                log_to_hk("Pat was not in standby mode, pat self test will not run")
-                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
-
-            #proceed to transmit
-            end_time = time.time()
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
-
-            #log transmit start time
-            start_time = time.time()
-
-            tx_pkt = tx_packet.txPacket(TRANSMIT_PPM, TRANSMIT_MESSAGE)
-            tx_pkt.pack()
-
-            control = fpga.read_reg(mmap.CTL)
-            if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
-
-            payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
-            flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
-
-            # seed = payload_seed
-            if(SEED_SETTING):
-                seed = payload_seed
-                ppm_input = [PPM4_THRESHOLDS[0], PPM4_THRESHOLDS[1]]
-            else:
-                seed = flat_sat_seed
-                ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
-
-            #Align seed to FGBG
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            tx_packet.seed_align(seed)
-            log_to_hk("Turn EDFA On")            
-
-            fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
-            time.sleep(0.1)
-            fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
-            time.sleep(0.1)
-            fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
-            time.sleep(2)
-
-            #set points are dependent on temperature
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
-            log_to_hk("PPM: "+str(ppm_order) +', EDFA Power: '+str(fpga.read_reg(34)))
-            while(abs(end_time - start_time) < TRANSMIT_TIME):
-
-                #Stall Fifo
-                fpga.write_reg(mmap.CTL, control | 0x8)
-
-                # # #Write to FIFO
-                tx_pkt.transmit(fpga, .1)
-
-                fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                    # success = False
-                    log_to_hk("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                    # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
-                    # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
-
-                if(fifo_len < 100): time.sleep(.005)
-
-                # #Release FIFO
-                fpga.write_reg(mmap.CTL, 0x7)
+                #proceed to transmit
                 end_time = time.time()
-                if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
-                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-            
-            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
 
-            power.edfa_off()
-            power.bias_off()
-            power.tec_off()
+                #log transmit start time
+                start_time = time.time()
 
-            #reset PAT:
-            send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+                tx_pkt = tx_packet.txPacket(TRANSMIT_PPM, TRANSMIT_MESSAGE)
+                tx_pkt.pack()
 
-            log_to_hk("END PL_DWNLINK_MODE - Transmit Session Complete")
-            ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
+                control = fpga.read_reg(mmap.CTL)
+                if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+
+                payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
+                flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+
+                # seed = payload_seed
+                if(SEED_SETTING):
+                    seed = payload_seed
+                    ppm_input = [PPM4_THRESHOLDS[0], PPM4_THRESHOLDS[1]]
+                else:
+                    seed = flat_sat_seed
+                    ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
+
+                #Align seed to FGBG
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                tx_packet.seed_align(seed)
+                log_to_hk("Turn EDFA On")            
+
+                fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                time.sleep(2)
+
+                #set points are dependent on temperature
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
+                log_to_hk("PPM: "+str(ppm_order) +', EDFA Power: '+str(fpga.read_reg(34)))
+                while(abs(end_time - start_time) < TRANSMIT_TIME):
+
+                    #Stall Fifo
+                    fpga.write_reg(mmap.CTL, control | 0x8)
+
+                    # # #Write to FIFO
+                    tx_pkt.transmit(fpga, .1)
+
+                    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                    if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                        # success = False
+                        log_to_hk("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                        # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+                        # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
+
+                    if(fifo_len < 100): time.sleep(.005)
+
+                    # #Release FIFO
+                    fpga.write_reg(mmap.CTL, 0x7)
+                    end_time = time.time()
+                    if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
+                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+
+                power.edfa_off()
+                power.bias_off()
+                power.tec_off()
+
+                #reset PAT:
+                send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+
+                log_to_hk("END PL_DWNLINK_MODE - Transmit Session Complete")
+                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
+            else:
+                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
