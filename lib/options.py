@@ -185,6 +185,10 @@ CAMERA_MIN_EXP = 10
 #Calibration Laser DAC setting
 CAL_LASER_DAC_SETTING = 6700
 
+#Timout Heat to 0C
+TIMEOUT_HEAT_TO_0C = 1200 #seconds
+OVERRIDE_HEAT_TO_0C = False #option to override heating to 0C if RTDs break or something and we want to test anyways
+
 # HK Options Settings
 HK_FPGA_REQ_ENABLE = 1
 HK_SYS_HK_SEND_ENABLE = 1
