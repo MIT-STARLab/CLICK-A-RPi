@@ -140,7 +140,9 @@ bool Tracking::verifyFrame(Image& frame, bool printFailure)
 			log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame verified, tuning camera parameters");
 			return true;
 		}
-		else log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
+		else if(printFailure){
+			log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame has good properties but grouping did not succeed");
+		}
 	}
 	else if(printFailure){
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame check failed! ",
