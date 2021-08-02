@@ -6,6 +6,7 @@ MESSAGE_TIMEOUT = 5000 # wait 5 seconds for ZeroMQ response
 
 # File management
 SYMLINK_MAX = 100
+FILE_MGMT_MAX = 100
 
 #Default Seed register settings
 DEFAULT_TEC_MSB = 5
