@@ -425,6 +425,9 @@ while True:
             log_to_hk('ACK CMD PL_ZIP_DOWNLINK_FILE')
             ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_ZIP_DOWNLINK_PAT_DATA):
+            pass
+
         elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
             disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_DISASSEMBLE_FILE')
@@ -476,8 +479,32 @@ while True:
                 ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
             get_pat_mode() #print current pat mode to hk telemetry
 
+        elif(CMD_ID == CMD_PL_UPDATE_PAT_OFFSET_PARAMS):
+            len_new_parameter_data = (ipc_rxcompacket.size - 2)//4
+            flag, new_parameter_data = struct.unpack('!H%df' % len_new_parameter_data, ipc_rxcompacket.payload)
+            num_offset_params = len(NAMES_OFFSET_PARAMS)
+            bool_update_row = [0]*num_offset_params
+            for i in range(0,num_offset_params):
+                bool_update_row[i] = (flag >> (15-i)) & 1
+
+            if(len_new_parameter_data == sum(bool_update_row)): 
+                #update parameter values
+                with open('offsetParams.csv', mode = 'w') as csvfile:
+                    csv_writer = csv.writer(csvfile, delimiter=',')
+                    j = 0
+                    for i in range(0,num_offset_params):
+                        if(bool_update_row[i]):
+                            csv_writer.writerow([NAMES_OFFSET_PARAMS[i], " %s" % new_parameter_data[j]])
+                            j += 1
+                
+                log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
+                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+            else:
+                log_to_hk("ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
+                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload) #TBR
+            window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
