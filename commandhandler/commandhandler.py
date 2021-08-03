@@ -426,7 +426,9 @@ while True:
             ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_ZIP_DOWNLINK_PAT_DATA):
-            pass
+            zip_downlink_pat_data(ipc_rxcompacket.payload, socket_tx_packets)
+            log_to_hk('ACK CMD PL_ZIP_DOWNLINK_PAT_DATA')
+            ack_to_hk(CMD_PL_ZIP_DOWNLINK_PAT_DATA, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
             disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)

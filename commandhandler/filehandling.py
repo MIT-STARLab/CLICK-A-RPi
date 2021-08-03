@@ -51,15 +51,22 @@ def auto_downlink_file(rx_pkt_payload, socket_tx_packets):
     request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
     request_file(request_file_cmd, socket_tx_packets)
 
-def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
+def zip_downlink_file(rx_pkt_payload, socket_tx_packets, zip_file_stem = ""):
     req_raw_size = len(rx_pkt_payload) - 7
     flag, transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!BHHH%ds'%req_raw_size, rx_pkt_payload)
     file_name = file_name_payload[0:file_name_len]
 
     #zip file
     try:
-        zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
-        os.system('tar -zcvf %s %s' % (zip_file_name, file_name))
+        if not zip_file_stem:
+            #custom zip file name
+            zip_file_name = '%s.tar.gz' % zip_file_stem
+        else:
+            #default zip file name
+            zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
+        
+        #zip with tar
+        os.system('tar -zcvf %s %s' % (zip_file_name, file_name)) 
 
         if(flag != 0x00): 
             #downlink zip file
@@ -80,6 +87,31 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
     except Exception as e:
         send_exception(socket_tx_packets, e)
 
+def zip_downlink_pat_data(rx_pkt_payload, socket_tx_packets):
+    downlink_flag, chronological_flag, transfer_id, chunk_size, directory_id = struct.unpack('!BBHHH', rx_pkt_payload)
+    if(chronological_flag == 0x00):
+        #directory id is chronological order (i.e. directory id = experiment id)
+        file_name = "/root/log/pat/%d" % directory_id
+        file_name_len = len(file_name)
+        tx_packet_payload = struct.pack('!BHHH%ds'%file_name_len, downlink_flag, transfer_id, chunk_size, file_name_len, file_name)
+        zip_downlink_file(tx_packet_payload, socket_tx_packets)
+    else:
+        #directory id is reverse chronological order (i.e. directory id = max_exp_id - exp_id)
+        try:
+            pat_directory_listing = os.listdir('/root/log/pat') #Get directory list
+            pat_exp_ids = []
+            for directory in pat_directory_listing:
+                if(directory.isdigit()):
+                    pat_exp_ids.append(int(directory))
+            pat_exp_ids.sort(reverse=True)
+            exp_id = pat_exp_ids[directory_id] #index with 0 as most recent experiment, 1 as previous experiment, etc.
+            file_name = "/root/log/pat/%d" % exp_id
+            file_name_len = len(file_name)
+            tx_packet_payload = struct.pack('!BHHH%ds'%file_name_len, downlink_flag, transfer_id, chunk_size, file_name_len, file_name)
+            zip_downlink_file(tx_packet_payload, socket_tx_packets, str(directory_id))
+            
+        except Exception as e:
+            send_exception(socket_tx_packets, e)
 
 def disassemble_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 6
