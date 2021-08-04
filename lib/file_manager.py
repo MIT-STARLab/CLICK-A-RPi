@@ -52,12 +52,9 @@ class ManagedFileOpen:
                 key_writer.writeheader()
                 #key_writer.writerows(key_reader)
                 file_data = list(key_reader)
-                print('file_data: ', file_data)
                 file_count = len(file_data)
-                print('file_count: ', file_count)
                 excess_file_count = file_count - options.SYMLINK_MAX
                 for i in range(0,file_count):
-                    print('excess_file_count: ', excess_file_count)
                     if(excess_file_count > 0):
                         os.remove(file_data[i]['_name']) #clean up old files and stop indexing them
                         excess_file_count -= 1
