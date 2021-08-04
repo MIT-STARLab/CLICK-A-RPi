@@ -484,7 +484,9 @@ while True:
 
         elif(CMD_ID == CMD_PL_UPDATE_PAT_OFFSET_PARAMS):
             len_new_parameter_data = (ipc_rxcompacket.size - 2)//4
-            flag, new_parameter_data = struct.unpack('!H%df' % len_new_parameter_data, ipc_rxcompacket.payload)
+            packet_data = struct.unpack('!H%df' % len_new_parameter_data, ipc_rxcompacket.payload)
+            flag = packet_data[0]
+            new_parameter_data = packet_data[1:]
             num_offset_params = len(NAMES_OFFSET_PARAMS)
             bool_update_row = [0]*num_offset_params
             for i in range(0,num_offset_params):
