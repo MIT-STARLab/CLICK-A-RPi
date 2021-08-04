@@ -483,7 +483,7 @@ while True:
 
         elif(CMD_ID == CMD_PL_UPDATE_PAT_OFFSET_PARAMS):
             len_new_parameter_data = (ipc_rxcompacket.size - 2)//4
-            flag, new_parameter_data = struct.unpack('!H%ds' % len_new_parameter_data, ipc_rxcompacket.payload)
+            flag, new_parameter_data = struct.unpack('!H%df' % len_new_parameter_data, ipc_rxcompacket.payload)
             num_offset_params = len(NAMES_OFFSET_PARAMS)
             bool_update_row = [0]*num_offset_params
             for i in range(0,num_offset_params):
@@ -496,7 +496,7 @@ while True:
                     j = 0
                     for i in range(0,num_offset_params):
                         if(bool_update_row[i]):
-                            csv_writer.writerow([NAMES_OFFSET_PARAMS[i], " %s" % new_parameter_data[j]])
+                            csv_writer.writerow([NAMES_OFFSET_PARAMS[i], " %f" % new_parameter_data[j]])
                             j += 1
                 
                 log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
