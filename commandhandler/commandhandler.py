@@ -12,6 +12,7 @@ import struct
 import math
 import hashlib
 import traceback
+import csv
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('/root/test/')
