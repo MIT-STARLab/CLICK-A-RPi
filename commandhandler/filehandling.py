@@ -402,7 +402,7 @@ def manage_file_staging():
     #count the number of directories in /root/file_staging/, and delete old directories if the directory limit is exceeded
     directory_listing = os.listdir('/root/file_staging') #Get directory list
     num_directories = len(directory_listing)
-    if(num_directories > FILE_MGMT_MAX)):
+    if(num_directories > FILE_MGMT_MAX):
         #create ordered integer list of transfer ids
         transfer_id_listing = [0]*num_directories #initialize list of transfer ids
         for i in range(0,num_directories):
