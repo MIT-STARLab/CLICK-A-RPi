@@ -56,7 +56,7 @@ class ManagedFileOpen:
                 file_count = len(file_data)
                 print('file_count: ', file_count)
                 excess_file_count = file_count - (options.SYMLINK_MAX + 1)
-                for i in range(0,file_count)
+                for i in range(0,file_count):
                     print('excess_file_count: ', excess_file_count)
                     if(excess_file_count > 0):
                         os.remove(file_data[i]['_name']) #clean up old files and stop indexing them
