@@ -55,7 +55,7 @@ class ManagedFileOpen:
                 print('file_data: ', file_data)
                 file_count = len(file_data)
                 print('file_count: ', file_count)
-                excess_file_count = file_count - (options.SYMLINK_MAX + 1)
+                excess_file_count = file_count - options.SYMLINK_MAX
                 for i in range(0,file_count):
                     print('excess_file_count: ', excess_file_count)
                     if(excess_file_count > 0):
