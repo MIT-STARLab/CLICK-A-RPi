@@ -42,7 +42,11 @@ class ManagedFileOpen:
             with gzip.open(idx_path,'r') as index_in, gzip.open(idx_path_temp,'w') as index_out:
 
                 key_reader = csv.DictReader(index_in,delimiter=',')
-                
+                file_listing = []
+                for row in key_reader:
+                    file_listing.append(row['_name'])
+                file_count = len(file_listing)
+
                 old_keys = key_reader.fieldnames
                 if old_keys: keys = old_keys + [k for k in new_keys if k not in old_keys]
                 else: keys = new_keys
@@ -50,7 +54,14 @@ class ManagedFileOpen:
                 key_writer = csv.DictWriter(index_out,fieldnames=keys,delimiter=',')
                 
                 key_writer.writeheader()
-                key_writer.writerows(key_reader)
+                #key_writer.writerows(key_reader)
+                excess_file_count = file_count - (options.SYMLINK_MAX + 1)
+                for row in key_reader:
+                    if(excess_file_count > 0):
+                        os.remove(row['_name']) #clean up old files and stop indexing them
+                        excess_file_count -= 1
+                    else:
+                        key_writer.writerow(row)
                 key_writer.writerow(self.tags)
                 
             os.remove(idx_path)
