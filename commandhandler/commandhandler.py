@@ -493,17 +493,33 @@ while True:
                 bool_update_row[i] = (flag >> (15-i)) & 1
 
             if(len_new_parameter_data == sum(bool_update_row)): 
-                #update parameter values
-                with open('offsetParams.csv', mode = 'w') as csvfile:
-                    csv_writer = csv.writer(csvfile, delimiter=',')
-                    j = 0
-                    for i in range(0,num_offset_params):
-                        if(bool_update_row[i]):
-                            csv_writer.writerow([NAMES_OFFSET_PARAMS[i], " %f" % new_parameter_data[j]])
-                            j += 1
-                
+                try:
+                    #update parameter values
+                    with open('/root/lib/offsetParams.csv', mode = 'r') as csvfile_read:
+                        csv_reader = csv.reader(csvfile_read, delimiter = ',')
+                        csv_data = list(csv_reader)
+
+                    len_csv_data = len(csv_data)
+                    len_default_csv_data = len(DEFAULT_DATA_OFFSET_PARAMS)
+                    with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
+                        csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                        j = 0
+                        for i in range(0,len_default_csv_data):
+                            if(bool_update_row[i]):
+                                csv_writer.writerow([DEFAULT_DATA_OFFSET_PARAMS[i][0], " %f" % new_parameter_data[j]])
+                                j += 1
+                            elif(len_csv_data != len_default_csv_data):
+                                #issue with previous file -> overwrite with defaults
+                                csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
+                            else:
+                                #re-use previous file values
+                                csv_writer.writerow(csv_data[i])
+
                 log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
                 ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+                except:
+                    log_to_hk('ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: ' + traceback.format_exc())
+                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
             else:
                 log_to_hk("ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
                 ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
