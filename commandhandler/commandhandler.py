@@ -483,46 +483,59 @@ while True:
             get_pat_mode() #print current pat mode to hk telemetry
 
         elif(CMD_ID == CMD_PL_UPDATE_PAT_OFFSET_PARAMS):
-            len_new_parameter_data = (ipc_rxcompacket.size - 2)//4
-            packet_data = struct.unpack('!H%df' % len_new_parameter_data, ipc_rxcompacket.payload)
-            flag = packet_data[0]
-            new_parameter_data = packet_data[1:]
-            num_offset_params = len(DEFAULT_DATA_OFFSET_PARAMS)
-            bool_update_row = [0]*num_offset_params
-            for i in range(0,num_offset_params):
-                bool_update_row[i] = (flag >> (15-i)) & 1
-
-            if(len_new_parameter_data == sum(bool_update_row)): 
-                try:
-                    #update parameter values
-                    with open('/root/lib/offsetParams.csv', mode = 'r') as csvfile_read:
-                        csv_reader = csv.reader(csvfile_read, delimiter = ',')
-                        csv_data = list(csv_reader)
-
-                    len_csv_data = len(csv_data)
-                    len_default_csv_data = len(DEFAULT_DATA_OFFSET_PARAMS)
-                    with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
-                        csv_writer = csv.writer(csvfile_write, delimiter = ',')
-                        j = 0
-                        for i in range(0,len_default_csv_data):
-                            if(bool_update_row[i]):
-                                csv_writer.writerow([DEFAULT_DATA_OFFSET_PARAMS[i][0], " %f" % new_parameter_data[j]])
-                                j += 1
-                            elif(len_csv_data != len_default_csv_data):
-                                #issue with previous file -> overwrite with defaults
-                                csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
-                            else:
-                                #re-use previous file values
-                                csv_writer.writerow(csv_data[i])
-
-                    log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
-                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
-                except:
-                    log_to_hk('ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: ' + traceback.format_exc())
-                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+            len_new_parameter_data = (ipc_rxcompacket.size - 3)//4
+            if(len_new_parameter_data == 0):
+                packet_data = struct.unpack('!BH', ipc_rxcompacket.payload)
             else:
-                log_to_hk("ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
-                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+                packet_data = struct.unpack('!BH%df' % len_new_parameter_data, ipc_rxcompacket.payload)
+            
+            reset_flag = packet_data[0]
+            len_default_csv_data = len(DEFAULT_DATA_OFFSET_PARAMS)
+            if(reset_flag > 0):
+                with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
+                    csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                    for i in range(0,len_default_csv_data):
+                        csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
+                
+                log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
+                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+            else:
+                #update parameter values
+                flag = packet_data[1]
+                new_parameter_data = packet_data[2:]
+                bool_update_row = [0]*len_default_csv_data
+                for i in range(0,len_default_csv_data):
+                    bool_update_row[i] = (flag >> (15-i)) & 1
+
+                if(len_new_parameter_data == sum(bool_update_row)): 
+                    try:
+                        with open('/root/lib/offsetParams.csv', mode = 'r') as csvfile_read:
+                            csv_reader = csv.reader(csvfile_read, delimiter = ',')
+                            csv_data = list(csv_reader)
+                        len_csv_data = len(csv_data)
+
+                        with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
+                            csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                            j = 0
+                            for i in range(0,len_default_csv_data):
+                                if(bool_update_row[i]):
+                                    csv_writer.writerow([DEFAULT_DATA_OFFSET_PARAMS[i][0], " %f" % new_parameter_data[j]])
+                                    j += 1
+                                elif(len_csv_data != len_default_csv_data):
+                                    #issue with previous file -> overwrite with defaults
+                                    csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
+                                else:
+                                    #re-use previous file values
+                                    csv_writer.writerow(csv_data[i])
+
+                        log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
+                        ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+                    except:
+                        log_to_hk('ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: ' + traceback.format_exc())
+                        ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+                else:
+                    log_to_hk("ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
+                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload)
