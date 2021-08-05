@@ -487,7 +487,7 @@ while True:
             packet_data = struct.unpack('!H%df' % len_new_parameter_data, ipc_rxcompacket.payload)
             flag = packet_data[0]
             new_parameter_data = packet_data[1:]
-            num_offset_params = len(NAMES_OFFSET_PARAMS)
+            num_offset_params = len(DEFAULT_DATA_OFFSET_PARAMS)
             bool_update_row = [0]*num_offset_params
             for i in range(0,num_offset_params):
                 bool_update_row[i] = (flag >> (15-i)) & 1
