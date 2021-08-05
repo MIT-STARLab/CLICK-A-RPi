@@ -60,7 +60,7 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets, zip_file_stem = ""):
     try:
         if zip_file_stem:
             #custom zip file name
-            zip_file_name = '%s.tar.gz' % zip_file_stem
+            zip_file_name = '/root/log/pat/%s.tar.gz' % zip_file_stem
         else:
             #default zip file name
             zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
