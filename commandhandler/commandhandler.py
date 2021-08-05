@@ -12,6 +12,7 @@ import struct
 import math
 import hashlib
 import traceback
+import csv
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('/root/test/')
@@ -425,6 +426,11 @@ while True:
             log_to_hk('ACK CMD PL_ZIP_DOWNLINK_FILE')
             ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_ZIP_DOWNLINK_PAT_DATA):
+            zip_downlink_pat_data(ipc_rxcompacket.payload, socket_tx_packets)
+            log_to_hk('ACK CMD PL_ZIP_DOWNLINK_PAT_DATA')
+            ack_to_hk(CMD_PL_ZIP_DOWNLINK_PAT_DATA, CMD_ACK)
+
         elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
             disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_DISASSEMBLE_FILE')
@@ -476,8 +482,63 @@ while True:
                 ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
             get_pat_mode() #print current pat mode to hk telemetry
 
+        elif(CMD_ID == CMD_PL_UPDATE_PAT_OFFSET_PARAMS):
+            len_new_parameter_data = (ipc_rxcompacket.size - 3)//4
+            if(len_new_parameter_data == 0):
+                packet_data = struct.unpack('!BH', ipc_rxcompacket.payload)
+            else:
+                packet_data = struct.unpack('!BH%df' % len_new_parameter_data, ipc_rxcompacket.payload)
+            
+            reset_flag = packet_data[0]
+            len_default_csv_data = len(DEFAULT_DATA_OFFSET_PARAMS)
+            if(reset_flag > 0):
+                with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
+                    csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                    for i in range(0,len_default_csv_data):
+                        csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
+                
+                log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
+                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+            else:
+                #update parameter values
+                flag = packet_data[1]
+                new_parameter_data = packet_data[2:]
+                bool_update_row = [0]*len_default_csv_data
+                for i in range(0,len_default_csv_data):
+                    bool_update_row[i] = (flag >> (15-i)) & 1
+
+                if(len_new_parameter_data == sum(bool_update_row)): 
+                    try:
+                        with open('/root/lib/offsetParams.csv', mode = 'r') as csvfile_read:
+                            csv_reader = csv.reader(csvfile_read, delimiter = ',')
+                            csv_data = list(csv_reader)
+                        len_csv_data = len(csv_data)
+
+                        with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
+                            csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                            j = 0
+                            for i in range(0,len_default_csv_data):
+                                if(bool_update_row[i]):
+                                    csv_writer.writerow([DEFAULT_DATA_OFFSET_PARAMS[i][0], " %f" % new_parameter_data[j]])
+                                    j += 1
+                                elif(len_csv_data != len_default_csv_data):
+                                    #issue with previous file -> overwrite with defaults
+                                    csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
+                                else:
+                                    #re-use previous file values
+                                    csv_writer.writerow(csv_data[i])
+
+                        log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
+                        ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+                    except:
+                        log_to_hk('ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: ' + traceback.format_exc())
+                        ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+                else:
+                    log_to_hk("ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
+                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
-            window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload) #TBR
+            window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                 if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))

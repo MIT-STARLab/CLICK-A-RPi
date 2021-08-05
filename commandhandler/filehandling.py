@@ -17,7 +17,7 @@ sys.path.append('../lib/') #test path
 
 from ipc_packets import TxPacket, RxCommandPacket
 from options import FL_ERR_EMPTY_DIR, FL_ERR_FILE_NAME, FL_ERR_SEQ_LEN, FL_ERR_MISSING_CHUNK, FL_SUCCESS
-from options import TX_PACKETS_PORT, TLM_DL_FILE, TLM_ASSEMBLE_FILE, TLM_DISASSEMBLE_FILE
+from options import TX_PACKETS_PORT, TLM_DL_FILE, TLM_ASSEMBLE_FILE, TLM_DISASSEMBLE_FILE, FILE_MGMT_MAX
 from errors import *
 
 class FileError(Exception):
@@ -57,28 +57,51 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
     file_name = file_name_payload[0:file_name_len]
 
     #zip file
-    # try:
-    zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
-    os.system('tar -zcvf %s %s' % (zip_file_name, file_name))
+    try:
+        #zip with tar
+        zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
+        os.system('tar -zcvf %s %s' % (zip_file_name, file_name)) 
 
-    if(flag != 0x00): 
-        #downlink zip file
-        zip_file_name_len = len(zip_file_name)
-        tx_pkt_payload = struct.pack('!HHH%ds'%(zip_file_name_len), transfer_id, chunk_size, zip_file_name_len, zip_file_name)
-        disassemble_file(tx_pkt_payload, socket_tx_packets)
+        if(flag != 0x00): 
+            #downlink zip file
+            zip_file_name_len = len(zip_file_name)
+            tx_pkt_payload = struct.pack('!HHH%ds'%(zip_file_name_len), transfer_id, chunk_size, zip_file_name_len, zip_file_name)
+            disassemble_file(tx_pkt_payload, socket_tx_packets)
 
-        request_flag = 0xFF
-        request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
-        request_file(request_file_cmd, socket_tx_packets)
+            request_flag = 0xFF
+            request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
+            request_file(request_file_cmd, socket_tx_packets)
 
-        if(flag == 0xFF):
-            #delete zip file            
-            recursive = 0x00 #not recursive
-            del_payload = struct.pack('!BH%ds'%(zip_file_name_len), recursive, zip_file_name_len, zip_file_name)
-            del_file(del_payload, socket_tx_packets)
-            
-    # except Exception as e:
-    #     send_exception(socket_tx_packets, e)
+            if(flag == 0xFF):
+                #delete zip file            
+                recursive = 0x00 #not recursive
+                del_payload = struct.pack('!BH%ds'%(zip_file_name_len), recursive, zip_file_name_len, zip_file_name)
+                del_file(del_payload, socket_tx_packets)
+                            
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
+
+def zip_downlink_pat_data(rx_pkt_payload, socket_tx_packets):
+    downlink_flag, chronological_flag, transfer_id, chunk_size, directory_id = struct.unpack('!BBHHH', rx_pkt_payload)
+    if(chronological_flag == 0x00):
+        #directory id is chronological order (i.e. directory id = experiment id)
+        file_name = "/root/log/pat/%d" % directory_id
+    else:
+        #directory id is reverse chronological order (i.e. directory id = max_exp_id - exp_id)
+        try:
+            pat_directory_listing = os.listdir('/root/log/pat') #Get directory list
+            pat_exp_ids = []
+            for directory in pat_directory_listing:
+                if(directory.isdigit()):
+                    pat_exp_ids.append(int(directory))
+            pat_exp_ids.sort(reverse=True)
+            exp_id = pat_exp_ids[directory_id] #index with 0 as most recent experiment, 1 as previous experiment, etc.
+            file_name = "/root/log/pat/%d" % exp_id
+        except Exception as e:
+            send_exception(socket_tx_packets, e)
+    file_name_len = len(file_name)
+    tx_packet_payload = struct.pack('!BHHH%ds'%file_name_len, downlink_flag, transfer_id, chunk_size, file_name_len, file_name)
+    zip_downlink_file(tx_packet_payload, socket_tx_packets)
 
 def disassemble_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 6
@@ -125,6 +148,9 @@ def disassemble_file(rx_pkt_payload, socket_tx_packets):
         txpacket = TxPacket()
         raw_packet = txpacket.encode(APID = TLM_DISASSEMBLE_FILE, payload = struct.pack('!HH', transfer_id, seq_num))
         socket_tx_packets.send(raw_packet)
+
+        #Memory Management
+        manage_file_staging()
 
     except Exception as e:
         send_exception(socket_tx_packets, e)
@@ -360,6 +386,23 @@ def del_file(rx_pkt_payload, socket_tx_packets):
             os.remove(file_name)
     except Exception as e:
         send_exception(socket_tx_packets, e)
+
+
+def manage_file_staging():
+    #count the number of directories in /root/file_staging/, and delete old directories if the directory limit is exceeded
+    directory_listing = os.listdir('/root/file_staging') #Get directory list
+    num_directories = len(directory_listing)
+    if(num_directories > FILE_MGMT_MAX):
+        #create ordered integer list of transfer ids
+        transfer_id_listing = [0]*num_directories #initialize list of transfer ids
+        for i in range(0,num_directories):
+            transfer_id_listing[i] = int(directory_listing[i])
+        transfer_id_listing.sort()
+
+        #delete old directories
+        num_deletions = num_directories - FILE_MGMT_MAX
+        for i in range(0,num_deletions):
+            shutil.rmtree('/root/file_staging/%d' % transfer_id_listing[i])
 
 
 def auto_assemble_file(rx_pkt_payload, socket_tx_packets):
