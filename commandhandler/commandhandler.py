@@ -515,8 +515,8 @@ while True:
                                 #re-use previous file values
                                 csv_writer.writerow(csv_data[i])
 
-                log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
-                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+                    log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
+                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
                 except:
                     log_to_hk('ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: ' + traceback.format_exc())
                     ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
