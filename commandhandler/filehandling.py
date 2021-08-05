@@ -58,7 +58,7 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets, zip_file_stem = ""):
 
     #zip file
     try:
-        if not zip_file_stem:
+        if zip_file_stem:
             #custom zip file name
             zip_file_name = '%s.tar.gz' % zip_file_stem
         else:
