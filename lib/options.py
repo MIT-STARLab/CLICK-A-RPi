@@ -5,8 +5,9 @@ COMMAND_HANDLERS_COUNT = 3
 MESSAGE_TIMEOUT = 5000 # wait 5 seconds for ZeroMQ response
 
 # File management
-SYMLINK_MAX = 100
-FILE_MGMT_MAX = 100
+SYMLINK_MAX = 100 #Limits the number of files in /root/log/self_test and /root/log/laser_self_test
+FILE_MGMT_MAX = 100 #Limits the number of files in /root/file_staging
+#Note: See pat/log.h for file limit on /root/log/pat
 
 #Default Seed register settings
 DEFAULT_TEC_MSB = 5
