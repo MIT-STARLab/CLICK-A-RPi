@@ -13,7 +13,6 @@ import math
 import hashlib
 import traceback
 import csv
-import ast
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('/root/test/')
@@ -89,64 +88,6 @@ poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
-
-### Functions for overwriting lib/options.py
-def reset_options():
-    os.system('cp /root/lib/options.txt /root/lib/options.py')
-
-def parse_cmd_data(data_str):
-    try:
-        data = ast.literal_eval(data_str)
-        success = True
-    except:
-        data = []
-        success = False
-    return success, data
-
-def parse_line(line, var_name):
-    if(line[0] == '#'):
-        return False
-    line_data = line.split('=')
-    for i in range(0,len(line_data)):
-        line_data[i] = line_data[i].strip()
-    if(line_data[0] == var_name):
-        return True
-    else:
-        return False
-
-QUOTE = '"'
-def generate_line(var_name, var_value):
-    if(isinstance(var_value, str)):
-        return var_name + " = " + QUOTE + var_value + QUOTE + "\n"
-    else:
-        return var_name + " = " + str(var_value) + "\n"
-
-def update_params(new_data):
-    #assumes new_data = [['NAME_1', Data_1], ['NAME_2', Data_2], ..., ['Name_N', Data_N]]
-    len_new_data = len(new_data)
-    var_names = []
-    var_values = []
-    for i in range(0,len_new_data):
-        var_names.append(new_data[i][0])
-        var_values.append(new_data[i][1])
-
-    with open('options.py', mode = 'r') as file_read:
-        file_data = list(file_read)
-
-    #find parameter and update it
-    success_counter = 0
-    for i in range(0,len(file_data)):
-        for j in range(0,len_new_data):
-            if(parse_line(file_data[i], var_names[j])):
-                file_data[i] = generate_line(var_names[j], var_values[j])
-                success_counter += 1
-    success = (success_counter == len_new_data)
-
-    with open('options.py', mode = 'w') as file_write:
-        file_write.writelines(file_data)
-
-    return success
-###
 
 def send_pat_command(socket_PAT_control, command, payload = ''):
     #Define Command Payload
