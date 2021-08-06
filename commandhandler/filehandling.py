@@ -429,7 +429,11 @@ def auto_assemble_file(rx_pkt_payload, socket_tx_packets):
 
 ### Functions for overwriting /root/lib/options.py
 def reset_options():
-    os.system('cp /root/lib/options.txt /root/lib/options.py')
+    try:
+        os.system('cp /root/lib/options.txt /root/lib/options.py')
+        return True
+    except:
+        return False
 
 def parse_cmd_data(data_str):
     try:
@@ -441,8 +445,11 @@ def parse_cmd_data(data_str):
     return success, data
 
 def parse_line(line, var_name):
+    #detect commented line
     if(line[0] == '#'):
         return False
+
+    #detect variable name in line of the form: NAME = <Value>
     line_data = line.split('=')
     for i in range(0,len(line_data)):
         line_data[i] = line_data[i].strip()
@@ -458,7 +465,7 @@ def generate_line(var_name, var_value):
     else:
         return var_name + " = " + str(var_value) + "\n"
 
-def update_params(new_data):
+def update_options(new_data):
     #assumes new_data = [['NAME_1', Data_1], ['NAME_2', Data_2], ..., ['Name_N', Data_N]]
     len_new_data = len(new_data)
     var_names = []
