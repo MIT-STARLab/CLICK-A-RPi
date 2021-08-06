@@ -13,6 +13,7 @@ import math
 import hashlib
 import traceback
 import csv
+import ast
 #importing options and functions
 sys.path.append('/root/lib/')
 sys.path.append('/root/test/')
@@ -88,6 +89,64 @@ poller_PAT_status.register(socket_PAT_status, zmq.POLLIN)
 
 # socket needs some time to set up. give it a second - else the first message will be lost
 time.sleep(1)
+
+### Functions for overwriting lib/options.py
+def reset_options():
+    os.system('cp /root/lib/options.txt /root/lib/options.py')
+
+def parse_cmd_data(data_str):
+    try:
+        data = ast.literal_eval(data_str)
+        success = True
+    except:
+        data = []
+        success = False
+    return success, data
+
+def parse_line(line, var_name):
+    if(line[0] == '#'):
+        return False
+    line_data = line.split('=')
+    for i in range(0,len(line_data)):
+        line_data[i] = line_data[i].strip()
+    if(line_data[0] == var_name):
+        return True
+    else:
+        return False
+
+QUOTE = '"'
+def generate_line(var_name, var_value):
+    if(isinstance(var_value, str)):
+        return var_name + " = " + QUOTE + var_value + QUOTE + "\n"
+    else:
+        return var_name + " = " + str(var_value) + "\n"
+
+def update_params(new_data):
+    #assumes new_data = [['NAME_1', Data_1], ['NAME_2', Data_2], ..., ['Name_N', Data_N]]
+    len_new_data = len(new_data)
+    var_names = []
+    var_values = []
+    for i in range(0,len_new_data):
+        var_names.append(new_data[i][0])
+        var_values.append(new_data[i][1])
+
+    with open('options.py', mode = 'r') as file_read:
+        file_data = list(file_read)
+
+    #find parameter and update it
+    success_counter = 0
+    for i in range(0,len(file_data)):
+        for j in range(0,len_new_data):
+            if(parse_line(file_data[i], var_names[j])):
+                file_data[i] = generate_line(var_names[j], var_values[j])
+                success_counter += 1
+    success = (success_counter == len_new_data)
+
+    with open('options.py', mode = 'w') as file_write:
+        file_write.writelines(file_data)
+
+    return success
+###
 
 def send_pat_command(socket_PAT_control, command, payload = ''):
     #Define Command Payload
@@ -1066,36 +1125,6 @@ while True:
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
             log_to_hk("ACK CMD PL_DEBUG_MODE with start time: %s" % (start_time))
-
-        elif(CMD_ID == CMD_PL_UPDATE_SEED_PARAMS):
-            set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
-            set_fpga_data = struct.unpack('!%dI'%(set_fpga_num_reg+3), ipc_rxcompacket.payload)
-            rq_number = set_fpga_data[0]
-            start_addr = set_fpga_data[1]
-            num_registers = set_fpga_data[2]
-            write_data = list(set_fpga_data[3:])
-            print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
-            if(num_registers != len(write_data)):
-                log_to_hk('ERROR CMD PL_SET_FPGA - Packet Error: expected number of registers (= ' + str(num_registers) +  ' not equal to data length (= ' + str(len(write_data)))
-            else:
-                fpga.write_reg(start_addr, write_data)
-                check_write_data = fpga.read_reg(start_addr, num_registers)
-                addresses = range(start_addr, start_addr+num_registers)
-                return_message = ""
-                num_errors = 0
-                for i in range(num_registers):
-                    if check_write_data[i] != write_data[i]:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
-                        num_errors += 1
-                    else:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
-                if(num_errors == 0):
-                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
-                else:
-                    log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
-
 
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
