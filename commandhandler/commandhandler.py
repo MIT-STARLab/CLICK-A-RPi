@@ -471,6 +471,30 @@ while True:
             log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')
             ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_UPDATE_OPTIONS):
+            data_str_raw_size = ipc_rxcompacket.size - 3
+            reset_flag, len_data_str, data_str = struct.unpack('!BH%ds'%data_str_raw_size, ipc_rxcompacket.payload)
+            if(reset_flag > 0):
+                if(reset_options()):
+                    log_to_hk('ACK CMD PL_UPDATE_OPTIONS')
+                    ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ACK)
+                else:
+                    log_to_hk('ERR CMD PL_UPDATE_OPTIONS - reset_options failed.')
+                    ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ERR)
+            else:
+                data_str = data_str[0:len_data_str]
+                parse_success, data = parse_cmd_data(data_str)
+                if(parse_success):
+                    if(update_options(data, socket_tx_packets)):
+                        log_to_hk('ACK CMD PL_UPDATE_OPTIONS')
+                        ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ACK)
+                    else:
+                        log_to_hk('ERR CMD PL_UPDATE_OPTIONS - update_options failed.')
+                        ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ERR)
+                else:
+                    log_to_hk('ERR CMD PL_UPDATE_OPTIONS - parse_cmd_data failed.')
+                    ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ERR)
+
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             pat_mode_cmd = pat_mode_cmd_tuple[0]
@@ -1066,36 +1090,6 @@ while True:
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()
             log_to_hk("ACK CMD PL_DEBUG_MODE with start time: %s" % (start_time))
-
-        elif(CMD_ID == CMD_PL_UPDATE_SEED_PARAMS):
-            set_fpga_num_reg = (ipc_rxcompacket.size - 4)//4
-            set_fpga_data = struct.unpack('!%dI'%(set_fpga_num_reg+3), ipc_rxcompacket.payload)
-            rq_number = set_fpga_data[0]
-            start_addr = set_fpga_data[1]
-            num_registers = set_fpga_data[2]
-            write_data = list(set_fpga_data[3:])
-            print ('Request Number = ' + str(rq_number) + ', Start Address = ' + str(start_addr) + ', Num Registers = ' + str(num_registers) + ', Write Data = ' + str(write_data)) #debug print
-            if(num_registers != len(write_data)):
-                log_to_hk('ERROR CMD PL_SET_FPGA - Packet Error: expected number of registers (= ' + str(num_registers) +  ' not equal to data length (= ' + str(len(write_data)))
-            else:
-                fpga.write_reg(start_addr, write_data)
-                check_write_data = fpga.read_reg(start_addr, num_registers)
-                addresses = range(start_addr, start_addr+num_registers)
-                return_message = ""
-                num_errors = 0
-                for i in range(num_registers):
-                    if check_write_data[i] != write_data[i]:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + " != " + str(write_data[i]) + "\n")
-                        num_errors += 1
-                    else:
-                        return_message += ("REG: " + str(addresses[i]) + ", VAL = " + str(check_write_data[i]) + "\n")
-                if(num_errors == 0):
-                    log_to_hk('ACK CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ACK)
-                else:
-                    log_to_hk('ERROR CMD PL_SET_FPGA. Request Number = ' + str(rq_number) + "\n" + return_message)
-                    ack_to_hk(CMD_PL_SET_FPGA, CMD_ERR)
-
 
         else: #default
             log_to_hk('ERROR: Unrecognized CMD_ID = ' + str(CMD_ID))
