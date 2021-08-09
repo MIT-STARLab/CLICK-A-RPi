@@ -471,6 +471,30 @@ while True:
             log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')
             ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_UPDATE_OPTIONS):
+            data_str_raw_size = ipc_rxcompacket.size - 3
+            reset_flag, len_data_str, data_str = struct.unpack('!BH%ds'%data_str_raw_size, ipc_rxcompacket.payload)
+            if(reset_flag > 0):
+                if(reset_options()):
+                    log_to_hk('ACK CMD PL_UPDATE_OPTIONS')
+                    ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ACK)
+                else:
+                    log_to_hk('ERR CMD PL_UPDATE_OPTIONS - reset_options failed.')
+                    ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ERR)
+            else:
+                data_str = data_str[0:len_data_str]
+                parse_success, data = parse_cmd_data(data_str)
+                if(parse_success):
+                    if(update_options(data, socket_tx_packets)):
+                        log_to_hk('ACK CMD PL_UPDATE_OPTIONS')
+                        ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ACK)
+                    else:
+                        log_to_hk('ERR CMD PL_UPDATE_OPTIONS - update_options failed.')
+                        ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ERR)
+                else:
+                    log_to_hk('ERR CMD PL_UPDATE_OPTIONS - parse_cmd_data failed.')
+                    ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ERR)
+
         elif(CMD_ID == CMD_PL_SET_PAT_MODE):
             pat_mode_cmd_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             pat_mode_cmd = pat_mode_cmd_tuple[0]

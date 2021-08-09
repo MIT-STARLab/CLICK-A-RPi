@@ -465,29 +465,34 @@ def generate_line(var_name, var_value):
     else:
         return var_name + " = " + str(var_value) + "\n"
 
-def update_options(new_data):
+def update_options(new_data, socket_tx_packets):
     #assumes new_data = [['NAME_1', Data_1], ['NAME_2', Data_2], ..., ['Name_N', Data_N]]
-    len_new_data = len(new_data)
-    var_names = []
-    var_values = []
-    for i in range(0,len_new_data):
-        var_names.append(new_data[i][0])
-        var_values.append(new_data[i][1])
+    success = False
+    try:
+        len_new_data = len(new_data)
+        var_names = []
+        var_values = []
+        for i in range(0,len_new_data):
+            var_names.append(new_data[i][0])
+            var_values.append(new_data[i][1])
 
-    with open('/root/lib/options.py', mode = 'r') as file_read:
-        file_data = list(file_read)
+        with open('/root/lib/options.py', mode = 'r') as file_read:
+            file_data = list(file_read)
 
-    #find parameter and update it
-    success_counter = 0
-    for i in range(0,len(file_data)):
-        for j in range(0,len_new_data):
-            if(parse_line(file_data[i], var_names[j])):
-                file_data[i] = generate_line(var_names[j], var_values[j])
-                success_counter += 1
-    success = (success_counter == len_new_data)
+        #find parameter and update it
+        success_counter = 0
+        for i in range(0,len(file_data)):
+            for j in range(0,len_new_data):
+                if(parse_line(file_data[i], var_names[j])):
+                    file_data[i] = generate_line(var_names[j], var_values[j])
+                    success_counter += 1
+        success = (success_counter == len_new_data)
 
-    with open('/root/lib/options.py', mode = 'w') as file_write:
-        file_write.writelines(file_data)
+        with open('/root/lib/options.py', mode = 'w') as file_write:
+            file_write.writelines(file_data)
+
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
     return success
 ###
