@@ -1040,6 +1040,8 @@ while True:
                     seed = flat_sat_seed
                     ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
 
+                log_to_hk("seed: " + str(seed) + "; " + "ppm_input: " + str(ppm_input))
+
                 #Align seed to FGBG
                 counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                 tx_packet.seed_align(seed)
@@ -1055,7 +1057,7 @@ while True:
                 #set points are dependent on temperature
                 counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                 ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
-                log_to_hk("PPM: "+str(ppm_order) +', EDFA Power: '+str(fpga.read_reg(34)))
+                log_to_hk("PPM: " + str(ppm_order) + ', EDFA Power: ' + str(fpga.read_reg(34)))
                 while(abs(end_time - start_time) < TRANSMIT_TIME):
 
                     #Stall Fifo
