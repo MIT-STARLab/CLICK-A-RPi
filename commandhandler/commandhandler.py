@@ -380,7 +380,7 @@ while True:
             log_to_hk('ACK CMD PL_EMERGENCY_REVERT')
             ack_to_hk(CMD_PL_EMERGENCY_REVERT, CMD_ACK)
             time.sleep(1)
-            os.system("systemctl start emergency-revert.service") #reflash the RPi FSW to golden image state
+            os.system("systemctl start emergency-revert") #reflash the RPi FSW to golden image state
 
         elif(CMD_ID == CMD_PL_EXEC_FILE):
             ex_raw_size = ipc_rxcompacket.size - 4
