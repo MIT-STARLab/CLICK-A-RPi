@@ -376,6 +376,12 @@ while True:
             log_to_hk('ACK CMD PL_ENABLE_TIME')
             ack_to_hk(CMD_PL_ENABLE_TIME, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_EMERGENCY_REVERT):
+            log_to_hk('ACK CMD PL_EMERGENCY_REVERT')
+            ack_to_hk(CMD_PL_EMERGENCY_REVERT, CMD_ACK)
+            time.sleep(1)
+            os.system("systemctl start emergency-revert") #reflash the RPi FSW to golden image state
+
         elif(CMD_ID == CMD_PL_EXEC_FILE):
             ex_raw_size = ipc_rxcompacket.size - 4
             output_to_file, file_out_num, file_path_len, file_path_payload = struct.unpack('!BBH%ds'%ex_raw_size, ipc_rxcompacket.payload)
@@ -1034,6 +1040,8 @@ while True:
                     seed = flat_sat_seed
                     ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
 
+                log_to_hk("seed: " + str(seed) + "; " + "ppm_input: " + str(ppm_input))
+
                 #Align seed to FGBG
                 counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                 tx_packet.seed_align(seed)
@@ -1049,7 +1057,7 @@ while True:
                 #set points are dependent on temperature
                 counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                 ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
-                log_to_hk("PPM: "+str(ppm_order) +', EDFA Power: '+str(fpga.read_reg(34)))
+                log_to_hk("PPM: " + str(ppm_order) + ', EDFA Power: ' + str(fpga.read_reg(34)))
                 while(abs(end_time - start_time) < TRANSMIT_TIME):
 
                     #Stall Fifo
