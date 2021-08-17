@@ -472,6 +472,11 @@ while True:
             log_to_hk('ACK CMD PL_DELETE_FILE')
             ack_to_hk(CMD_PL_DELETE_FILE, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_UNZIP_FILE):
+            unzip_file(ipc_rxcompacket.payload, socket_tx_packets)
+            log_to_hk('ACK CMD PL_UNZIP_FILE')
+            ack_to_hk(CMD_PL_UNZIP_FILE, CMD_ACK)
+
         elif(CMD_ID == CMD_PL_AUTO_ASSEMBLE_FILE):
             auto_assemble_file(ipc_rxcompacket.payload, socket_tx_packets)
             log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')

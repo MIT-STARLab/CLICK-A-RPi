@@ -315,7 +315,6 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
         raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data) #pkt_data is a single byte string (e.g. the output of struct.pack)
         socket_tx_packets.send(raw_tx_pkt)
 
-
 def format_err_response(transfer_id, file_error, missing_chunks):
     pkt = ''
     pkt += struct.pack('!H', transfer_id)
@@ -387,6 +386,17 @@ def del_file(rx_pkt_payload, socket_tx_packets):
     except Exception as e:
         send_exception(socket_tx_packets, e)
 
+def unzip_file(rx_pkt_payload, socket_tx_packets):
+    req_raw_size = len(rx_pkt_payload) - 4
+    zip_file_name_len, dest_dir_name_len, str_data = struct.unpack('!HH%ds'% (req_raw_size), rx_pkt_payload)
+
+    zip_file_name = str_data[:zip_file_name_len]
+    destination_dir = str_data[zip_file_name_len:zip_file_name_len+dest_dir_name_len]
+    
+    try:
+        os.system("tar -xvf %s -C %s" % (zip_file_name, destination_dir))
+    except Exception as e:
+        send_exception(socket_tx_packets, e)
 
 def manage_file_staging():
     #count the number of directories in /root/file_staging/, and delete old directories if the directory limit is exceeded
@@ -404,10 +414,9 @@ def manage_file_staging():
         for i in range(0,num_deletions):
             shutil.rmtree('/root/file_staging/%d' % transfer_id_listing[i])
 
-
 def auto_assemble_file(rx_pkt_payload, socket_tx_packets):
-    req_raw_size = len(rx_pkt_payload) - 20
-    transfer_id, file_hash, dest_file_name_len, dest_file_name_payload = struct.unpack('!H%dsH%ds'% (16, req_raw_size), rx_pkt_payload)
+    req_raw_size = len(rx_pkt_payload) - 21
+    transfer_id, unzip_flag, file_hash, dest_file_name_len, dest_file_name_payload = struct.unpack('!HB%dsH%ds'% (16, req_raw_size), rx_pkt_payload)
     dest_file_name = dest_file_name_payload[0:dest_file_name_len]
 
     temp_file_name = '/root/file_staging/'+str(transfer_id)+'/reassembled_file.temp'
@@ -418,14 +427,33 @@ def auto_assemble_file(rx_pkt_payload, socket_tx_packets):
     val_file_cmd = struct.pack('!%dsH%ds' % (16, temp_file_name_len), file_hash, temp_file_name_len, temp_file_name)
     validate_file(val_file_cmd, socket_tx_packets)
 
-    mov_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, dest_file_name_len), temp_file_name_len, dest_file_name_len, temp_file_name, dest_file_name)
-    move_file(mov_file_cmd, socket_tx_packets)
+    if(unzip_flag > 0):
+        #This will unzip the file to the destination specified in dest_file_name (tar will automatically name the file based on the zip data)
+        unzip_dir, _ = parse_path(dest_file_name)
+        unzip_dir_len = len(unzip_dir)
+        unzip_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, unzip_dir_len), temp_file_name_len, unzip_dir_len, temp_file_name, unzip_dir)
+        unzip_file(unzip_file_cmd, socket_tx_packets)
+    else:
+        mov_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, dest_file_name_len), temp_file_name_len, dest_file_name_len, temp_file_name, dest_file_name)
+        move_file(mov_file_cmd, socket_tx_packets)
 
     del_flag = 0xFF
     del_file_name = '/root/file_staging/'+str(transfer_id)
     del_file_name_len = len(del_file_name)
     del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
     del_file(del_file_cmd, socket_tx_packets)
+
+def parse_path(file_path):
+    path_list = file_path.split("/")
+    if(len(path_list) == 1):
+        path_list = file_path.split("\\")
+        delim = "\\"
+    else:
+        delim = "/"
+
+    file_name = path_list.pop(len(path_list)-1)
+    directory_name = delim.join(path_list)
+    return directory_name, file_name
 
 ### Functions for overwriting /root/lib/options.py
 def reset_options():
