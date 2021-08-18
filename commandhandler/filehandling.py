@@ -60,7 +60,7 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
     #zip file
     try:
         #zip with tar
-        zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
+        zip_file_name = '%s.tar.gz' % (os.path.splitext(file_path)[0])
         os.system('tar -C %s -zcvf %s %s' % (file_dir, zip_file_name, file_name)) 
 
         if(flag != 0x00): 
