@@ -417,7 +417,7 @@ while True:
                 ack_to_hk(CMD_PL_LIST_FILE, CMD_ERR)
 
             list_file_txpacket = TxPacket()
-            raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
+            raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data)
             # print (list_file_txpacket) #Debug printing
             # print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet
@@ -458,9 +458,12 @@ while True:
             ack_to_hk(CMD_PL_ASSEMBLE_FILE, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_VALIDATE_FILE):
-            validate_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_VALIDATE_FILE')
-            ack_to_hk(CMD_PL_VALIDATE_FILE, CMD_ACK)
+            if(validate_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_VALIDATE_FILE')
+                ack_to_hk(CMD_PL_VALIDATE_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_VALIDATE_FILE')
+                ack_to_hk(CMD_PL_VALIDATE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_MOVE_FILE):
             move_file(ipc_rxcompacket.payload, socket_tx_packets)
@@ -472,10 +475,18 @@ while True:
             log_to_hk('ACK CMD PL_DELETE_FILE')
             ack_to_hk(CMD_PL_DELETE_FILE, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_UNZIP_FILE):
+            unzip_file(ipc_rxcompacket.payload, socket_tx_packets)
+            log_to_hk('ACK CMD PL_UNZIP_FILE')
+            ack_to_hk(CMD_PL_UNZIP_FILE, CMD_ACK)
+
         elif(CMD_ID == CMD_PL_AUTO_ASSEMBLE_FILE):
-            auto_assemble_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')
-            ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ACK)
+            if(auto_assemble_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_AUTO_ASSEMBLE_FILE')
+                ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_AUTO_ASSEMBLE_FILE')
+                ack_to_hk(CMD_PL_AUTO_ASSEMBLE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPDATE_OPTIONS):
             data_str_raw_size = ipc_rxcompacket.size - 3
