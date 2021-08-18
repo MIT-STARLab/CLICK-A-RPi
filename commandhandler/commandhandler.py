@@ -417,7 +417,7 @@ while True:
                 ack_to_hk(CMD_PL_LIST_FILE, CMD_ERR)
 
             list_file_txpacket = TxPacket()
-            raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data) #TBR
+            raw = list_file_txpacket.encode(APID = TLM_LIST_FILE, payload = return_data)
             # print (list_file_txpacket) #Debug printing
             # print ('SENDING to %s' % (socket_tx_packets.get_string(zmq.LAST_ENDPOINT))) #Debug printing
             socket_tx_packets.send(raw) #send packet

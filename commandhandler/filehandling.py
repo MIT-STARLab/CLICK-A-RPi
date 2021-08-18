@@ -53,14 +53,15 @@ def auto_downlink_file(rx_pkt_payload, socket_tx_packets):
 
 def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 7
-    flag, transfer_id, chunk_size, file_name_len, file_name_payload = struct.unpack('!BHHH%ds'%req_raw_size, rx_pkt_payload)
-    file_name = file_name_payload[0:file_name_len]
+    flag, transfer_id, chunk_size, file_path_len, file_path_payload = struct.unpack('!BHHH%ds'%req_raw_size, rx_pkt_payload)
+    file_path = file_path_payload[0:file_path_len]
+    file_dir, file_name = parse_path(file_path)
 
     #zip file
     try:
         #zip with tar
         zip_file_name = '%s.tar.gz' % (os.path.splitext(file_name)[0])
-        os.system('tar -zcvf %s %s' % (zip_file_name, file_name)) 
+        os.system('tar -C %s -zcvf %s %s' % (file_dir, zip_file_name, file_name)) 
 
         if(flag != 0x00): 
             #downlink zip file
