@@ -34,21 +34,29 @@ def send_exception(tx_socket, err):
     err_pkt = TxPacket()
 
     pkt_payload = ''
-    pkt_payload += struct.pack('B', error_type_len)
-    pkt_payload += struct.pack('!%ds' % error_type_len, error_type)
-    pkt_payload += struct.pack('B', errno)
-    pkt_payload += struct.pack('!H', file_name_len)
-    pkt_payload += struct.pack('!%ds' % file_name_len, file_name)
-    pkt_payload += struct.pack('!H', line_num)
-
+    #Fixed length packet contents:
+    pkt_payload += struct.pack('B', error_type_len) #Error Type Length
+    pkt_payload += struct.pack('B', errno) #Error Number
+    pkt_payload += struct.pack('!H', file_name_len) #File Name Length
+    pkt_payload += struct.pack('!H', line_num) #Line Number
     if (FULL_TRACE_ENABLE):
         available_space = (BUS_DATA_LEN-error_type_len-file_name_len-6)
         if(full_trace_len > available_space):
-            pkt_payload += struct.pack('!H', available_space)
-            pkt_payload += struct.pack('!%ds' % available_space, full_trace)
+            pkt_payload += struct.pack('!H', available_space) #Reduced trace length
         else:
-            pkt_payload += struct.pack('!H', full_trace_len)
-            pkt_payload += struct.pack('!%ds' % full_trace_len, full_trace)
+            pkt_payload += struct.pack('!H', full_trace_len) #Full trace length
+    else:
+        pkt_payload += struct.pack('!H', 0) #Null value (no trace)
+
+    #Variable length packet contents:
+    pkt_payload += struct.pack('!%ds' % error_type_len, error_type) #Error Type
+    pkt_payload += struct.pack('!%ds' % file_name_len, file_name) #File Name
+    if (FULL_TRACE_ENABLE):
+        available_space = (BUS_DATA_LEN-error_type_len-file_name_len-6)
+        if(full_trace_len > available_space):
+            pkt_payload += struct.pack('!%ds' % available_space, full_trace) #Reduced trace
+        else:
+            pkt_payload += struct.pack('!%ds' % full_trace_len, full_trace) #Full trace
 
     raw_err_pkt = err_pkt.encode(ERR_GEN_EXCEPTION, pkt_payload)
     tx_socket.send(raw_err_pkt)
