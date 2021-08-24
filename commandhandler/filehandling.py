@@ -327,27 +327,27 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
                     out_file.write(curr_chunk.read())
 
     except FileError as e:
-        print('assemble_file - FileError')
-        print('transfer_id: ', transfer_id)
-        print('Error: ', e)
+        #print('assemble_file - FileError')
+        #print('transfer_id: ', transfer_id)
+        #print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
         success = False
 
     except Exception as e:
-        print('assemble_file - Exception: ', e)
+        #print('assemble_file - Exception: ', e)
         send_exception(socket_tx_packets, e)
         pkt_data = format_null_response(transfer_id)
         success = False
 
     else:
-        print('assemble_file - else')
+        #print('assemble_file - else')
         pkt_data = format_success_response(transfer_id)
 
     finally:
         # FOR TEST
         # print(pkt_data)
         # print(binascii.hexlify(bytearray(pkt_data)))
-        print('assemble_file - pkt_data: ', pkt_data)
+        #print('assemble_file - pkt_data: ', pkt_data)
         tx_pkt = TxPacket()
         raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data) #pkt_data is a single byte string (e.g. the output of struct.pack)
         socket_tx_packets.send(raw_tx_pkt)
