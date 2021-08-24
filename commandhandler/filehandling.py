@@ -327,6 +327,7 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
 
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        pkt_data = format_null_response(transfer_id)
         success = False
 
     else:
@@ -357,6 +358,13 @@ def format_success_response(transfer_id):
     pkt = ''
     pkt += struct.pack('!H', transfer_id)
     pkt += struct.pack('!B', FL_SUCCESS)
+    pkt += struct.pack('!H', 0)
+    return pkt
+
+def format_null_response(transfer_id):
+    pkt = ''
+    pkt += struct.pack('!H', transfer_id)
+    pkt += struct.pack('!B', 0)
     pkt += struct.pack('!H', 0)
     return pkt
 
