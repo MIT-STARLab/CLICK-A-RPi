@@ -347,7 +347,7 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
 def format_err_response(transfer_id, file_error, missing_chunks):
     pkt = ''
     pkt += struct.pack('!H', transfer_id)
-    pkt += struct.pack('B', file_error.flag)
+    pkt += struct.pack('!B', file_error.flag)
     pkt += struct.pack('!H', len(missing_chunks))
     for chunk_id in missing_chunks:
         pkt += struct.pack('!H', chunk_id)
@@ -356,7 +356,7 @@ def format_err_response(transfer_id, file_error, missing_chunks):
 def format_success_response(transfer_id):
     pkt = ''
     pkt += struct.pack('!H', transfer_id)
-    pkt += struct.pack('B', FL_SUCCESS)
+    pkt += struct.pack('!B', FL_SUCCESS)
     pkt += struct.pack('!H', 0)
     return pkt
 
