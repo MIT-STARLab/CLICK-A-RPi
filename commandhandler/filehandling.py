@@ -259,6 +259,7 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
     file_name = file_name_payload[0:file_name_len]
     #print('assemble file - file_name: ', file_name)
     missing_chunks = []
+    received_chunks = []
     pkt_data = ''
     success = True
     try:
@@ -268,6 +269,7 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
 
         all_files = [f for f in os.listdir('/root/file_staging/'+str(transfer_id)+'/') if f.endswith('.chunk')]
         chunk_files = sorted(all_files, key=lambda s: int(s.split('_')[0]))
+        num_chunk_files = len(chunk_files)
 
         # Check that the directory isn't empty
         if not chunk_files:
@@ -284,61 +286,68 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
 
         chunk_name_pattern = re.compile('\d{1,5}_\d{1,5}.chunk')
 
-        with safe_open_w(file_name) as out_file:
+        #Verify chunk file names
+        for i in range(num_chunk_files):
+            # Check file names are valid
+            if chunk_name_pattern.match(chunk_files[i]) is None:
+                # Chunk file name is not correct
+                raise FileError(FL_ERR_FILE_NAME)
 
+            # Check file names are consistent
+            seq_num, seq_len = chunk_files[i].split('_')
+            seq_num = int(seq_num)
+            seq_len = int(seq_len[:-6])
+
+            if seq_len != seq_len_all:
+                # Sequence count doesn't match
+                raise FileError(FL_ERR_SEQ_LEN)
+
+            received_chunks.append(seq_num)
+
+        #Check if missing chunks
+        if(seq_len_all != num_chunk_files):
             for i in range(seq_len_all):
+                seq_num_check = i+1
+                if(seq_num_check not in received_chunks):
+                    missing_chunks.append(seq_num_check)
 
-                if chunk_name_pattern.match(chunk_files[i]) is None:
-                    # Chunk file name is not correct
-                    raise FileError(FL_ERR_FILE_NAME)
+            raise FileError(FL_ERR_MISSING_CHUNK)
 
-                # Check file names are valid
-                seq_num, seq_len = chunk_files[i].split('_')
-                seq_num = int(seq_num)
-                seq_len = int(seq_len[:-6])
-
-                if seq_len != seq_len_all:
-                    # Sequence count doesn't match
-                    raise FileError(FL_ERR_SEQ_LEN)
-
+        #Write to file
+        with safe_open_w(file_name) as out_file:
+            for i in range(num_chunk_files):
                 # FOR TEST:
                 # chunk_size = os.stat('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
                 chunk_size = os.stat('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
 
-                if (seq_num != i+1):
-                    #print('seq_num: %d != i: %d' % (seq_num, i+1))
-                    missing_chunks.append(i)
-                else:
-                    # FOR TEST:
-                    # with open('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
-                    with open('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
-                        # Read the entire chunk, may be better to buffer?
-                        out_file.write(curr_chunk.read())
-
-        if missing_chunks:
-            raise FileError(FL_ERR_MISSING_CHUNK)
+                # FOR TEST:
+                # with open('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
+                with open('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
+                    # Read the entire chunk, may be better to buffer?
+                    out_file.write(curr_chunk.read())
 
     except FileError as e:
-        #print('assemble_file - except')
-        #print('transfer_id: ', transfer_id)
-        #print('Error: ', e)
+        print('assemble_file - FileError')
+        print('transfer_id: ', transfer_id)
+        print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
         success = False
 
     except Exception as e:
+        print('assemble_file - Exception: ', e)
         send_exception(socket_tx_packets, e)
         pkt_data = format_null_response(transfer_id)
         success = False
 
     else:
-        #print('assemble_file - else')
+        print('assemble_file - else')
         pkt_data = format_success_response(transfer_id)
 
     finally:
         # FOR TEST
         # print(pkt_data)
         # print(binascii.hexlify(bytearray(pkt_data)))
-        #print('assemble_file - pkt_data: ', pkt_data)
+        print('assemble_file - pkt_data: ', pkt_data)
         tx_pkt = TxPacket()
         raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data) #pkt_data is a single byte string (e.g. the output of struct.pack)
         socket_tx_packets.send(raw_tx_pkt)
