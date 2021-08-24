@@ -45,18 +45,21 @@ def auto_downlink_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 6
     transfer_id, _, _, _ = struct.unpack('!HHH%ds'%req_raw_size, rx_pkt_payload)
 
-    disassemble_file(rx_pkt_payload, socket_tx_packets)
-
-    request_flag = 0xFF
-    request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
-    request_file(request_file_cmd, socket_tx_packets)
+    if(disassemble_file(rx_pkt_payload, socket_tx_packets)):
+        request_flag = 0xFF
+        request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
+        success = request_file(request_file_cmd, socket_tx_packets)
+    else:
+        success = False
+    
+    return success
 
 def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 7
     flag, transfer_id, chunk_size, file_path_len, file_path_payload = struct.unpack('!BHHH%ds'%req_raw_size, rx_pkt_payload)
     file_path = file_path_payload[0:file_path_len]
     file_dir, file_name = parse_path(file_path)
-
+    success = True
     #zip file
     try:
         #zip with tar
@@ -67,23 +70,29 @@ def zip_downlink_file(rx_pkt_payload, socket_tx_packets):
             #downlink zip file
             zip_file_name_len = len(zip_file_name)
             tx_pkt_payload = struct.pack('!HHH%ds'%(zip_file_name_len), transfer_id, chunk_size, zip_file_name_len, zip_file_name)
-            disassemble_file(tx_pkt_payload, socket_tx_packets)
-
-            request_flag = 0xFF
-            request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
-            request_file(request_file_cmd, socket_tx_packets)
-
-            if(flag == 0xFF):
-                #delete zip file            
-                recursive = 0x00 #not recursive
-                del_payload = struct.pack('!BH%ds'%(zip_file_name_len), recursive, zip_file_name_len, zip_file_name)
-                del_file(del_payload, socket_tx_packets)
+            if(disassemble_file(tx_pkt_payload, socket_tx_packets)):            
+                request_flag = 0xFF
+                request_file_cmd = struct.pack('!HBHH', transfer_id, request_flag, 0, 0)
+                if(request_file(request_file_cmd, socket_tx_packets)):
+                    if(flag == 0xFF):
+                        #delete zip file            
+                        recursive = 0x00 #not recursive
+                        del_payload = struct.pack('!BH%ds'%(zip_file_name_len), recursive, zip_file_name_len, zip_file_name)
+                        success = del_file(del_payload, socket_tx_packets)
+                else:
+                    success = False #file request failed
+            else:
+                success = False #file disassembly failed
                             
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        success = False
+
+    return success
 
 def zip_downlink_pat_data(rx_pkt_payload, socket_tx_packets):
     downlink_flag, chronological_flag, transfer_id, chunk_size, directory_id = struct.unpack('!BBHHH', rx_pkt_payload)
+    success = True
     if(chronological_flag == 0x00):
         #directory id is chronological order (i.e. directory id = experiment id)
         file_name = "/root/log/pat/%d" % directory_id
@@ -98,11 +107,17 @@ def zip_downlink_pat_data(rx_pkt_payload, socket_tx_packets):
             pat_exp_ids.sort(reverse=True)
             exp_id = pat_exp_ids[directory_id] #index with 0 as most recent experiment, 1 as previous experiment, etc.
             file_name = "/root/log/pat/%d" % exp_id
+
         except Exception as e:
             send_exception(socket_tx_packets, e)
-    file_name_len = len(file_name)
-    tx_packet_payload = struct.pack('!BHHH%ds'%file_name_len, downlink_flag, transfer_id, chunk_size, file_name_len, file_name)
-    zip_downlink_file(tx_packet_payload, socket_tx_packets)
+            success = False
+    
+    if(success):
+        file_name_len = len(file_name)
+        tx_packet_payload = struct.pack('!BHHH%ds'%file_name_len, downlink_flag, transfer_id, chunk_size, file_name_len, file_name)
+        success = zip_downlink_file(tx_packet_payload, socket_tx_packets)
+
+    return success
 
 def disassemble_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 6
@@ -152,9 +167,11 @@ def disassemble_file(rx_pkt_payload, socket_tx_packets):
 
         #Memory Management
         manage_file_staging()
+        return True
 
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        return False
 
 def request_file(rx_pkt_payload, socket_tx_packets):
     transfer_id, all_flag, chunk_start_index, num_chunks = struct.unpack('!HBHH', rx_pkt_payload)
@@ -208,8 +225,11 @@ def request_file(rx_pkt_payload, socket_tx_packets):
             raw_packet = txpacket.encode(APID = TLM_DL_FILE, payload = packet)
             socket_tx_packets.send(raw_packet)
 
+        return True
+
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        return False
 
 def uplink_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 8
@@ -225,8 +245,12 @@ def uplink_file(rx_pkt_payload, socket_tx_packets):
         file_name = '/root/file_staging/'+str(transfer_id)+'/'+str(seq_num)+'_'+str(seq_len)+'.chunk'
         with safe_open_w(file_name) as chunk_file:
             chunk_file.write(chunk_data)
+        
+        return True
+
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        return False
 
 def assemble_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 4
@@ -235,7 +259,9 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
     file_name = file_name_payload[0:file_name_len]
     #print('assemble file - file_name: ', file_name)
     missing_chunks = []
+    received_chunks = []
     pkt_data = ''
+    success = True
     try:
         # FOR TEST:
         # all_files = [f for f in os.listdir('test_file_staging/'+str(transfer_id)+'/') if f.endswith('.chunk')]
@@ -243,6 +269,7 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
 
         all_files = [f for f in os.listdir('/root/file_staging/'+str(transfer_id)+'/') if f.endswith('.chunk')]
         chunk_files = sorted(all_files, key=lambda s: int(s.split('_')[0]))
+        num_chunk_files = len(chunk_files)
 
         # Check that the directory isn't empty
         if not chunk_files:
@@ -259,49 +286,58 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
 
         chunk_name_pattern = re.compile('\d{1,5}_\d{1,5}.chunk')
 
-        with safe_open_w(file_name) as out_file:
+        #Verify chunk file names
+        for i in range(num_chunk_files):
+            # Check file names are valid
+            if chunk_name_pattern.match(chunk_files[i]) is None:
+                # Chunk file name is not correct
+                raise FileError(FL_ERR_FILE_NAME)
 
+            # Check file names are consistent
+            seq_num, seq_len = chunk_files[i].split('_')
+            seq_num = int(seq_num)
+            seq_len = int(seq_len[:-6])
+
+            if seq_len != seq_len_all:
+                # Sequence count doesn't match
+                raise FileError(FL_ERR_SEQ_LEN)
+
+            received_chunks.append(seq_num)
+
+        #Check if missing chunks
+        if(seq_len_all != num_chunk_files):
             for i in range(seq_len_all):
+                seq_num_check = i+1
+                if(seq_num_check not in received_chunks):
+                    missing_chunks.append(seq_num_check)
 
-                if chunk_name_pattern.match(chunk_files[i]) is None:
-                    # Chunk file name is not correct
-                    raise FileError(FL_ERR_FILE_NAME)
+            raise FileError(FL_ERR_MISSING_CHUNK)
 
-                # Check file names are valid
-                seq_num, seq_len = chunk_files[i].split('_')
-                seq_num = int(seq_num)
-                seq_len = int(seq_len[:-6])
-
-                if seq_len != seq_len_all:
-                    # Sequence count doesn't match
-                    raise FileError(FL_ERR_SEQ_LEN)
-
+        #Write to file
+        with safe_open_w(file_name) as out_file:
+            for i in range(num_chunk_files):
                 # FOR TEST:
                 # chunk_size = os.stat('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
                 chunk_size = os.stat('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i]).st_size
 
-                if (seq_num != i+1):
-                    #print('seq_num: %d != i: %d' % (seq_num, i+1))
-                    missing_chunks.append(i)
-                else:
-                    # FOR TEST:
-                    # with open('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
-                    with open('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
-                        # Read the entire chunk, may be better to buffer?
-                        out_file.write(curr_chunk.read())
-
-        if missing_chunks:
-            raise FileError(FL_ERR_MISSING_CHUNK)
-
+                # FOR TEST:
+                # with open('test_file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
+                with open('/root/file_staging/'+str(transfer_id)+'/'+chunk_files[i], 'rb') as curr_chunk:
+                    # Read the entire chunk, may be better to buffer?
+                    out_file.write(curr_chunk.read())
 
     except FileError as e:
-        #print('assemble_file - except')
+        #print('assemble_file - FileError')
         #print('transfer_id: ', transfer_id)
         #print('Error: ', e)
         pkt_data = format_err_response(transfer_id, e, missing_chunks)
+        success = False
 
     except Exception as e:
+        #print('assemble_file - Exception: ', e)
         send_exception(socket_tx_packets, e)
+        pkt_data = format_null_response(transfer_id)
+        success = False
 
     else:
         #print('assemble_file - else')
@@ -315,11 +351,13 @@ def assemble_file(rx_pkt_payload, socket_tx_packets):
         tx_pkt = TxPacket()
         raw_tx_pkt = tx_pkt.encode(TLM_ASSEMBLE_FILE, pkt_data) #pkt_data is a single byte string (e.g. the output of struct.pack)
         socket_tx_packets.send(raw_tx_pkt)
+    
+    return success
 
 def format_err_response(transfer_id, file_error, missing_chunks):
     pkt = ''
     pkt += struct.pack('!H', transfer_id)
-    pkt += struct.pack('B', file_error.flag)
+    pkt += struct.pack('!B', file_error.flag)
     pkt += struct.pack('!H', len(missing_chunks))
     for chunk_id in missing_chunks:
         pkt += struct.pack('!H', chunk_id)
@@ -328,7 +366,14 @@ def format_err_response(transfer_id, file_error, missing_chunks):
 def format_success_response(transfer_id):
     pkt = ''
     pkt += struct.pack('!H', transfer_id)
-    pkt += struct.pack('B', FL_SUCCESS)
+    pkt += struct.pack('!B', FL_SUCCESS)
+    pkt += struct.pack('!H', 0)
+    return pkt
+
+def format_null_response(transfer_id):
+    pkt = ''
+    pkt += struct.pack('!H', transfer_id)
+    pkt += struct.pack('!B', 0)
     pkt += struct.pack('!H', 0)
     return pkt
 
@@ -337,7 +382,7 @@ def validate_file(rx_pkt_payload, socket_tx_packets):
     file_hash, file_name_len, file_name_payload = struct.unpack('!%dsH%ds'% (16, req_raw_size), rx_pkt_payload)
 
     file_name = file_name_payload[0:file_name_len]
-
+    success = True
     try:
         hash_func = hashlib.md5()
         with open(file_name, 'rb') as source_file:
@@ -350,20 +395,20 @@ def validate_file(rx_pkt_payload, socket_tx_packets):
         if (check_hash != file_hash):
             #print('Hash Check Failed!')
             err_pkt = TxPacket()
-            err_pkt_payload = ''
+            pkt_payload = ''
             pkt_payload += struct.pack('!16s', check_hash)
             pkt_payload += struct.pack('!16s', file_hash)
             pkt_payload += struct.pack('!H', file_name_len)
             pkt_payload += struct.pack('!%ds' % file_name_len, file_name)
             raw_err_pkt = err_pkt.encode(ERR_FL_FILE_INVALID, pkt_payload)
             socket_tx_packets.send(raw_err_pkt)
-            return False
-        else:
-            return True
+            success = False
 
     except Exception as e:
         send_exception(socket_tx_packets, e)
-        return False
+        success = False
+
+    return success
 
 def move_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 4
@@ -374,8 +419,11 @@ def move_file(rx_pkt_payload, socket_tx_packets):
 
     try:
         shutil.move(src_file_name, dest_file_name)
+        return True
+
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        return False
 
 
 def del_file(rx_pkt_payload, socket_tx_packets):
@@ -388,8 +436,12 @@ def del_file(rx_pkt_payload, socket_tx_packets):
             shutil.rmtree(file_name)
         else:
             os.remove(file_name)
+        
+        return True
+
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        return False
 
 def unzip_file(rx_pkt_payload, socket_tx_packets):
     req_raw_size = len(rx_pkt_payload) - 4
@@ -400,8 +452,11 @@ def unzip_file(rx_pkt_payload, socket_tx_packets):
     
     try:
         os.system("tar -xvf %s -C %s" % (zip_file_name, destination_dir))
+        return True
+
     except Exception as e:
         send_exception(socket_tx_packets, e)
+        return False
 
 def manage_file_staging():
     #count the number of directories in /root/file_staging/, and delete old directories if the directory limit is exceeded
@@ -427,29 +482,38 @@ def auto_assemble_file(rx_pkt_payload, socket_tx_packets):
     temp_file_name = '/root/file_staging/'+str(transfer_id)+'/reassembled_file.temp'
     temp_file_name_len = len(temp_file_name)
     assm_file_cmd = struct.pack('!HH%ds' % (temp_file_name_len), transfer_id, temp_file_name_len, temp_file_name)
-    assemble_file(assm_file_cmd, socket_tx_packets)
+    success = True
+    #Assemble File
+    if(assemble_file(assm_file_cmd, socket_tx_packets)):
+        #Validate File
+        val_file_cmd = struct.pack('!%dsH%ds' % (16, temp_file_name_len), file_hash, temp_file_name_len, temp_file_name)
+        if(validate_file(val_file_cmd, socket_tx_packets)):
+            if(unzip_flag > 0):
+                #Unzip File
+                #This will unzip the file to the destination specified in dest_file_name (tar will automatically name the file based on the zip data)
+                unzip_dir, _ = parse_path(dest_file_name)
+                unzip_dir_len = len(unzip_dir)
+                unzip_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, unzip_dir_len), temp_file_name_len, unzip_dir_len, temp_file_name, unzip_dir)
+                success = unzip_file(unzip_file_cmd, socket_tx_packets)
+            else:
+                #Move File
+                mov_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, dest_file_name_len), temp_file_name_len, dest_file_name_len, temp_file_name, dest_file_name)
+                success = move_file(mov_file_cmd, socket_tx_packets)
 
-    val_file_cmd = struct.pack('!%dsH%ds' % (16, temp_file_name_len), file_hash, temp_file_name_len, temp_file_name)
-    if(validate_file(val_file_cmd, socket_tx_packets)):
-        if(unzip_flag > 0):
-            #This will unzip the file to the destination specified in dest_file_name (tar will automatically name the file based on the zip data)
-            unzip_dir, _ = parse_path(dest_file_name)
-            unzip_dir_len = len(unzip_dir)
-            unzip_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, unzip_dir_len), temp_file_name_len, unzip_dir_len, temp_file_name, unzip_dir)
-            unzip_file(unzip_file_cmd, socket_tx_packets)
+            if(success):
+                #Delete Temporary Staging Directory
+                del_flag = 0xFF
+                del_file_name = '/root/file_staging/'+str(transfer_id)
+                del_file_name_len = len(del_file_name)
+                del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
+                success = del_file(del_file_cmd, socket_tx_packets)
+
         else:
-            mov_file_cmd = struct.pack('!HH%ds%ds' % (temp_file_name_len, dest_file_name_len), temp_file_name_len, dest_file_name_len, temp_file_name, dest_file_name)
-            move_file(mov_file_cmd, socket_tx_packets)
-
-        del_flag = 0xFF
-        del_file_name = '/root/file_staging/'+str(transfer_id)
-        del_file_name_len = len(del_file_name)
-        del_file_cmd = struct.pack('!BH%ds' % del_file_name_len, del_flag, del_file_name_len, del_file_name)
-        del_file(del_file_cmd, socket_tx_packets)
-
-        return True
+            success = False #validation failed
     else:
-        return False
+        success = False #assembly failed
+    
+    return success
 
 def parse_path(file_path):
     path_list = file_path.split("/")

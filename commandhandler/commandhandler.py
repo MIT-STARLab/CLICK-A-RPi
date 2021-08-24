@@ -423,39 +423,60 @@ while True:
             socket_tx_packets.send(raw) #send packet
 
         elif(CMD_ID == CMD_PL_AUTO_DOWNLINK_FILE):
-            auto_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_AUTO_DOWNLINK_FILE')
-            ack_to_hk(CMD_PL_AUTO_DOWNLINK_FILE, CMD_ACK)
+            if(auto_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_AUTO_DOWNLINK_FILE')
+                ack_to_hk(CMD_PL_AUTO_DOWNLINK_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_AUTO_DOWNLINK_FILE')
+                ack_to_hk(CMD_PL_AUTO_DOWNLINK_FILE, CMD_ERR)               
 
         elif(CMD_ID == CMD_PL_ZIP_DOWNLINK_FILE):
-            zip_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_ZIP_DOWNLINK_FILE')
-            ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ACK)
+            if(zip_downlink_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_ZIP_DOWNLINK_FILE')
+                ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_ZIP_DOWNLINK_FILE')
+                ack_to_hk(CMD_PL_ZIP_DOWNLINK_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_ZIP_DOWNLINK_PAT_DATA):
-            zip_downlink_pat_data(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_ZIP_DOWNLINK_PAT_DATA')
-            ack_to_hk(CMD_PL_ZIP_DOWNLINK_PAT_DATA, CMD_ACK)
+            if(zip_downlink_pat_data(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_ZIP_DOWNLINK_PAT_DATA')
+                ack_to_hk(CMD_PL_ZIP_DOWNLINK_PAT_DATA, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_ZIP_DOWNLINK_PAT_DATA')
+                ack_to_hk(CMD_PL_ZIP_DOWNLINK_PAT_DATA, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_DISASSEMBLE_FILE):
-            disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_DISASSEMBLE_FILE')
-            ack_to_hk(CMD_PL_DISASSEMBLE_FILE, CMD_ACK)
+            if(disassemble_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_DISASSEMBLE_FILE')
+                ack_to_hk(CMD_PL_DISASSEMBLE_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_DISASSEMBLE_FILE')
+                ack_to_hk(CMD_PL_DISASSEMBLE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_REQUEST_FILE):
-            request_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_REQUEST_FILE')
-            ack_to_hk(CMD_PL_REQUEST_FILE, CMD_ACK)
+            if(request_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_REQUEST_FILE')
+                ack_to_hk(CMD_PL_REQUEST_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_REQUEST_FILE')
+                ack_to_hk(CMD_PL_REQUEST_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UPLINK_FILE):
-            uplink_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_UPLINK_FILE')
-            ack_to_hk(CMD_PL_UPLINK_FILE, CMD_ACK)
+            if(uplink_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_UPLINK_FILE')
+                ack_to_hk(CMD_PL_UPLINK_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_UPLINK_FILE')
+                ack_to_hk(CMD_PL_UPLINK_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_ASSEMBLE_FILE):
-            assemble_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_ASSEMBLE_FILE')
-            ack_to_hk(CMD_PL_ASSEMBLE_FILE, CMD_ACK)
+            if(assemble_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_ASSEMBLE_FILE')
+                ack_to_hk(CMD_PL_ASSEMBLE_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_ASSEMBLE_FILE')
+                ack_to_hk(CMD_PL_ASSEMBLE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_VALIDATE_FILE):
             if(validate_file(ipc_rxcompacket.payload, socket_tx_packets)):
@@ -466,19 +487,28 @@ while True:
                 ack_to_hk(CMD_PL_VALIDATE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_MOVE_FILE):
-            move_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_MOVE_FILE')
-            ack_to_hk(CMD_PL_MOVE_FILE, CMD_ACK)
+            if(move_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_MOVE_FILE')
+                ack_to_hk(CMD_PL_MOVE_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_MOVE_FILE')
+                ack_to_hk(CMD_PL_MOVE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_DELETE_FILE):
-            del_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_DELETE_FILE')
-            ack_to_hk(CMD_PL_DELETE_FILE, CMD_ACK)
+            if(del_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_DELETE_FILE')
+                ack_to_hk(CMD_PL_DELETE_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_DELETE_FILE')
+                ack_to_hk(CMD_PL_DELETE_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_UNZIP_FILE):
-            unzip_file(ipc_rxcompacket.payload, socket_tx_packets)
-            log_to_hk('ACK CMD PL_UNZIP_FILE')
-            ack_to_hk(CMD_PL_UNZIP_FILE, CMD_ACK)
+            if(unzip_file(ipc_rxcompacket.payload, socket_tx_packets)):
+                log_to_hk('ACK CMD PL_UNZIP_FILE')
+                ack_to_hk(CMD_PL_UNZIP_FILE, CMD_ACK)
+            else:
+                log_to_hk('ERR CMD PL_UNZIP_FILE')
+                ack_to_hk(CMD_PL_UNZIP_FILE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_AUTO_ASSEMBLE_FILE):
             if(auto_assemble_file(ipc_rxcompacket.payload, socket_tx_packets)):
