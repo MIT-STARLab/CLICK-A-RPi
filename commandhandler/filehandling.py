@@ -378,7 +378,7 @@ def validate_file(rx_pkt_payload, socket_tx_packets):
         if (check_hash != file_hash):
             #print('Hash Check Failed!')
             err_pkt = TxPacket()
-            err_pkt_payload = ''
+            pkt_payload = ''
             pkt_payload += struct.pack('!16s', check_hash)
             pkt_payload += struct.pack('!16s', file_hash)
             pkt_payload += struct.pack('!H', file_name_len)
