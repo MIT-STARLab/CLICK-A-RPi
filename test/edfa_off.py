@@ -53,7 +53,7 @@ def pwr_edfa_off(fo):
     fpga.write_reg(mmap.EDFA_IN_STR ,'edfa off\r')
     time.sleep(4)
     off_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
-    fo.write('OFF Current: %f A\n' % on_curr)
+    fo.write('OFF Current: %f A\n' % off_curr)
 
     power.edfa_off() #write 15 to reg 34
 
