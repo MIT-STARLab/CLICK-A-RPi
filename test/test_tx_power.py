@@ -83,7 +83,7 @@ def run_all(origin):
 
     t_str = time.strftime("%d.%b.%Y %H.%M.%S", time.gmtime())
     
-    with file_manager.ManagedFileOpen('/root/log/%s.gz' % t_str,'w') as (f, tags):
+    with file_manager.ManagedFileOpen('/root/log/laser_self_test_data/%s.gz' % t_str,'w') as (f, tags):
     
         tags['origin'] = origin
         f.write('Tx Power Test Script, %s\n' % t_str)
