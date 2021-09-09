@@ -1122,6 +1122,7 @@ while True:
                         fpga.write_reg(mmap.CTL, 0x7)
                         end_time = time.time()
                         if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
+                            log_to_hk("Time Elapsed: %s" % (end_time - start_time))
                             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
