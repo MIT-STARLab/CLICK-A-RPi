@@ -52,8 +52,9 @@ def test_tx(fo):
     avg = 3
     print_test(fo, "Power EDFA ON and Align Seed Laser")
 
-    seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
-    time.sleep(10)
+    power.edfa_on()
+    #seed_align([options.DEFAULT_TEC_MSB, options.DEFAULT_TEC_LSB, options.DEFAULT_LD_MSB, options.DEFAULT_LD_LSB])
+    #time.sleep(10)
     avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
     fo.write('EDFA Power In: %f dBm\n' % avg_input_power)
 
@@ -66,7 +67,7 @@ def test_tx(fo):
     on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('EDFA ON Current: %f A\n' % on_curr)
 
-    time.sleep(120)
+    time.sleep(10)
     power.edfa_off()
     power.bias_off()
     power.tec_off()
