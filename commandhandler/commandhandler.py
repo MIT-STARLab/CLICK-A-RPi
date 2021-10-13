@@ -337,10 +337,10 @@ while True:
         #ipc_rxcompacket.decode(message)
         CMD_ID = ipc_rxcompacket.APID
 
-        if(CMD_ID != APID_TIME_AT_TONE):
-            #don't print the time at tone receives
-            print (ipc_rxcompacket)
-            # print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
+        # if(CMD_ID != APID_TIME_AT_TONE):
+        #     #don't print the time at tone receives
+        #     print (ipc_rxcompacket)
+        #     # print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
 
         if(CMD_ID == APID_TIME_AT_TONE):
             if (TIME_SET_ENABLE > 0):
@@ -356,6 +356,7 @@ while True:
                                                                                     set_time.tm_min,
                                                                                     set_time.tm_sec))
                 TIME_SET_ENABLE -= 1
+                log_to_hk('ACK TIME_AT_TONE')
             else:
                 pass
 
