@@ -534,6 +534,8 @@ while True:
                 parse_success, data = parse_cmd_data(data_str)
                 if(parse_success):
                     if(update_options(data, socket_tx_packets)):
+                        updated_options_str = list_options(data, socket_tx_packets)
+                        log_to_hk("Updated Options Parameters:\n" + updated_options_str)
                         log_to_hk('ACK CMD PL_UPDATE_OPTIONS')
                         ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ACK)
                     else:
