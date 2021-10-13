@@ -857,6 +857,51 @@ while True:
             log_to_hk('ACK CMD PL_NOOP')
             ack_to_hk(CMD_PL_NOOP, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_EDFA_ON):
+            avg_len = 10
+            try:
+                edfa_ldc_cmd = struct.unpack('!H', ipc_rxcompacket.payload)[0] 
+                #clamp ldc cmd to max limit
+                if(edfa_ldc_cmd > 2200):
+                    log_to_hk('Warning - Rounding commanded LDC BA of %d to maximum of 2200' % edfa_ldc_cmd)
+                    edfa_ldc_cmd = 2200
+
+                log_to_hk("Power EDFA ON")
+                power.edfa_on() #write 85 to reg 34
+                time.sleep(1)
+                standby_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+                log_to_hk('Standby Current: %f A' % standby_curr)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba %d\r' % edfa_ldc_cmd)
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                time.sleep(4)
+                on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+                log_to_hk('ON Current: %f A' % on_curr)
+
+                log_to_hk('ACK CMD PL_EDFA_ON')
+                ack_to_hk(CMD_PL_EDFA_ON, CMD_ACK)  
+            except:
+                log_to_hk('ERROR CMD PL_EDFA_ON: ' + traceback.format_exc())
+                ack_to_hk(CMD_PL_EDFA_ON, CMD_ERR)  
+
+        elif(CMD_ID == CMD_PL_EDFA_OFF):
+            avg_len = 10
+            try:
+                log_to_hk("Power EDFA OFF")
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa off\r')
+                time.sleep(4)
+                off_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+                log_to_hk('OFF Current: %f A' % off_curr)
+                power.edfa_off() #write 15 to reg 34
+
+                log_to_hk('ACK CMD PL_EDFA_OFF')
+                ack_to_hk(CMD_PL_EDFA_OFF, CMD_ACK)  
+            except:
+                log_to_hk('ERROR CMD PL_EDFA_OFF: ' + traceback.format_exc())
+                ack_to_hk(CMD_PL_EDFA_OFF, CMD_ERR)  
+
         elif(CMD_ID == CMD_PL_SELF_TEST):
             test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             test_id = test_id_tuple[0]
