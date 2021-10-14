@@ -130,6 +130,7 @@ enum offsetParamIndex {
     IDX_TX_OFFSET_DITHER_X_RADIUS,
     IDX_TX_OFFSET_DITHER_Y_RADIUS,
     IDX_DITHER_COUNT_PERIOD,
+	IDX_DITHER_ENABLE,
     NUM_TX_OFFSET_PARAMS
 };
 struct offsetParamStruct {
@@ -337,7 +338,7 @@ int main() //int argc, char** argv
 	bool self_test_passed = false, self_test_failed = false;
 	tx_offsets offsets;
 	offsets.x = TX_OFFSET_X_DEFAULT; offsets.y = TX_OFFSET_Y_DEFAULT;
-	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
+	int dither_count = 0; bool dithering_on = true; float offset_x_init, offset_y_init;
 	float period_calculate_tx_offsets = PERIOD_CALCULATE_TX_OFFSETS;
 	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
 	calculateTxOffsetsParams params_calculateTxOffsets;
@@ -368,6 +369,7 @@ int main() //int argc, char** argv
 		params_ditherOffsets.tx_offset_dither_x_radius = offsetParams[IDX_TX_OFFSET_DITHER_X_RADIUS].parameter;
 		params_ditherOffsets.tx_offset_dither_y_radius = offsetParams[IDX_TX_OFFSET_DITHER_Y_RADIUS].parameter;
 		params_ditherOffsets.dither_count_period = offsetParams[IDX_DITHER_COUNT_PERIOD].parameter;
+		dithering_on = (offsetParams[IDX_DITHER_ENABLE].parameter > 0);
 	} 
 	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets); 
 	
