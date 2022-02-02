@@ -280,7 +280,8 @@ def heat_to_0C(counter_heartbeat):
             time.sleep(temp_sleep_time)
             log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
             if ((time.time() - begin_time) > TIMEOUT_HEAT_TO_0C):
-                log_to_hk("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                log_to_hk("Heater time reached %s minutes and avg temps: %s" % (TIMEOUT_HEAT_TO_0C/60, sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6))
                 success = False
                 break 
         fpga.write_reg(mmap.PO3, 15)
