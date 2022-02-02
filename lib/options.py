@@ -26,6 +26,9 @@ DEFAULT_CW_TEC_LSB = 151
 DEFAULT_CW_FTEC_MSB = 5
 DEFAULT_CW_FTEC_LSB = 107
 
+#Seed Align Window
+SEED_ALIGN_WINDOW = 7
+
 #HIGH/LOW for Payload/flatsat
 PPM4_THRESHOLDS = [-2.1, -3.0, -5,-7]
 

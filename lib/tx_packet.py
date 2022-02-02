@@ -87,7 +87,7 @@ def seed_align(default_settings, cw = False):
     
     time.sleep(2)
     power_inputs = []
-    window = 4
+    window = SEED_ALIGN_WINDOW
     avg = 3
     for i in range(total_tec-window, total_tec+window):
         tec_msb = i//256
