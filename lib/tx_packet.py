@@ -108,7 +108,7 @@ def seed_align(default_settings, cw = False):
     if(pwr_index != None):
 	    new_tec = total_tec+power_inputs.index(pwr_index)-window
     else:
-        new_tec = PPM4_THRESHOLDS[0]*256+ PPM4_THRESHOLDS[1]
+        new_tec = total_tec
    
     tec_msb = abs(int(new_tec//256))
     tec_lsb = abs(int(new_tec%256))
