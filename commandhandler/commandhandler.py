@@ -312,7 +312,7 @@ while True:
 
     if(elapsed_time >= 10):
         if(print_time_set):
-            log_to_hk('CH (PID ' + str(pid) + ': ACK TIME AT TONE RECEIVED')
+            log_to_hk('CH (PID ' + str(pid) + '): ACK TIME AT TONE RECEIVED')
             print_time_set = False
 
         if(not pat_init):

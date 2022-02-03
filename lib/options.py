@@ -234,7 +234,7 @@ FL_ERR_OUT_OF_BOUNDS = 0x05
 FL_SUCCESS = 0xFF
 
 # Set Time Flag
-TIME_SET_ENABLE = 0
+TIME_SET_ENABLE = 1
 
 FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,98), range(200,206), range(300,304), range(602,612), range(502,510)],[])
 #FPGA_TELEM_REGS = sum([range(602,612)],[])
