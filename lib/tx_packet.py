@@ -87,10 +87,9 @@ def seed_align(default_settings, cw = False):
     
     time.sleep(2)
     power_inputs = []
-    window = SEED_ALIGN_WINDOW
     avg = 3
     msg_out.append("Looping over TEC range... ")
-    for i in range(total_tec-window, total_tec+window):
+    for i in range(total_tec-SEED_ALIGN_WINDOW_LOWER, total_tec+SEED_ALIGN_WINDOW_UPPER):
         tec_msb = i//256
         tec_lsb = i%256
         fpga.write_reg(mmap.LTSa, tec_msb)
@@ -110,7 +109,7 @@ def seed_align(default_settings, cw = False):
             msg_out.append("pwr_index: " + str(pwr_index))
 
     if(pwr_index != None):
-	    new_tec = total_tec+power_inputs.index(pwr_index)-window
+	    new_tec = total_tec-SEED_ALIGN_WINDOW_LOWER+power_inputs.index(pwr_index)
     else:
         new_tec = total_tec
    
