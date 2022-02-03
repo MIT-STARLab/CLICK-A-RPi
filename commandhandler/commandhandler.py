@@ -299,6 +299,7 @@ counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
 pat_init = False 
+print_time_set = False
 
 #start command handling
 while True:
@@ -309,12 +310,17 @@ while True:
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
         counter_heartbeat = send_heartbeat(curr_time, counter_heartbeat)
 
-    if((elapsed_time >= 10) and (not pat_init)):
-        #initialize PAT status
-        pat_status_flag = init_pat_status()
-        if(pat_status_flag in pat_status_list):
-            pat_init = True
-            log_pat_status()
+    if(elapsed_time >= 10):
+        if(print_time_set):
+            log_to_hk('CH (PID ' + str(pid) + ': ACK TIME AT TONE RECEIVED')
+            print_time_set = False
+
+        if(not pat_init):
+            #initialize PAT status
+            pat_status_flag = init_pat_status()
+            if(pat_status_flag in pat_status_list):
+                pat_init = True
+                log_pat_status()
 
     if(pat_init):
         #update PAT status
@@ -357,7 +363,7 @@ while True:
                                                                                     set_time.tm_min,
                                                                                     set_time.tm_sec))
                 TIME_SET_ENABLE -= 1
-                log_to_hk('ACK TIME_AT_TONE')
+                print_time_set = True
             else:
                 pass
 
