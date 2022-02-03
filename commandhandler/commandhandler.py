@@ -1141,8 +1141,11 @@ while True:
 
                     #Align seed to FGBG
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                    tx_packet.seed_align(seed)
+                    _, _, msg_out = tx_packet.seed_align(seed)
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    for i in range(0,len(msg_out)):
+                        log_to_hk(msg_out[i]) 
+                    
                     log_to_hk("Turn EDFA On")            
 
                     fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')

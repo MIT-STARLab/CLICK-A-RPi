@@ -72,14 +72,14 @@ def bits2ascii(s):
     return(''.join([chr(int(s[x:x+8],2)) for x in range(0,len(s),8)]))
 
 def seed_align(default_settings, cw = False):
-
+    msg_out = []
     power.edfa_on()
     power.bias_on()
     power.tec_on()
 
     tec_msb, tec_lsb, ld_msb, ld_lsb = default_settings
     total_tec = tec_msb*256 + tec_lsb
-
+    msg_out.append("Setting Default Seed Values: " + str(default_settings))
     for i in range(1,5):
         fpga.write_reg(i, default_settings[i-1])
     if(not cw):
@@ -89,6 +89,7 @@ def seed_align(default_settings, cw = False):
     power_inputs = []
     window = SEED_ALIGN_WINDOW
     avg = 3
+    msg_out.append("Looping over TEC range... ")
     for i in range(total_tec-window, total_tec+window):
         tec_msb = i//256
         tec_lsb = i%256
@@ -97,13 +98,16 @@ def seed_align(default_settings, cw = False):
         time.sleep(.1)
         avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
         power_inputs.append(avg_input_power)
+        msg_out.append("TEC value: " + str(i) + ", TEC MSB: " + str(tec_msb) + ", TEC LSB: " + str(tec_lsb) + ", AVG PWR: " + str(avg_input_power))
 
     pwr_index = None
     for pwr in power_inputs:
         if PPM4_THRESHOLDS[0] > pwr > PPM4_THRESHOLDS[1] and not cw:
             pwr_index = pwr
+            msg_out.append("pwr_index: " + str(pwr_index))
         elif CW_THRESHOLDS[0] > pwr > CW_THRESHOLDS[1] and cw:
             pwr_index = pwr
+            msg_out.append("pwr_index: " + str(pwr_index))
 
     if(pwr_index != None):
 	    new_tec = total_tec+power_inputs.index(pwr_index)-window
@@ -115,8 +119,9 @@ def seed_align(default_settings, cw = False):
     fpga.write_reg(mmap.LTSa, tec_msb)
     fpga.write_reg(mmap.LTSb, tec_lsb)
     time.sleep(1)
+    msg_out.append("Final TEC value: " + str(new_tec) + ", TEC MSB: " + str(tec_msb) + ", TEC LSB: " + str(tec_lsb))
 
-    return tec_msb, tec_lsb
+    return tec_msb, tec_lsb, msg_out
 
 
 
