@@ -1157,8 +1157,10 @@ while True:
 
                     #set points are dependent on temperature
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    prev_hb_time = time.time()
                     ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
                     log_to_hk("PPM: " + str(ppm_order) + ', EDFA Power: ' + str(fpga.read_reg(34)))
+                    prev_print_time = start_time
                     while(abs(end_time - start_time) < TRANSMIT_TIME):
 
                         #Stall Fifo
@@ -1179,9 +1181,13 @@ while True:
                         # #Release FIFO
                         fpga.write_reg(mmap.CTL, 0x7)
                         end_time = time.time()
-                        if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
+                        if((end_time - prev_print_time) >= 60): 
                             log_to_hk("Time Elapsed: %s" % (end_time - start_time))
+                            prev_print_time = end_time
                             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        if((end_time - prev_hb_time) >= 0.9*HK_CH_HEARTBEAT_PD):
+                            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                            prev_hb_time = end_time
                     
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
