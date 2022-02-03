@@ -225,6 +225,11 @@ HK_PAT_CHECK_PD_MIN = 2 #seconds, minimum period of hb checking
 HK_CH_HEARTBEAT_PD = 0.5 #seconds, period of hb sending
 HK_LB_HEARTBEAT_PD = 0.5 #seconds, period of hb sending
 
+HK_CH_CHECK_PD_GENERAL_SELF_TEST = 200 #delay CH check period by this much during general self test
+HK_CH_CHECK_PD_LASER_SELF_TEST = 30 #delay CH check period by this much during general self test
+HK_CH_CHECK_PD_DOWNLINK_MODE = 1800 #disable CH check during downlink experiment (which is about 20 min long)
+PERIOD_PRINT_DOWNLINK_TIME = 60 #period to print elapsed time at during downlink
+
 # File Handling Options Settings
 FL_ERR_EMPTY_DIR = 0x01
 FL_ERR_FILE_NAME = 0x02

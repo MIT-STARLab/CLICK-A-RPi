@@ -265,15 +265,15 @@ class Housekeeping:
         pkt += struct.pack('B', enables)
 
         # 2: FPGA housekeeping period
-        pkt += struct.pack('B', self.fpga_check_period)
+        pkt += struct.pack('B', (self.fpga_check_period % 256))
         # 3: System housekeeping period
-        pkt += struct.pack('B', self.sys_check_period)
+        pkt += struct.pack('B', (self.sys_check_period % 256))
         # 4: Command handler heartbeat period
-        pkt += struct.pack('B', self.ch_heartbeat_period)
+        pkt += struct.pack('B', (self.ch_heartbeat_period % 256))
         # 5: Loadbalancer heartbeat period
-        pkt += struct.pack('B', self.lb_heartbeat_period)
+        pkt += struct.pack('B', (self.lb_heartbeat_period % 256))
         # 6: PAT health period
-        pkt += struct.pack('B', self.pat_health_period)
+        pkt += struct.pack('B', (self.pat_health_period % 256))
         # 7: Acknowledged command count
         pkt += struct.pack('B', (self.ack_cmd_count % 256))
         # 8: Last acknowledged command ID
