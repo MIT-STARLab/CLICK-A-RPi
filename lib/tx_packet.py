@@ -95,7 +95,7 @@ def seed_align(default_settings, cw = False):
         tec_lsb = i%256
         fpga.write_reg(mmap.LTSa, tec_msb)
         fpga.write_reg(mmap.LTSb, tec_lsb)
-        time.sleep(.1)
+        time.sleep(1)
         avg_input_power = sum([fpga.read_reg(mmap.EDFA_POWER_IN) for x in range(avg)])/avg
         power_inputs.append(avg_input_power)
         msg_out.append("TEC value: " + str(i) + ", TEC MSB: " + str(tec_msb) + ", TEC LSB: " + str(tec_lsb) + ", AVG PWR: " + str(avg_input_power))

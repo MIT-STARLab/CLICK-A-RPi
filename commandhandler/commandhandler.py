@@ -925,7 +925,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is GENERAL_SELF_TEST')
                     success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
                     if(success_heating or OVERRIDE_HEAT_TO_0C):
-                        set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                        set_hk_ch_period(HK_CH_CHECK_PD_GENERAL_SELF_TEST) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         #Execute general self test script
                         try:
@@ -944,7 +944,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
                     success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
                     if(success_heating or OVERRIDE_HEAT_TO_0C):
-                        set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                        set_hk_ch_period(HK_CH_CHECK_PD_LASER_SELF_TEST) #delay housekeeping heartbeat checking for 30 sec
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         #Execute laser self test script 
                         try:
@@ -1014,7 +1014,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is ALL_SELF_TEST')
                     success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
                     if(success_heating or OVERRIDE_HEAT_TO_0C):
-                        set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                        set_hk_ch_period(HK_CH_CHECK_PD_GENERAL_SELF_TEST) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         no_test_error = True 
                         #Execute general self test script
@@ -1029,7 +1029,7 @@ while True:
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
                         #Execute laser self test script
-                        set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                        set_hk_ch_period(HK_CH_CHECK_PD_LASER_SELF_TEST) #delay housekeeping heartbeat checking for 30 sec
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         try:
                             log_to_hk("Running Laser Self Test...")
@@ -1066,6 +1066,7 @@ while True:
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
             try:
                 start_time = time.time()
+                set_hk_ch_period(HK_CH_CHECK_PD_DOWNLINK_MODE)
                 counter_heartbeat = send_heartbeat(start_time, counter_heartbeat)
                 log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
 
@@ -1074,7 +1075,7 @@ while True:
                 if(success_heating or OVERRIDE_HEAT_TO_0C):
                     #General self test:
                     log_to_hk("Running General Self Test...")
-                    set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                    #set_hk_ch_period(HK_CH_CHECK_PD_GENERAL_SELF_TEST) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
                     log_to_hk(results_summary)
@@ -1082,7 +1083,7 @@ while True:
 
                     #Laser self test
                     log_to_hk("Running Laser Self Test...")
-                    set_hk_ch_period(30) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
+                    #set_hk_ch_period(HK_CH_CHECK_PD_LASER_SELF_TEST) #delay housekeeping heartbeat checking for 30 sec (test is ~ 10 sec)
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
                     log_to_hk(results_summary)
@@ -1090,7 +1091,7 @@ while True:
 
                     #PAT self test
                     log_to_hk("Running PAT Self Test...")
-                    set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                    #set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
                         initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
@@ -1140,6 +1141,7 @@ while True:
                     log_to_hk("seed: " + str(seed) + "; " + "ppm_input: " + str(ppm_input))
 
                     #Align seed to FGBG
+                    #set_hk_ch_period(HK_CH_CHECK_PD_SEED_ALIGN)
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     _, _, msg_out = tx_packet.seed_align(seed)
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
@@ -1156,6 +1158,7 @@ while True:
                     time.sleep(2)
 
                     #set points are dependent on temperature
+                    #set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     prev_hb_time = time.time()
                     ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
@@ -1181,13 +1184,13 @@ while True:
                         # #Release FIFO
                         fpga.write_reg(mmap.CTL, 0x7)
                         end_time = time.time()
-                        if((end_time - prev_print_time) >= 60): 
+                        if((end_time - prev_print_time) >= PERIOD_PRINT_DOWNLINK_TIME): 
                             log_to_hk("Time Elapsed: %s" % (end_time - start_time))
                             prev_print_time = end_time
                             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                        if((end_time - prev_hb_time) >= 0.9*HK_CH_HEARTBEAT_PD):
-                            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                            prev_hb_time = end_time
+                        #if((end_time - prev_hb_time) >= 0.9*HK_CH_HEARTBEAT_PD):
+                        #    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        #    prev_hb_time = end_time
                     
                     counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
@@ -1206,6 +1209,7 @@ while True:
                 log_to_hk('ERROR CMD PL_DWNLINK_MODE: ' + traceback.format_exc())
                 ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
                 counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                 power.edfa_off()
                 power.bias_off()
                 power.tec_off()
