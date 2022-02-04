@@ -261,7 +261,7 @@ def heat_to_0C(counter_heartbeat):
     counter_heartbeat = send_heartbeat(start_time, counter_heartbeat)    
     #Heat Payload to 0C (if not already there)
     temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
-    temps = sum(temp_block)/6
+    temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
     log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
     success = True #initialize return value
     if (temps<0):
@@ -275,13 +275,14 @@ def heat_to_0C(counter_heartbeat):
         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
         begin_time = time.time()
         while(temps < 0):
-            temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
+            temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
+            temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             time.sleep(temp_sleep_time)
             log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
             if ((time.time() - begin_time) > TIMEOUT_HEAT_TO_0C):
                 counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                log_to_hk("Heater time reached %s minutes and avg temps: %s" % (TIMEOUT_HEAT_TO_0C/60, sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6))
+                log_to_hk("Heater time reached %s minutes and avg temps: %s" % (TIMEOUT_HEAT_TO_0C/60, temps))
                 success = False
                 break 
         fpga.write_reg(mmap.PO3, 15)
@@ -986,7 +987,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: THERMAL_SELF_TEST')    
                     #Heat Payload for up to 3 min or up to a change in temp of 10C
                     temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
-                    temps = sum(temp_block)/6
+                    temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
                     log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
                     log_to_hk("Start Time = %s, Temp = %s" % (start_time, temps))
                     fpga.write_reg(mmap.PO3, 85)
@@ -999,7 +1000,8 @@ while True:
                     begin_time = time.time()
                     temps_init = temps
                     while((abs(temps - temps_init) < 10) and ((time.time() - begin_time) < 180)):
-                        temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
+                        temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
+                        temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         time.sleep(temp_sleep_time)
                         log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
