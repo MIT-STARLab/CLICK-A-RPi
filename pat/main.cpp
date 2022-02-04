@@ -539,11 +539,15 @@ int main() //int argc, char** argv
 			{
 				if(self_test_passed){
 					send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
+					log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY_SELF_TEST_PASSED"); 
 				} else if(self_test_failed){
 					send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
+					log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY_SELF_TEST_FAILED"); 
 				} else if(haveCalibKnowledge){
 					send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
+					log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY_CALIBRATED"); 
 				} else {
+					log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY"); 
 					send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
 				}
 				time_prev_status = steady_clock::now(); // Record time of message						
@@ -1133,6 +1137,7 @@ int main() //int argc, char** argv
 			elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
 			if(elapsed_time_status > period_status) //pg
 			{
+				log(pat_health_port, textFileOut, "In main.cpp - Main - Sending STATUS_MAIN"); 
 				send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 				time_prev_status = steady_clock::now(); // Record time of message						
 			}
