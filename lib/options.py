@@ -193,7 +193,7 @@ CAMERA_HEIGHT = 1944
 CAMERA_MAX_EXP = 10000000
 CAMERA_MIN_EXP = 10
 #Default Data in offsetParams.csv
-DEFAULT_DATA_OFFSET_PARAMS = [['PERIOD_CALCULATE_TX_OFFSETS', ' 1000.0'], ['PERIOD_DITHER_TX_OFFSETS', ' 10.0'], ['TX_OFFSET_X_DEFAULT', ' -20'], ['TX_OFFSET_Y_DEFAULT', ' 120'], ['TX_OFFSET_SLOPE_X', ' 0.34619'], ['TX_OFFSET_BIAS_X', ' -29.464'], ['TX_OFFSET_QUADRATIC_Y', ' 0.0084797'], ['TX_OFFSET_SLOPE_Y', ' -0.34707'], ['TX_OFFSET_BIAS_Y', ' 123.46'], ['TX_OFFSET_DITHER_X_RADIUS', ' 4.0'], ['TX_OFFSET_DITHER_Y_RADIUS', ' 1.0'], ['DITHER_COUNT_PERIOD', ' 10']]  
+DEFAULT_DATA_OFFSET_PARAMS = [['PERIOD_CALCULATE_TX_OFFSETS', ' 1000.0'], ['PERIOD_DITHER_TX_OFFSETS', ' 10.0'], ['TX_OFFSET_X_DEFAULT', ' -20'], ['TX_OFFSET_Y_DEFAULT', ' 120'], ['TX_OFFSET_SLOPE_X', ' 0.34619'], ['TX_OFFSET_BIAS_X', ' -29.464'], ['TX_OFFSET_QUADRATIC_Y', ' 0.0084797'], ['TX_OFFSET_SLOPE_Y', ' -0.34707'], ['TX_OFFSET_BIAS_Y', ' 123.46'], ['TX_OFFSET_DITHER_X_RADIUS', ' 4.0'], ['TX_OFFSET_DITHER_Y_RADIUS', ' 1.0'], ['DITHER_COUNT_PERIOD', ' 10'], ['DITHER_ENABLE', '1']]  
 
 #Calibration Laser DAC setting
 CAL_LASER_DAC_SETTING = 6700
@@ -217,7 +217,7 @@ HK_FPGA_CHECK_PD = 5 #seconds, default period of hb checking
 HK_SYS_CHECK_PD = 1 #seconds, default period of hb checking
 HK_CH_CHECK_PD = 10 #seconds, default period of hb checking
 HK_LB_CHECK_PD = 10 #seconds, default period of hb checking
-HK_PAT_CHECK_PD = 10 #seconds, default period of hb checking
+HK_PAT_CHECK_PD = 30 #seconds, default period of hb checking
 HK_FPGA_CHECK_PD_MIN = 1 #seconds, minimum period of hb checking
 HK_SYS_CHECK_PD_MIN = 1 #seconds, minimum period of hb checking
 HK_CH_CHECK_PD_MIN = 2 #seconds, minimum period of hb checking
