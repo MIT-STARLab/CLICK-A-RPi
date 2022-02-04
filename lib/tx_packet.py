@@ -100,13 +100,16 @@ def seed_align(default_settings, cw = False):
         msg_out.append("TEC value: " + str(i) + ", TEC MSB: " + str(tec_msb) + ", TEC LSB: " + str(tec_lsb) + ", AVG PWR: " + str(avg_input_power))
 
     pwr_index = None
+    pwr_candidates = []
     for pwr in power_inputs:
         if PPM4_THRESHOLDS[0] > pwr > PPM4_THRESHOLDS[1] and not cw:
-            pwr_index = pwr
-            msg_out.append("pwr_index: " + str(pwr_index))
+            pwr_candidates.append(pwr)
         elif CW_THRESHOLDS[0] > pwr > CW_THRESHOLDS[1] and cw:
-            pwr_index = pwr
-            msg_out.append("pwr_index: " + str(pwr_index))
+            pwr_candidates.append(pwr)
+
+    if(len(pwr_candidates) > 0):
+        pwr_index = max(pwr_candidates)
+        msg_out.append("pwr_index: " + str(pwr_index))
 
     if(pwr_index != None):
 	    new_tec = total_tec-SEED_ALIGN_WINDOW_LOWER+power_inputs.index(pwr_index)
