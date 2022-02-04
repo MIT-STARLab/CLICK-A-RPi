@@ -28,6 +28,7 @@
 #define PERIOD_CALIB_LOSS 3.0f //seconds, time to wait after beacon loss before switching to open loop
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_TLM_MSG 5.0f //seconds, time to wait in-between periodic telemetry messages
+#define PERIOD_STATUS_MSG 2.5f //seconds, time to wait in-between status messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 1000.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
@@ -378,6 +379,12 @@ int main() //int argc, char** argv
 	char self_test_error_buffer[BUFFER_SIZE];	
 	self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
 
+	//CH Status Msg Telemetry Timing
+	time_point<steady_clock> time_prev_status;
+	duration<double> period_status(PERIOD_STATUS_MSG); //wait time in between status messages
+	time_point<steady_clock> check_status; // Record current time
+	duration<double> elapsed_time_status; // time since status
+
 	// Killing app handler (Enables graceful Ctrl+C exit)
 	signal(SIGINT, [](int signum) { stop = true; });
 
@@ -386,9 +393,17 @@ int main() //int argc, char** argv
 	//Catch camera initialization failure state in a re-initialization loop:
 	bool camera_initialized = camera.initialize();	
 	if(!camera_initialized){log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Camera Initialization Failed! Error:", camera.error);}
-	while(!camera_initialized){
-		send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
+	while(!camera_initialized){		
 		send_packet_pat_health(pat_health_port);
+
+		check_status = steady_clock::now(); // Record current time
+		elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+		if(elapsed_time_status > period_status) //pg
+		{
+			send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
+			time_prev_status = steady_clock::now(); // Record time of message						
+		}
+		
 		// Listen for exit command 		
 		zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN){
@@ -472,19 +487,19 @@ int main() //int argc, char** argv
 	time_point<steady_clock> time_prev_heartbeat;
 	duration<double> period_heartbeat(PERIOD_HEARTBEAT_TLM); //wait time in between heartbeat messages (0.5s = 2 Hz)
 	time_point<steady_clock> check_heartbeat; // Record current time
-	duration<double> elapsed_time_heartbeat; // time since tx adcs tlm
+	duration<double> elapsed_time_heartbeat; // time since heartbeat
 
 	//Main Loop Periodic Telemetry Timing
 	time_point<steady_clock> time_prev_tlm_msg;
 	duration<double> period_tlm_msg(PERIOD_TLM_MSG); //wait time in between heartbeat messages (0.5s = 2 Hz)
 	time_point<steady_clock> check_tlm_msg; // Record current time
-	duration<double> elapsed_time_tlm_msg; // time since tx adcs tlm
+	duration<double> elapsed_time_tlm_msg; // time since tlm
 
 	//CSV Telemetry Timing
 	time_point<steady_clock> time_prev_csv_write; 
 	duration<double> period_csv_write(PERIOD_CSV_WRITE); //wait time in between csv writes (0.1s = 10 Hz)
 	time_point<steady_clock> check_csv_write; // Record current time
-	duration<double> elapsed_time_csv_write; // time since tx adcs tlm
+	duration<double> elapsed_time_csv_write; // time since csv write
 	time_point<steady_clock> now;
 	duration<double> diff;
 
@@ -517,15 +532,23 @@ int main() //int argc, char** argv
 				OPERATIONAL = false;
 				break;
 			}
-			if(self_test_passed){
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
-			} else if(self_test_failed){
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
-			} else if(haveCalibKnowledge){
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
-			} else {
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+
+			check_status = steady_clock::now(); // Record current time
+			elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+			if(elapsed_time_status > period_status) //pg
+			{
+				if(self_test_passed){
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
+				} else if(self_test_failed){
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
+				} else if(haveCalibKnowledge){
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
+				} else {
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+				}
+				time_prev_status = steady_clock::now(); // Record time of message						
 			}
+
 			if(!standby_msg_sent){
 				if(haveCalibKnowledge){
 					log(pat_health_port, textFileOut, "In main.cpp - Standby - Calib is at [", calib.x, ",", calib.y, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
@@ -1102,9 +1125,16 @@ int main() //int argc, char** argv
 			elapsed_time_heartbeat = check_heartbeat - time_prev_heartbeat; // Calculate time since heartbeat tlm
 			if(elapsed_time_heartbeat > period_heartbeat) //pg
 			{
-				send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 				send_packet_pat_health(pat_health_port);
 				time_prev_heartbeat = steady_clock::now(); // Record time of message						
+			}
+
+			check_status = steady_clock::now(); // Record current time
+			elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+			if(elapsed_time_status > period_status) //pg
+			{
+				send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
+				time_prev_status = steady_clock::now(); // Record time of message						
 			}
 
 			check_tlm_msg = steady_clock::now(); // Record current time
