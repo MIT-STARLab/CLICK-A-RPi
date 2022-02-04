@@ -65,7 +65,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 		elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
 		if(elapsed_time_status > period_status) //pg
 		{
-			log(pat_health_port, textFileOut, "In tracking.cpp - Main - Sending STATUS_MAIN"); 
+			log(pat_health_port, fileStream, "In tracking.cpp - Main - Sending STATUS_MAIN"); 
 			send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 			time_prev_status = steady_clock::now(); // Record time of message						
 		}
