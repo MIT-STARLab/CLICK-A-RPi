@@ -939,6 +939,7 @@ while True:
                         set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     else:
+                        log_to_hk("ERR CMD PL_SELF_TEST - Heat to 0C Unsuccessful")
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
 
                 elif(test_id == LASER_SELF_TEST):
@@ -1206,6 +1207,7 @@ while True:
                     log_to_hk("END PL_DWNLINK_MODE - Transmit Session Complete")
                     ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
                 else:
+                    log_to_hk("END PL_DWNLINK_MODE - Heat to 0C Unsuccessful")
                     ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
             except:
                 log_to_hk('ERROR CMD PL_DWNLINK_MODE: ' + traceback.format_exc())
