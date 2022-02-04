@@ -11,6 +11,12 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 100;
 	uint16_t command;
 
+	//CH Status Msg Telemetry Timing
+	time_point<steady_clock> time_prev_status;
+	duration<double> period_status(PERIOD_STATUS_MSG_TRACK); //wait time in between status messages
+	time_point<steady_clock> check_status; // Record current time
+	duration<double> elapsed_time_status; // time since status
+
 	// Skip pre-queued old frames
 	camera.ignoreNextFrames(skip);
 
@@ -53,6 +59,15 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 			  	received_end_process_cmd = true;
 			  	return false; 
 			}
+		}
+
+		check_status = steady_clock::now(); // Record current time
+		elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+		if(elapsed_time_status > period_status) //pg
+		{
+			log(pat_health_port, textFileOut, "In tracking.cpp - Main - Sending STATUS_MAIN"); 
+			send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
+			time_prev_status = steady_clock::now(); // Record time of message						
 		}
 
 		//try search up:

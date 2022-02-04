@@ -8,6 +8,8 @@
 #include "calibration.h"
 #include "log.h"
 
+#define PERIOD_STATUS_MSG_TRACK 0.5f //seconds, time to wait in-between status messages
+
 #define TRACK_GUESS_EXPOSURE 100 //guess at beacon exposure
 #define TRACK_MIN_EXPOSURE 10 //minimum exposure limit, pg-comment
 #define TRACK_MAX_EXPOSURE 100000 //maximum exposure limit, pg
