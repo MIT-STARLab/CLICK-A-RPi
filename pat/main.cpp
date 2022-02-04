@@ -28,7 +28,7 @@
 #define PERIOD_CALIB_LOSS 3.0f //seconds, time to wait after beacon loss before switching to open loop
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_TLM_MSG 5.0f //seconds, time to wait in-between periodic telemetry messages
-#define PERIOD_STATUS_MSG 0.5f //seconds, time to wait in-between status messages
+#define PERIOD_STATUS_MSG 2.5f //seconds, time to wait in-between status messages
 #define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 1000.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
