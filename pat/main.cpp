@@ -1825,7 +1825,7 @@ int main() //int argc, char** argv
 							fsm.setNormalizedAngles(0,0); 
 						}
 						static_pointing_initialized = true; 
-						period_csv_write = 0.5; //reduce sampling rate to save data
+						period_csv_write = (duration<double>) 0.5; //reduce sampling rate to save data
 					} else{
 						if(haveCalibKnowledge){
 							if(dithering_on){
