@@ -33,6 +33,8 @@
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 1000.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define PERIOD_DITHER_TX_OFFSETS 10.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
+#define PERIOD_PROPERTY_CHANGE_CAL 0.5f //seconds, time to wait in-between reporting rapid calibration laser property changes
+#define PERIOD_PROPERTY_CHANGE_BCN 0.5f //seconds, time to wait in-between reporting rapid beacon laser property changes
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -20 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
 #define TX_OFFSET_Y_DEFAULT 120 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
@@ -526,7 +528,19 @@ int main() //int argc, char** argv
 	time_point<steady_clock> time_prev_dither; 
 	time_point<steady_clock> check_dither; // Record current time
 	duration<double> elapsed_time_dither; // time since last tx offset calculation
-	
+
+	//Rapid Property Change Timing for Cal Laser
+	time_point<steady_clock> time_prev_prop_change_cal;
+	duration<double> period_prop_change_cal(PERIOD_PROPERTY_CHANGE_CAL); //wait time in between heartbeat messages (0.5s = 2 Hz)
+	time_point<steady_clock> check_prop_change_cal; // Record current time
+	duration<double> elapsed_time_prop_change_cal; // time since heartbeat
+
+	//Rapid Property Change Timing for Bcn Laser
+	time_point<steady_clock> time_prev_prop_change_bcn;
+	duration<double> period_prop_change_bcn(PERIOD_PROPERTY_CHANGE_BCN); //wait time in between heartbeat messages (0.5s = 2 Hz)
+	time_point<steady_clock> check_prop_change_bcn; // Record current time
+	duration<double> elapsed_time_prop_change_bcn; // time since heartbeat
+
 	// Enter Primary Process Loop: Standby + Main
 	while(OPERATIONAL){
 		// Allow graceful exit with Ctrl-C
@@ -1375,10 +1389,16 @@ int main() //int argc, char** argv
 											}
 											else
 											{
-												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
-												"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-												"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
-												"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+												check_prop_change_bcn = steady_clock::now(); // Record current time
+												elapsed_time_prop_change_bcn = check_prop_change_bcn - time_prev_prop_change_bcn; // Calculate time since property change report
+												if(elapsed_time_prop_change_bcn > period_prop_change_bcn) //pg
+												{
+													log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
+													"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+													"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+													time_prev_prop_change_bcn = steady_clock::now(); // Record time of message		
+												}
 												if(haveBeaconKnowledge) // Beacon Loss Scenario
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1535,10 +1555,16 @@ int main() //int argc, char** argv
 											}
 											else
 											{
-												log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
-												"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-												"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
-												"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+												check_prop_change_cal = steady_clock::now(); // Record current time
+												elapsed_time_prop_change_cal = check_prop_change_cal - time_prev_prop_change_cal; // Calculate time since heartbeat tlm
+												if(elapsed_time_prop_change_cal > period_prop_change_cal) //pg
+												{
+													log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
+													"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+													"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
+													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+													time_prev_prop_change_cal = steady_clock::now(); // Record time of message		
+												}
 											}
 										}
 										else
@@ -1714,10 +1740,16 @@ int main() //int argc, char** argv
 											}
 											else
 											{
-												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Rapid beacon spot property change: ",
-												"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-												"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
-												"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+												check_prop_change_bcn = steady_clock::now(); // Record current time
+												elapsed_time_prop_change_bcn = check_prop_change_bcn - time_prev_prop_change_bcn; // Calculate time since heartbeat tlm
+												if(elapsed_time_prop_change_bcn > period_prop_change_bcn) //pg
+												{
+													log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Rapid beacon spot property change: ",
+													"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+													"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+													time_prev_prop_change_bcn = steady_clock::now(); // Record time of message		
+												}
 												if(haveBeaconKnowledge) // Beacon Loss Scenario
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
