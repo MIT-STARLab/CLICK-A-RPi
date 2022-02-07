@@ -56,6 +56,7 @@
 using namespace std;
 using namespace std::chrono;
 
+/*
 class CSVdata
 {
 public:
@@ -65,7 +66,7 @@ public:
     bcnX(bcnXin), bcnY(bcnYin), bcnExp(bcnExpIn),
     calX(calXin), calY(calYin), calSetX(calSetXin), calSetY(calSetYin), calExp(calExpIn) {}
 };
-
+*/
 //Turn on Calibration Laser
 bool laserOn(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
 	bool laser_is_on;
@@ -297,6 +298,13 @@ int main() //int argc, char** argv
 	//Generate text telemetry file, pg
 	ofstream textFileOut; //stream for text telemetry
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
+
+	//Generate csv telemetry file
+	ofstream dataFileOut;
+	dataFileOut.open(dataFileName, ios::app); //create text file and open for writing
+	writeHeaderToDataFile(dataFileOut);
+
+	//Log process start and telemetry directory
 	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid, ". Saving data to: ", pathName);
 
 	// Synchronization
@@ -472,8 +480,8 @@ int main() //int argc, char** argv
 
 	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
-	map<double, CSVdata> csvData;
-	bool haveCsvData = false; //don't save csv if there's no data
+	//map<double, CSVdata> csvData;
+	//bool haveCsvData = false; //don't save csv if there's no data
 
 	//Beacon Loss Timing
 	time_point<steady_clock> startBeaconLoss;
@@ -615,7 +623,11 @@ int main() //int argc, char** argv
 					
 					case CMD_START_PAT_STATIC_POINT:
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
-						phase = CALIBRATION;
+						if(haveCalibKnowledge){
+							phase = STATIC_POINT;
+						} else{
+							phase = CALIBRATION;
+						}
 						staticPoint = true;
 						STANDBY = false;
 						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
@@ -1499,11 +1511,11 @@ int main() //int argc, char** argv
 													// Save for CSV
 													now = steady_clock::now();
 													diff = now - beginTime;
-													csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
-														calib.x, calib.y, setPointX, setPointY, calibExposure)));
+													writeToDataFile(dataFileOut, diff.count(), beacon.x, beacon.y, beaconExposure, calib.x, calib.y, setPointX, setPointY, calibExposure);
+													//csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure, calib.x, calib.y, setPointX, setPointY, calibExposure)));
 													//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 													time_prev_csv_write = now; // Record time of csv write	
-													if(!haveCsvData){haveCsvData = true;}	
+													//if(!haveCsvData){haveCsvData = true;}	
 												}
 
 												if(dithering_on){
@@ -1663,11 +1675,11 @@ int main() //int argc, char** argv
 													// Save for CSV
 													now = steady_clock::now();
 													diff = now - beginTime;
-													csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
-														calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
+													writeToDataFile(dataFileOut, diff.count(), beacon.x, beacon.y, beaconExposure, calib.x, calib.y, beacon.x, beacon.y, calibExposure);
+													//csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure, calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
 													//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 													time_prev_csv_write = now; // Record time of csv write
-													if(!haveCsvData){haveCsvData = true;}			
+													//if(!haveCsvData){haveCsvData = true;}			
 												}
 												// If sending beacon angle errors to the bus adcs
 												//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
@@ -1813,6 +1825,7 @@ int main() //int argc, char** argv
 							fsm.setNormalizedAngles(0,0); 
 						}
 						static_pointing_initialized = true; 
+						period_csv_write = 0.5; //reduce sampling rate to save data
 					} else{
 						if(haveCalibKnowledge){
 							if(dithering_on){
@@ -1848,10 +1861,11 @@ int main() //int argc, char** argv
 							// Save for CSV
 							now = steady_clock::now();
 							diff = now - beginTime;
-							csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
+							writeToDataFile(dataFileOut, diff.count(), 0, 0, 0, calib.x, calib.y, calib.x, calib.y, calibExposure);
+							//csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
 							//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 							time_prev_csv_write = now; // Record time of csv write
-							if(!haveCsvData){haveCsvData = true;}			
+							//if(!haveCsvData){haveCsvData = true;}			
 						}
 					}
 					break;
@@ -1876,6 +1890,7 @@ int main() //int argc, char** argv
 	//reset FSM before ending PAT process
 	fsm.resetFSM();
 
+	/*
 	if(haveCsvData){
 		log(pat_health_port, textFileOut,  "In main.cpp - Saving csv file.");
 		ofstream out(dataFileName);
@@ -1889,9 +1904,11 @@ int main() //int argc, char** argv
 		out.close(); //close data file
 		//std::cout << "CSV File Saved." << std::endl;
 	}
+	*/
 	
-	log(pat_health_port, textFileOut,  "In main.cpp - Saving text file and ending process.");
+	log(pat_health_port, textFileOut,  "In main.cpp - Ending process.");
 	textFileOut.close(); //close telemetry text file
+	dataFileOut.close(); //close telemetry data file
     //std::cout << "TXT File Saved." << std::endl;
 	pat_status_port.close();
 	pat_health_port.close();

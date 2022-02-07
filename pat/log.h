@@ -59,4 +59,11 @@ std::string getExperimentFolder(bool updateExpId = false);
 //Delete old logs
 void manageLogs();
 
+//Write line to CSV data file
+void writeToDataFile(std::ofstream& fileStream, double time, double bcnX, double bcnY, double bcnExp, double calX, double calY, double calSetX, double calSetY, double calExp);
+
+//Write header line to CSV data file
+void writeHeaderToDataFile(std::ofstream& fileStream);
+
+
 #endif

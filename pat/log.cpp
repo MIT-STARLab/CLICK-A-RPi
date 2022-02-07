@@ -92,3 +92,13 @@ void manageLogs(){
 		}
 	}
 }
+
+//Write line to CSV Data File
+void writeToDataFile(std::ofstream& fileStream, double time, double bcnX, double bcnY, double bcnExp, double calX, double calY, double calSetX, double calSetY, double calExp){
+	fileStream << time << "," << bcnX << "," << bcnY << "," << bcnExp << "," << calX << "," << calY << "," << calSetX << "," << calSetY << "," << calExp << std::endl;
+}
+
+//Write header line to CSV data file
+void writeHeaderToDataFile(std::ofstream& fileStream){
+	fileStream << "time" << "," << "bcnX" << "," << "bcnY" << "," << "bcnExp" << "," << "calX" << "," << "calY" << "," << "calSetX" << "," << "calSetY" << "," << "calExp" << std::endl;
+}
