@@ -301,7 +301,7 @@ int main() //int argc, char** argv
 
 	//Generate csv telemetry file
 	ofstream dataFileOut;
-	dataFileOut.open(dataFileName, ios::app); //create text file and open for writing
+	dataFileOut.open(dataFileName, ios::app); //create data file and open for writing
 	writeHeaderToDataFile(dataFileOut);
 
 	//Log process start and telemetry directory

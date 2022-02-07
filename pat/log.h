@@ -39,9 +39,11 @@ void log(zmq::socket_t& pat_health_port, std::ofstream& fileStream, args&&... ms
 	fileStream << std::endl;	
 	
 	//log to terminal; eliminate this for flight
+	/*
 	std::cout << "[" << std::fixed << std::setprecision(2) << (float)clock()/CLOCKS_PER_SEC << std::setprecision(5) << "] ";
 	(void) expander{0, (void(std::cout << std::forward<args>(msgs) << " "), 0)...};
 	std::cout << std::endl;	
+	*/
 }
 
 // Get date and time for telemetry file names
