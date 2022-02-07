@@ -431,7 +431,7 @@ int main() //int argc, char** argv
 				fsm_test_result = NULL_SELF_TEST;
 				calibration_test_result = NULL_SELF_TEST;			
 				//send self test results
-				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result) //, self_test_error_buffer);
+				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result); //, self_test_error_buffer);
 				
 			} else if(command == CMD_END_PROCESS){
 				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_END_PROCESS command. Saving text file and ending process.");
