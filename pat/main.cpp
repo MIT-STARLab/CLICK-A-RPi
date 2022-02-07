@@ -1841,6 +1841,8 @@ int main() //int argc, char** argv
 						}
 					}
 					if(haveCalibKnowledge){
+						check_csv_write = steady_clock::now(); // Record current time
+						elapsed_time_csv_write = check_csv_write - time_prev_csv_write; // Calculate time since csv write
 						if(elapsed_time_csv_write > period_csv_write)
 						{
 							// Save for CSV
