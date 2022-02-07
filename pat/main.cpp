@@ -615,7 +615,8 @@ int main() //int argc, char** argv
 					
 					case CMD_START_PAT_STATIC_POINT:
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
-						phase = STATIC_POINT;
+						phase = CALIBRATION;
+						staticPoint = true;
 						STANDBY = false;
 						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;
@@ -1192,7 +1193,11 @@ int main() //int argc, char** argv
 							haveCalibKnowledge = true; 
 							calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
 							log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
-							phase = ACQUISITION;
+							if(staticPoint){
+								phase = STATIC_POINT;
+							} else{
+								phase = ACQUISITION;
+							}
 						}
 						else
 						{
@@ -1200,14 +1205,22 @@ int main() //int argc, char** argv
 							log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - calibration.run failed!");
 							num_calibration_attempts++;
 							log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
-							phase = CALIBRATION;
+							if(staticPoint){
+								phase = STATIC_POINT;
+							} else{
+								phase = CALIBRATION;
+							}
 						}
 					} else{
 						haveCalibKnowledge = false; 
 						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - laserOn FPGA command failed!");
 						num_calibration_attempts++;
 						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
-						phase = CALIBRATION;
+						if(staticPoint){
+							phase = STATIC_POINT;
+						} else{
+							phase = CALIBRATION;
+						}
 					}
 					break;
 
@@ -1799,13 +1812,6 @@ int main() //int argc, char** argv
 							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Do not have calibration knowledge. Setting FSM to (x_normalized, y_normalized) = (0,0).");
 							fsm.setNormalizedAngles(0,0); 
 						}
-
-						// Save for CSV
-						now = steady_clock::now();
-						diff = now - beginTime;
-						csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
-						//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
-
 						static_pointing_initialized = true; 
 					} else{
 						if(haveCalibKnowledge){
@@ -1832,6 +1838,18 @@ int main() //int argc, char** argv
 									time_prev_dither = steady_clock::now();
 								}
 							}
+						}
+					}
+					if(haveCalibKnowledge){
+						if(elapsed_time_csv_write > period_csv_write)
+						{
+							// Save for CSV
+							now = steady_clock::now();
+							diff = now - beginTime;
+							csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
+							//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							time_prev_csv_write = now; // Record time of csv write
+							if(!haveCsvData){haveCsvData = true;}			
 						}
 					}
 					break;
