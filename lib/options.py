@@ -198,6 +198,13 @@ DEFAULT_DATA_OFFSET_PARAMS = [['PERIOD_CALCULATE_TX_OFFSETS', ' 1000.0'], ['PERI
 #Calibration Laser DAC setting
 CAL_LASER_DAC_SETTING = 6700
 
+#Calibration Laser Self Test Parameters
+HEATER_OFF_UB = 0.2 #Reference temp is 26.5C, can be 110mA at 0C
+HEATER_ONLY_LB = 0.007 #Reference temp is 26.5C
+HEATER_ONLY_UB = 0.117 #Reference temp is 26.5C
+CALIB_LB = 0.022 #Reference temp is 26.5C
+CALB_UB = 0.134 #Reference temp is 26.5C
+
 #Timout Heat to 0C
 TIMEOUT_HEAT_TO_0C = 1200 #seconds
 OVERRIDE_HEAT_TO_0C = False #option to override heating to 0C if RTDs break or something and we want to test anyways
