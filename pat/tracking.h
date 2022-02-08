@@ -45,6 +45,35 @@
 
 using namespace std::chrono;
 
+//for loading modifiable constant parameters from external file
+enum trackParamIndex { 
+    IDX_TRACK_GUESS_EXPOSURE, 
+    IDX_TRACK_MIN_EXPOSURE,
+    IDX_TRACK_MAX_EXPOSURE,
+    IDX_TRACK_ACQUISITION_EXP_INCREMENT,
+    IDX_TRACK_ACQUISITION_BRIGHTNESS,
+    IDX_TRACK_ACQUISITION_WINDOW,
+    IDX_TRACK_GOOD_PEAKTOMAX_DISTANCE,
+	IDX_TRACK_HAPPY_BRIGHTNESS,
+	IDX_TRACK_TUNING_TOLERANCE,
+	IDX_TRACK_TUNING_EXP_DIVIDER,
+	IDX_TRACK_EXP_CONTROL_TOLERANCE,
+	IDX_TRACK_EXP_CONTROL_DIVIDER,
+	IDX_TRACK_WINDOW_SIZE_TOLERANCE,
+	IDX_TRACK_MAX_SPOT_DIFFERENCE,
+	IDX_TRACK_MIN_SPOT_LIMIT,
+	IDX_TRACK_CONTROL_I,
+	IDX_TRACK_CONTROL_MAX_TS_MS,
+	IDX_TRACK_SAFE_DISTANCE_ALLOW,
+	IDX_TRACK_SAFE_DISTANCE_PANIC,
+    NUM_TRACK_PARAMS
+};
+struct trackParamStruct {
+    string name;
+    int parameter;
+};
+
+//Tracking Class
 class Tracking
 {
 	Camera& camera;
@@ -55,6 +84,7 @@ class Tracking
 	zmq::socket_t &pat_health_port;
 	zmq::socket_t &pat_control_port;
 	std::vector<zmq::pollitem_t>& poll_pat_control; 
+	trackParamStruct (trackParams)[NUM_TRACK_PARAMS];
 	bool verifyFrame(Image& frame, bool printFailure = false);
 	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int maxBcnExposure = TRACK_MAX_EXPOSURE);
 	bool autoTuneExposure(Group& beacon, int maxExposure = TRACK_MAX_EXPOSURE);
@@ -63,7 +93,8 @@ public:
 	double actionX, actionY;
 	bool received_end_pat_cmd = false;
 	bool received_end_process_cmd = false;
-	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in) : camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_status_port_in), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), actionX(0), actionY(0) {};
+	Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in);
+	bool getTrackParams();
 	bool runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure = TRACK_MAX_EXPOSURE);
 	int findSpotCandidate(Image& frame, Group& oldSpot, double *difference);
 	void updateTrackingWindow(Image& frame, Group& spot, AOI& window);

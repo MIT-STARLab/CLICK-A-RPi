@@ -3,6 +3,101 @@
 #include "tracking.h"
 #include <cmath>
 
+//Contructor
+Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in): 
+camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_status_port_in), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), actionX(0), actionY(0)
+{
+	if(!getTrackParams()){
+		//assign default parameters if CSV parameter retrieval fails
+		log(pat_health_port, fileStream, "In tracking.cpp - Tracking: using default parameters:");
+		
+		//Set names
+		trackParams[IDX_TRACK_GUESS_EXPOSURE].name = "TRACK_GUESS_EXPOSURE";
+		trackParams[IDX_TRACK_MIN_EXPOSURE].name = "TRACK_MIN_EXPOSURE";
+		trackParams[IDX_TRACK_MAX_EXPOSURE].name = "TRACK_MAX_EXPOSURE";
+		trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].name = "TRACK_ACQUISITION_EXP_INCREMENT";
+		trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].name = "TRACK_ACQUISITION_BRIGHTNESS";
+		trackParams[IDX_TRACK_ACQUISITION_WINDOW].name = "TRACK_ACQUISITION_WINDOW";
+		trackParams[IDX_TRACK_GOOD_PEAKTOMAX_DISTANCE].name = "TRACK_GOOD_PEAKTOMAX_DISTANCE";
+		trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].name = "TRACK_HAPPY_BRIGHTNESS";
+		trackParams[IDX_TRACK_TUNING_TOLERANCE].name = "TRACK_TUNING_TOLERANCE";
+		trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].name = "TRACK_TUNING_EXP_DIVIDER";
+		trackParams[IDX_TRACK_EXP_CONTROL_TOLERANCE].name = "TRACK_EXP_CONTROL_TOLERANCE";
+		trackParams[IDX_TRACK_EXP_CONTROL_DIVIDER].name = "TRACK_EXP_CONTROL_DIVIDER";
+		trackParams[IDX_TRACK_WINDOW_SIZE_TOLERANCE].name = "TRACK_WINDOW_SIZE_TOLERANCE";
+		trackParams[IDX_TRACK_MAX_SPOT_DIFFERENCE].name = "TRACK_MAX_SPOT_DIFFERENCE";
+		trackParams[IDX_TRACK_MIN_SPOT_LIMIT].name = "TRACK_MIN_SPOT_LIMIT";
+		trackParams[IDX_TRACK_CONTROL_I].name = "TRACK_CONTROL_I";
+		trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].name = "TRACK_CONTROL_MAX_TS_MS";
+		trackParams[IDX_TRACK_SAFE_DISTANCE_ALLOW].name = "TRACK_SAFE_DISTANCE_ALLOW";
+		trackParams[IDX_TRACK_SAFE_DISTANCE_PANIC].name = "TRACK_SAFE_DISTANCE_PANIC";
+
+		//Set default parameters
+		trackParams[IDX_TRACK_GUESS_EXPOSURE].parameter = TRACK_GUESS_EXPOSURE;
+		trackParams[IDX_TRACK_MIN_EXPOSURE].parameter = TRACK_MIN_EXPOSURE;
+		trackParams[IDX_TRACK_MAX_EXPOSURE].parameter = TRACK_MAX_EXPOSURE;
+		trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter = TRACK_ACQUISITION_EXP_INCREMENT;
+		trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter = TRACK_ACQUISITION_BRIGHTNESS;
+		trackParams[IDX_TRACK_ACQUISITION_WINDOW].parameter = TRACK_ACQUISITION_WINDOW;
+		trackParams[IDX_TRACK_GOOD_PEAKTOMAX_DISTANCE].parameter = TRACK_GOOD_PEAKTOMAX_DISTANCE;
+		trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter = TRACK_HAPPY_BRIGHTNESS;
+		trackParams[IDX_TRACK_TUNING_TOLERANCE].parameter = TRACK_TUNING_TOLERANCE;
+		trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter = TRACK_TUNING_EXP_DIVIDER;
+		trackParams[IDX_TRACK_EXP_CONTROL_TOLERANCE].parameter = TRACK_EXP_CONTROL_TOLERANCE;
+		trackParams[IDX_TRACK_EXP_CONTROL_DIVIDER].parameter = TRACK_EXP_CONTROL_DIVIDER;
+		trackParams[IDX_TRACK_WINDOW_SIZE_TOLERANCE].parameter = TRACK_WINDOW_SIZE_TOLERANCE;
+		trackParams[IDX_TRACK_MAX_SPOT_DIFFERENCE].parameter = TRACK_MAX_SPOT_DIFFERENCE;
+		trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter = TRACK_MIN_SPOT_LIMIT;
+		trackParams[IDX_TRACK_CONTROL_I].parameter = TRACK_CONTROL_I;
+		trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].parameter = (int) 1000*TRACK_CONTROL_MAX_TS;
+		trackParams[IDX_TRACK_SAFE_DISTANCE_ALLOW].parameter = TRACK_SAFE_DISTANCE_ALLOW;
+		trackParams[IDX_TRACK_SAFE_DISTANCE_PANIC].parameter = TRACK_SAFE_DISTANCE_PANIC;	
+
+		//Display parameters
+		for (size_t i = 0; i < NUM_TRACK_PARAMS; i++)
+		{
+			log(pat_health_port, fileStream, "In tracking.cpp - Tracking: ", trackParams[i].name, ": ", trackParams[i].parameter);
+		}			
+	}
+};
+
+//Load modifiable constant parameters from external CSV file
+bool getTrackParams(){
+	trackParamStruct trackParam; //temp offsetParamStruct for use in the while loop
+    ifstream inFile("/root/lib/trackParams.csv"); //our file
+    string line;
+    int linenum = 0;
+	log(pat_health_port, fileStream, "In tracking.cpp - getTrackParams: Retrieving Tracking Parameters from /root/lib/trackParams.csv");
+    if(inFile.is_open()){
+		while (getline (inFile, line))
+		{
+			istringstream linestream(line);
+			string item;
+			//use this to get up to the first comma
+			getline(linestream, item, ',');
+			trackParam.name = item;
+			//convert to a string stream and then put in id.
+			getline(linestream, item, ',');
+			stringstream ss(item);
+			ss >> trackParam.parameter;
+			//report read data
+			log(pat_health_port, fileStream, "In tracking.cpp - getTrackParams: ", trackParam.name, ": ", trackParam.parameter);
+			//add the new data to the list
+			trackParams[linenum] = trackParam;
+			linenum++;
+		}
+		if(linenum != NUM_TRACK_PARAMS){
+			log(pat_health_port, fileStream, "In tracking.cpp - getTrackParams: /root/lib/trackParams.csv is missing data: ", linenum, " lines found out of ", NUM_TRACK_PARAMS);
+            return false;
+        } else{
+			return true;
+		}
+	} else{
+		log(pat_health_port, fileStream, "In tracking.cpp - getTrackParams: /root/lib/trackParams.csv did not open or doesn't exist.");
+		return false;
+	}
+}
+
 // Sweep through expected power ranges and look for spot
 //-----------------------------------------------------------------------------
 bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
