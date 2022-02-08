@@ -59,7 +59,7 @@ camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_sta
 			log(pat_health_port, fileStream, "In tracking.cpp - Tracking: ", trackParams[i].name, ": ", trackParams[i].parameter);
 		}			
 	}
-};
+}
 
 //Load modifiable constant parameters from external CSV file
 bool getTrackParams(){
