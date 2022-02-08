@@ -3,9 +3,11 @@
 #include "tracking.h"
 #include <cmath>
 
-//Contructor
+//Constructor
+//-----------------------------------------------------------------------------
 Tracking::Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in): 
 camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_status_port_in), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), actionX(0), actionY(0)
+//-----------------------------------------------------------------------------
 {
 	if(!getTrackParams()){
 		//assign default parameters if CSV parameter retrieval fails
@@ -62,7 +64,10 @@ camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_sta
 }
 
 //Load modifiable constant parameters from external CSV file
-bool Tracking::getTrackParams(){
+//-----------------------------------------------------------------------------
+bool Tracking::getTrackParams()
+//-----------------------------------------------------------------------------
+{
 	trackParamStruct trackParam; //temp offsetParamStruct for use in the while loop
     ifstream inFile("/root/lib/trackParams.csv"); //our file
     string line;
@@ -103,7 +108,7 @@ bool Tracking::getTrackParams(){
 bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 //-----------------------------------------------------------------------------
 {
-	int exposure = TRACK_GUESS_EXPOSURE, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 100;
+	int exposure = trackParams[IDX_TRACK_GUESS_EXPOSURE].parameter, gain = 0, skip = camera.queuedCount, counter = 0, printPeriod = 100;
 	uint16_t command;
 
 	//CH Status Msg Telemetry Timing
