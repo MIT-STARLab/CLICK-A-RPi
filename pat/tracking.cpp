@@ -4,7 +4,7 @@
 #include <cmath>
 
 //Contructor
-Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in): 
+Tracking::Tracking(Camera& c, Calibration& calib, std::ofstream &fileStreamIn, zmq::socket_t &pat_status_port_in, zmq::socket_t &pat_health_port_in, zmq::socket_t& pat_control_port_in, std::vector<zmq::pollitem_t>& poll_pat_control_in): 
 camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_status_port_in), pat_health_port(pat_health_port_in), pat_control_port(pat_control_port_in), poll_pat_control(poll_pat_control_in), actionX(0), actionY(0)
 {
 	if(!getTrackParams()){
@@ -62,7 +62,7 @@ camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_sta
 }
 
 //Load modifiable constant parameters from external CSV file
-bool getTrackParams(){
+bool Tracking::getTrackParams(){
 	trackParamStruct trackParam; //temp offsetParamStruct for use in the while loop
     ifstream inFile("/root/lib/trackParams.csv"); //our file
     string line;
