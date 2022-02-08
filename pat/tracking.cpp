@@ -647,7 +647,7 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 
 // Check whether spots are at a safe distance and closed-loop tracking is possible
 //-----------------------------------------------------------------------------
-bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
+bool Tracking::distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 //-----------------------------------------------------------------------------
 {
 	double distance = sqrt((beacon.x - calib.x)*(beacon.x - calib.x) +
