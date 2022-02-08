@@ -84,13 +84,13 @@ class Tracking
 	zmq::socket_t &pat_health_port;
 	zmq::socket_t &pat_control_port;
 	std::vector<zmq::pollitem_t>& poll_pat_control; 
-	trackParamStruct trackParams[NUM_TRACK_PARAMS];
 	double track_control_max_ts = TRACK_CONTROL_MAX_TS;
 	bool verifyFrame(Image& frame, bool printFailure = false);
 	bool windowAndTune(Image& frame, Group& beacon, AOI& beaconWindow, int maxBcnExposure = TRACK_MAX_EXPOSURE);
 	bool autoTuneExposure(Group& beacon, int maxExposure = TRACK_MAX_EXPOSURE);
 public:
 	//int beaconSmoothing = 0;
+	trackParamStruct trackParams[NUM_TRACK_PARAMS];
 	double actionX, actionY;
 	bool received_end_pat_cmd = false;
 	bool received_end_process_cmd = false;
