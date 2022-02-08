@@ -203,7 +203,7 @@ HEATER_OFF_UB = 0.2 #Reference temp is 26.5C, can be 110mA at 0C
 HEATER_ONLY_LB = 0.007 #Reference temp is 26.5C
 HEATER_ONLY_UB = 0.117 #Reference temp is 26.5C
 CALIB_LB = 0.022 #Reference temp is 26.5C
-CALB_UB = 0.134 #Reference temp is 26.5C
+CALIB_UB = 0.134 #Reference temp is 26.5C
 
 #Timout Heat to 0C
 TIMEOUT_HEAT_TO_0C = 1200 #seconds

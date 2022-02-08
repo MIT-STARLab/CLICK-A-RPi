@@ -86,9 +86,9 @@ def test_calib_laser(fo):
         success = False
         fo.write("Heater Circuit current is outside of bounds: %f A to %f A: %f\n" % (options.HEATER_ONLY_LB, options.HEATER_ONLY_UB+add_temp, heater_only_curr))
         #print(2)
-    if(not (options.CALIB_LB < calib_curr < options.CALB_UB+add_temp)):
+    if(not (options.CALIB_LB < calib_curr < options.CALIB_UB+add_temp)):
         success = False
-        fo.write("Heater Circuit + Cal Laser current is outside of bounds: %f A to %f A: %f\n" % (options.CALIB_LB, options.CALB_UB+add_temp, calib_curr))
+        fo.write("Heater Circuit + Cal Laser current is outside of bounds: %f A to %f A: %f\n" % (options.CALIB_LB, options.CALIB_UB+add_temp, calib_curr))
         #print(3)
 
     #print("TOSA Temp: %0.03f, OFF: %.03f A, Heater Circuit Only: %.03f A, Heater Circuit + Cal Laser: %.03f A" % (tosa_temp, heater_off_curr, heater_only_curr, calib_curr))  
