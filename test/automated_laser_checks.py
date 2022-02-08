@@ -54,19 +54,19 @@ def test_calib_laser(fo):
     power.heaters_off()
     power.heater_1_off()
     power.heater_2_off()
-    time.sleep(.25)
+    time.sleep(1)
     heater_off_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('OFF: %f A\n' % heater_off_curr)
     
     power.heaters_on()
-    time.sleep(.1)
+    time.sleep(1)
     heater_only_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('Heater Circuit: %f A\n' % heater_only_curr)
 
     power.calib_diode_on()
     fpga.write_reg(mmap.DAC_SETUP,1)
     fpga.write_reg(mmap.DAC_1_D, options.CAL_LASER_DAC_SETTING)
-    time.sleep(.1)
+    time.sleep(1)
     calib_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('Heater Circuit + Cal Laser: %f A\n' % calib_curr)
         
@@ -84,7 +84,7 @@ def test_calib_laser(fo):
     add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP) #Temperature variation TBR    
     if(heater_off_curr > HEATER_OFF_UB):
         success = False
-        fo.write("Heater off current is larger than %f A\n" % (HEATER_OFF_LB))
+        fo.write("Heater off current is larger than %f A\n" % (HEATER_OFF_UB))
         print(1)
     if(not (HEATER_ONLY_LB < heater_only_curr < HEATER_ONLY_UB+add_temp)):
         success = False
