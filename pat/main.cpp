@@ -339,12 +339,8 @@ int main() //int argc, char** argv
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
-	int beaconWindowSize = TRACK_ACQUISITION_WINDOW;
-	beaconWindow.w = beaconWindowSize;
-	beaconWindow.h = beaconWindow.w;
 	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
 	beacon.x = CAMERA_WIDTH/2 + beacon_x_rel; beacon.y = CAMERA_HEIGHT/2 + beacon_y_rel;
-	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
 	tx_offsets offsets;
@@ -479,6 +475,15 @@ int main() //int argc, char** argv
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
 	Tracking track(camera, calibration, textFileOut, pat_status_port, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
+
+	//Load Track Parameters
+	int minBcnExposure = track.trackParams[IDX_TRACK_MIN_EXPOSURE].parameter;
+	int maxBcnExposure = track.trackParams[IDX_TRACK_MAX_EXPOSURE].parameter; 
+	int beaconWindowSize = track.trackParams[IDX_TRACK_ACQUISITION_WINDOW].parameter;
+	int track_acquisition_brightness = track.trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter;
+	int track_max_spot_difference = track.trackParams[IDX_TRACK_MAX_SPOT_DIFFERENCE].parameter;
+	beaconWindow.w = beaconWindowSize;
+	beaconWindow.h = beaconWindow.w;
 
 	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
@@ -1180,8 +1185,8 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where beacon is.");
 					}
 				} else{
-					if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
-					if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
+					if(beaconExposure == minBcnExposure) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
+					if(beaconExposure == maxBcnExposure) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
 					if(haveBeaconKnowledge){
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
 					} else{
@@ -1320,10 +1325,10 @@ int main() //int argc, char** argv
 
 				// Initialize closed-loop double window tracking
 				case CL_INIT:
-					calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
-					calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
-					calibWindow.w = TRACK_ACQUISITION_WINDOW;
-					calibWindow.h = TRACK_ACQUISITION_WINDOW;
+					calibWindow.x = calib.x - beaconWindowSize/2;
+					calibWindow.y = calib.y - beaconWindowSize/2;
+					calibWindow.w = beaconWindowSize;
+					calibWindow.h = beaconWindowSize;
 					log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - ",
 					"calibWindow.x = ", calibWindow.x, "calibWindow.y = ", calibWindow.y,
 					"calibWindow.w = ", calibWindow.w, "calibWindow.h = ", calibWindow.h);
@@ -1349,7 +1354,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
+							if(frame.histBrightest > track_acquisition_brightness)
 							{
 								cl_beacon_num_groups = frame.performPixelGrouping();
 								if(cl_beacon_num_groups > 0)
@@ -1357,11 +1362,11 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+										if(frame.groups[spotIndex].valueMax > track_acquisition_brightness)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
-											if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+											if(propertyDifference < track_max_spot_difference)
 											{
 												haveBeaconKnowledge = true;
 												// Update values if confident
@@ -1394,7 +1399,7 @@ int main() //int argc, char** argv
 												if(elapsed_time_prop_change_bcn > period_prop_change_bcn) //pg
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
-													"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+													"(propertyDifference = ", propertyDifference, ") >= (track_max_spot_difference = ",  track_max_spot_difference, "). ",
 													"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
 													time_prev_prop_change_bcn = steady_clock::now(); // Record time of message		
@@ -1410,7 +1415,7 @@ int main() //int argc, char** argv
 										else
 										{
 											log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
-											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 											if(haveBeaconKnowledge) // Beacon Loss Scenario
 											{
 												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1446,7 +1451,7 @@ int main() //int argc, char** argv
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 								if(haveBeaconKnowledge) // Beacon Loss Scenario
 								{
 									log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1508,7 +1513,7 @@ int main() //int argc, char** argv
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
-											if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+											if(propertyDifference < track_max_spot_difference)
 											{
 												haveCalibKnowledge = true;
 												// Update values if confident
@@ -1560,7 +1565,7 @@ int main() //int argc, char** argv
 												if(elapsed_time_prop_change_cal > period_prop_change_cal) //pg
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
-													"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+													"(propertyDifference = ", propertyDifference, ") >= (track_max_spot_difference = ",  track_max_spot_difference, "). ",
 													"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
 													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
 													time_prev_prop_change_cal = steady_clock::now(); // Record time of message		
@@ -1663,7 +1668,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
+							if(frame.histBrightest > track_acquisition_brightness)
 							{
 								cl_beacon_num_groups = frame.performPixelGrouping();
 								if(cl_beacon_num_groups > 0)
@@ -1671,11 +1676,11 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+										if(frame.groups[spotIndex].valueMax > track_acquisition_brightness)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
-											if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+											if(propertyDifference < track_max_spot_difference)
 											{
 												haveBeaconKnowledge = true;
 												// Update values if confident
@@ -1745,7 +1750,7 @@ int main() //int argc, char** argv
 												if(elapsed_time_prop_change_bcn > period_prop_change_bcn) //pg
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Rapid beacon spot property change: ",
-													"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
+													"(propertyDifference = ", propertyDifference, ") >= (track_max_spot_difference = ",  track_max_spot_difference, "). ",
 													"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
 													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
 													time_prev_prop_change_bcn = steady_clock::now(); // Record time of message		
@@ -1761,7 +1766,7 @@ int main() //int argc, char** argv
 										else
 										{
 											log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Switching Failure: ",
-											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 											if(haveBeaconKnowledge) // Beacon Loss Scenario
 											{
 												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
@@ -1797,7 +1802,7 @@ int main() //int argc, char** argv
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 								if(haveBeaconKnowledge) // Beacon Loss Scenario
 								{
 									log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");

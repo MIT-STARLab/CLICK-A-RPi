@@ -35,25 +35,25 @@ camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_sta
 		trackParams[IDX_TRACK_SAFE_DISTANCE_PANIC].name = "TRACK_SAFE_DISTANCE_PANIC";
 
 		//Set default parameters
-		trackParams[IDX_TRACK_GUESS_EXPOSURE].parameter = TRACK_GUESS_EXPOSURE;
-		trackParams[IDX_TRACK_MIN_EXPOSURE].parameter = TRACK_MIN_EXPOSURE;
-		trackParams[IDX_TRACK_MAX_EXPOSURE].parameter = TRACK_MAX_EXPOSURE;
-		trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter = TRACK_ACQUISITION_EXP_INCREMENT;
-		trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter = TRACK_ACQUISITION_BRIGHTNESS;
-		trackParams[IDX_TRACK_ACQUISITION_WINDOW].parameter = TRACK_ACQUISITION_WINDOW;
-		trackParams[IDX_TRACK_GOOD_PEAKTOMAX_DISTANCE].parameter = TRACK_GOOD_PEAKTOMAX_DISTANCE;
-		trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter = TRACK_HAPPY_BRIGHTNESS;
-		trackParams[IDX_TRACK_TUNING_TOLERANCE].parameter = TRACK_TUNING_TOLERANCE;
-		trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter = TRACK_TUNING_EXP_DIVIDER;
-		trackParams[IDX_TRACK_EXP_CONTROL_TOLERANCE].parameter = TRACK_EXP_CONTROL_TOLERANCE;
-		trackParams[IDX_TRACK_EXP_CONTROL_DIVIDER].parameter = TRACK_EXP_CONTROL_DIVIDER;
-		trackParams[IDX_TRACK_WINDOW_SIZE_TOLERANCE].parameter = TRACK_WINDOW_SIZE_TOLERANCE;
-		trackParams[IDX_TRACK_MAX_SPOT_DIFFERENCE].parameter = TRACK_MAX_SPOT_DIFFERENCE;
-		trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter = TRACK_MIN_SPOT_LIMIT;
-		trackParams[IDX_TRACK_CONTROL_I].parameter = TRACK_CONTROL_I;
-		trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].parameter = (int) 1000*TRACK_CONTROL_MAX_TS;
-		trackParams[IDX_TRACK_SAFE_DISTANCE_ALLOW].parameter = TRACK_SAFE_DISTANCE_ALLOW;
-		trackParams[IDX_TRACK_SAFE_DISTANCE_PANIC].parameter = TRACK_SAFE_DISTANCE_PANIC;	
+		trackParams[IDX_TRACK_GUESS_EXPOSURE].parameter = TRACK_GUESS_EXPOSURE; //implemented
+		trackParams[IDX_TRACK_MIN_EXPOSURE].parameter = TRACK_MIN_EXPOSURE; //implemented
+		trackParams[IDX_TRACK_MAX_EXPOSURE].parameter = TRACK_MAX_EXPOSURE; //implemented
+		trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter = TRACK_ACQUISITION_EXP_INCREMENT; //implemented
+		trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter = TRACK_ACQUISITION_BRIGHTNESS; //implemented
+		trackParams[IDX_TRACK_ACQUISITION_WINDOW].parameter = TRACK_ACQUISITION_WINDOW; //implemented
+		trackParams[IDX_TRACK_GOOD_PEAKTOMAX_DISTANCE].parameter = TRACK_GOOD_PEAKTOMAX_DISTANCE; //implemented
+		trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter = TRACK_HAPPY_BRIGHTNESS; //implemented
+		trackParams[IDX_TRACK_TUNING_TOLERANCE].parameter = TRACK_TUNING_TOLERANCE; //implemented
+		trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter = TRACK_TUNING_EXP_DIVIDER; //implemented
+		trackParams[IDX_TRACK_EXP_CONTROL_TOLERANCE].parameter = TRACK_EXP_CONTROL_TOLERANCE; //implemented
+		trackParams[IDX_TRACK_EXP_CONTROL_DIVIDER].parameter = TRACK_EXP_CONTROL_DIVIDER; //implemented
+		trackParams[IDX_TRACK_WINDOW_SIZE_TOLERANCE].parameter = TRACK_WINDOW_SIZE_TOLERANCE; //implemented
+		trackParams[IDX_TRACK_MAX_SPOT_DIFFERENCE].parameter = TRACK_MAX_SPOT_DIFFERENCE; //implemented
+		trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter = TRACK_MIN_SPOT_LIMIT; //implemented
+		trackParams[IDX_TRACK_CONTROL_I].parameter = TRACK_CONTROL_I; //implemented
+		trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].parameter = (int) 1000*TRACK_CONTROL_MAX_TS; //implemented
+		trackParams[IDX_TRACK_SAFE_DISTANCE_ALLOW].parameter = TRACK_SAFE_DISTANCE_ALLOW; //implemented
+		trackParams[IDX_TRACK_SAFE_DISTANCE_PANIC].parameter = TRACK_SAFE_DISTANCE_PANIC; //implemented
 
 		//Display parameters
 		for (size_t i = 0; i < NUM_TRACK_PARAMS; i++)
@@ -61,6 +61,7 @@ camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_sta
 			log(pat_health_port, fileStream, "In tracking.cpp - Tracking: ", trackParams[i].name, ": ", trackParams[i].parameter);
 		}			
 	}
+	track_control_max_ts = (double) trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].parameter/1000;
 }
 
 //Load modifiable constant parameters from external CSV file
@@ -139,8 +140,8 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 
 	bool searching_up = true, searching_down = true;
 	int exposure_up = exposure, exposure_down = exposure; 
-	exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
-	exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT; 
+	exposure_up += trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter;
+	exposure_down -= trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter; 
 	counter++;
 
 	while(searching_up || searching_down){
@@ -180,7 +181,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 				if(verifyFrame(frame, (counter%printPeriod == 0)) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
-			exposure_up += TRACK_ACQUISITION_EXP_INCREMENT;
+			exposure_up += trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter;
 			counter++;
 		} else{
 			searching_up = false;
@@ -204,7 +205,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 		}
 		
 		//try search down:
-		if(exposure_down >= TRACK_MIN_EXPOSURE){
+		if(exposure_down >= trackParams[IDX_TRACK_MIN_EXPOSURE].parameter){
 			if(counter%printPeriod == 0){log(pat_health_port, fileStream, "In tracking.cpp Tracking::runAcquisition - Attemping acquisition with exposure = ", exposure_down);}
 			camera.config->expose_us.write(exposure_down);
 			camera.requestFrame();
@@ -213,7 +214,7 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 				if(verifyFrame(frame, (counter%printPeriod == 0)) && windowAndTune(frame, beacon, beaconWindow, maxExposure)){return true;}
 			}
 			//update exposure:
-			exposure_down -= TRACK_ACQUISITION_EXP_INCREMENT;
+			exposure_down -= trackParams[IDX_TRACK_ACQUISITION_EXP_INCREMENT].parameter;
 			counter++; 
 		} else{
 			searching_down = false;
@@ -243,9 +244,9 @@ bool Tracking::runAcquisition(Group& beacon, AOI& beaconWindow, int maxExposure)
 bool Tracking::verifyFrame(Image& frame, bool printFailure)
 //-----------------------------------------------------------------------------
 {
-	if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS &&
+	if(frame.histBrightest > trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter &&
 	   frame.histBrightest > frame.histPeak &&
-	   frame.histBrightest - frame.histPeak > TRACK_GOOD_PEAKTOMAX_DISTANCE)
+	   frame.histBrightest - frame.histPeak > trackParams[IDX_TRACK_GOOD_PEAKTOMAX_DISTANCE].parameter)
 	{
 		// All checks passed and we have some good groups!
 		if(frame.performPixelGrouping(0, false) > 0)
@@ -259,7 +260,7 @@ bool Tracking::verifyFrame(Image& frame, bool printFailure)
 	}
 	else if(printFailure){
 		log(pat_health_port, fileStream, "In tracking.cpp Tracking::verifyFrame - Frame check failed! ",
-			"histBrightest =", frame.histBrightest, "(", TRACK_ACQUISITION_BRIGHTNESS, ") and histPeak =", frame.histPeak);
+			"histBrightest =", frame.histBrightest, "(", trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter, ") and histPeak =", frame.histPeak);
 	}
 	send_packet_pat_health(pat_health_port);
 	return false;
@@ -377,8 +378,8 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 				beacon.valueMax = spot.valueMax;
 				beacon.valueSum = spot.valueSum;
 				beacon.pixelCount = spot.pixelCount;
-				if(desaturating && (spot.valueMax <= TRACK_HAPPY_BRIGHTNESS)) return true;
-				if(!desaturating && (spot.valueMax >= TRACK_HAPPY_BRIGHTNESS)) return true;
+				if(desaturating && (spot.valueMax <= trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter)) return true;
+				if(!desaturating && (spot.valueMax >= trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter)) return true;
 				updateTrackingWindow(test, spot, tuningWindow);
 				camera.setWindow(tuningWindow);
 			}
@@ -399,7 +400,7 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 			// if(frame.performPixelGrouping() > 0){...}
 			Group& spot = frame.groups[0];
 			// Check if tuning is necessary
-			if(abs((int)spot.valueMax - TRACK_HAPPY_BRIGHTNESS) < TRACK_TUNING_TOLERANCE){
+			if(abs((int)spot.valueMax - trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter) < trackParams[IDX_TRACK_TUNING_TOLERANCE].parameter){
 				// Copy properties
 				beacon.x = frame.area.x + spot.x;
 				beacon.y = frame.area.y + spot.y;
@@ -414,14 +415,14 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 			camera.setWindow(tuningWindow);
 			bool desaturating;
 
-			if(spot.valueMax > TRACK_HAPPY_BRIGHTNESS)
+			if(spot.valueMax > trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter)
 			{
 				desaturating = true;
 				// log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - ",
 				// "(spot.valueMax = ", spot.valueMax, ") > (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Reducing exposure..."); 
 				// Start decreasing exposure
 				int exposure = camera.config->expose_us.read();
-				for(exposure -= exposure/TRACK_TUNING_EXP_DIVIDER; (exposure >= TRACK_MIN_EXPOSURE) && (exposure/TRACK_TUNING_EXP_DIVIDER >= 1); exposure -= exposure/TRACK_TUNING_EXP_DIVIDER)
+				for(exposure -= exposure/trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter; (exposure >= trackParams[IDX_TRACK_MIN_EXPOSURE].parameter) && (exposure/trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter >= 1); exposure -= exposure/trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter)
 				{
 					camera.config->expose_us.write(exposure);
 					if(test(desaturating)){
@@ -443,7 +444,7 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 				// }
 
 				// Camera reached lower limit, too high power
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reduce brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with minimum parameters: TRACK_MIN_EXPOSURE = ", TRACK_MIN_EXPOSURE, ", gain = 0");
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to reduce brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter, ") with minimum parameters: TRACK_MIN_EXPOSURE = ", trackParams[IDX_TRACK_MIN_EXPOSURE].parameter, ", gain = 0");
 			}
 			// Otherwise, have to increase exposure
 			else
@@ -453,7 +454,7 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 				// "(spot.valueMax = ", spot.valueMax, ") <= (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS,"). Increasing exposure...");
 				// Start increasing exposure
 				int exposure = camera.config->expose_us.read();
-				for(exposure += exposure/TRACK_TUNING_EXP_DIVIDER; (exposure <= maxExposure); exposure += exposure/TRACK_TUNING_EXP_DIVIDER)
+				for(exposure += exposure/trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter; (exposure <= maxExposure); exposure += exposure/trackParams[IDX_TRACK_TUNING_EXP_DIVIDER].parameter)
 				{
 					camera.config->expose_us.write(exposure);
 					if(test(desaturating)){
@@ -474,7 +475,7 @@ bool Tracking::autoTuneExposure(Group& beacon, int maxExposure)
 				// }
 
 				// Very high parameters reached
-				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", TRACK_HAPPY_BRIGHTNESS, ") with maximum parameters: maxExposure = ", maxExposure, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
+				log(pat_health_port, fileStream, "In tracking.cpp Tracking::autoTuneExposure - Unable to increase brightness to desired level (TRACK_HAPPY_BRIGHTNESS = ", trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter, ") with maximum parameters: maxExposure = ", maxExposure, ", TRACK_MAX_GAIN = ", TRACK_MAX_GAIN);
 			}
 		}
 	}
@@ -488,17 +489,17 @@ void Tracking::updateTrackingWindow(Image& frame, Group& spot, AOI& window)
 //-----------------------------------------------------------------------------
 {
 	float spotWidth = sqrt(1.5f * (float)spot.pixelCount);
-	float distanceLimit = spotWidth > TRACK_MIN_SPOT_LIMIT ? spotWidth : TRACK_MIN_SPOT_LIMIT;
+	float distanceLimit = spotWidth > trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter ? spotWidth : trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter;
 
 	// Check maximum allowed width discrepancy due to quantization & tolerance
 	// Then check if location of centroid is in good bounds
-	if(abs(window.w - (spotWidth + 2*TRACK_MIN_SPOT_LIMIT)) > (30 + TRACK_WINDOW_SIZE_TOLERANCE) ||
-	   abs(window.h - (spotWidth + 2*TRACK_MIN_SPOT_LIMIT)) > (30 + TRACK_WINDOW_SIZE_TOLERANCE) ||
+	if(abs(window.w - (spotWidth + 2*trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter)) > (30 + trackParams[IDX_TRACK_WINDOW_SIZE_TOLERANCE].parameter) ||
+	   abs(window.h - (spotWidth + 2*trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter)) > (30 + trackParams[IDX_TRACK_WINDOW_SIZE_TOLERANCE].parameter) ||
 	   spot.x < distanceLimit || spot.x > window.w - distanceLimit ||
 	   spot.y < distanceLimit || spot.y > window.h - distanceLimit)
 	{
 		// Update is most likely needed, calculate new bounds
-		int width = spotWidth + 2*TRACK_MIN_SPOT_LIMIT, height = width, temp;
+		int width = spotWidth + 2*trackParams[IDX_TRACK_MIN_SPOT_LIMIT].parameter, height = width, temp;
 		int x = frame.area.x + spot.x - width/2;
 		int y = frame.area.y + spot.y - height/2;
 
@@ -605,7 +606,7 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	// Calculate elapsed time
 	time_point<steady_clock> now = steady_clock::now();
 	duration<double> diff = now - lastUpdate;
-	double Ts = diff.count() > TRACK_CONTROL_MAX_TS ? TRACK_CONTROL_MAX_TS : diff.count();
+	double Ts = diff.count() > track_control_max_ts ? track_control_max_ts : diff.count();
 
 	// log(pat_health_port, fileStream, "Ts is", diff.count());
 
@@ -614,8 +615,8 @@ void Tracking::control(FSM& fsm, double x, double y, double spX, double spY)
 	double ey = calibration.transformDy(spX - x, spY - y);
 
 	// Calculate integral deltas
-	double dxFSM = ex * Ts * TRACK_CONTROL_I;
-	double dyFSM = ey * Ts * TRACK_CONTROL_I;
+	double dxFSM = ex * Ts * trackParams[IDX_TRACK_CONTROL_I].parameter;
+	double dyFSM = ey * Ts * trackParams[IDX_TRACK_CONTROL_I].parameter;
 	if(dxFSM > CALIB_FSM_MAX_DELTA) dxFSM = CALIB_FSM_MAX_DELTA;
 	if(dyFSM > CALIB_FSM_MAX_DELTA) dyFSM = CALIB_FSM_MAX_DELTA;
 
@@ -651,8 +652,8 @@ bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 {
 	double distance = sqrt((beacon.x - calib.x)*(beacon.x - calib.x) +
 		(beacon.y - calib.y)*(beacon.y - calib.y));
-	if(openloop && distance > TRACK_SAFE_DISTANCE_ALLOW) return true;
-	if(!openloop && distance > TRACK_SAFE_DISTANCE_PANIC) return true;
+	if(openloop && distance > trackParams[IDX_TRACK_SAFE_DISTANCE_ALLOW].parameter) return true;
+	if(!openloop && distance > trackParams[IDX_TRACK_SAFE_DISTANCE_PANIC].parameter) return true;
 	return false;
 }
 
@@ -661,19 +662,19 @@ bool distanceIsSafe(Group& beacon, Group& calib, bool openloop)
 int Tracking::controlExposure(int valueMax, int exposure, int maxBcnExposure)
 //-----------------------------------------------------------------------------
 {
-	int brightnessDifference = valueMax - TRACK_HAPPY_BRIGHTNESS; //difference in brightness from ideal
+	int brightnessDifference = valueMax - trackParams[IDX_TRACK_HAPPY_BRIGHTNESS].parameter; //difference in brightness from ideal
 
-	if(abs(brightnessDifference) > TRACK_EXP_CONTROL_TOLERANCE) //outside acceptable brightness
+	if(abs(brightnessDifference) > trackParams[IDX_TRACK_EXP_CONTROL_TOLERANCE].parameter) //outside acceptable brightness
 	{
 		if(brightnessDifference > 0) //too bright, decrease exposure
 		{
-			int newExposure = exposure - exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
-			if(newExposure > TRACK_MIN_EXPOSURE){exposure = newExposure;} //limit at min exposure
-			else{exposure = TRACK_MIN_EXPOSURE;} //set to limit if necessary
+			int newExposure = exposure - exposure/trackParams[IDX_TRACK_EXP_CONTROL_DIVIDER].parameter; //use divider defined in header
+			if(newExposure > trackParams[IDX_TRACK_MIN_EXPOSURE].parameter){exposure = newExposure;} //limit at min exposure
+			else{exposure = trackParams[IDX_TRACK_MIN_EXPOSURE].parameter;} //set to limit if necessary
 		}
 		else //too dim, increase exposure
 		{
-			int newExposure = exposure + exposure/TRACK_EXP_CONTROL_DIVIDER; //use divider defined in header
+			int newExposure = exposure + exposure/trackParams[IDX_TRACK_EXP_CONTROL_DIVIDER].parameter; //use divider defined in header
 			if(newExposure < maxBcnExposure){exposure = newExposure;} //limit at max exposure
 			else{exposure = maxBcnExposure;} //set to limit if necessary
 		}
