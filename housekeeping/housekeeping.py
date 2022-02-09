@@ -12,6 +12,7 @@ import binascii
 import struct
 import subprocess
 import Queue
+import datetime
 
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
@@ -339,6 +340,7 @@ class Housekeeping:
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
             payload, tx_flag, _, _, _, _ = pat_pkt.decode(data)
+            payload = "(" + str(datetime.datetime.now()) + ") " + payload
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling PAT pkt w/ payload: ', payload)
 
@@ -357,7 +359,7 @@ class Housekeeping:
             ch_pkt = HKControlPacket()
             origin, _, data = ch_pkt.decode(data)
             # TODO: Maybe format this better
-            payload = str(origin)+": "+data
+            payload = "(" + str(datetime.datetime.now()) + ") " + str(origin) + ": " + data
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling CH pkt w/ payload: ', payload)
 
