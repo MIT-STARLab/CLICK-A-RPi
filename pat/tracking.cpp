@@ -61,7 +61,8 @@ camera(c), calibration(calib), fileStream(fileStreamIn), pat_status_port(pat_sta
 			log(pat_health_port, fileStream, "In tracking.cpp - Tracking: ", trackParams[i].name, ": ", trackParams[i].parameter);
 		}			
 	}
-	track_control_max_ts = (double) trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].parameter/1000;
+	track_control_max_ts = ((double) trackParams[IDX_TRACK_CONTROL_MAX_TS_MS].parameter)/1000;
+	log(pat_health_port, fileStream, "In tracking.cpp - Tracking: ", "track_control_max_ts", ": ", track_control_max_ts);
 }
 
 //Load modifiable constant parameters from external CSV file
