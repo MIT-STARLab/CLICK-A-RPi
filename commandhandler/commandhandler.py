@@ -198,7 +198,7 @@ def get_pat_mode():
 
 def stop_pat():
     send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS) #this isn't necessary if PAT is running as a service
-    time.sleep(1)
+    time.sleep(2)
     os.system("systemctl --user stop pat") #stop the pat service
     log_to_hk('PAT STOPPED')
 
