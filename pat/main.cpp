@@ -317,13 +317,6 @@ int main() //int argc, char** argv
 	Phase phase = CALIBRATION;
 	Group beacon, calib;
 	AOI beaconWindow, calibWindow, getImageWindow;
-	//set default get image window
-	getImageWindow.w = CALIB_BIG_WINDOW;
-	getImageWindow.h = CALIB_BIG_WINDOW;
-	getImageWindow.x = CAMERA_WIDTH/2 - CALIB_BIG_WINDOW/2;
-	getImageWindow.y = CAMERA_HEIGHT/2 - CALIB_BIG_WINDOW/2;
-	int cmd_get_image_w = getImageWindow.w, cmd_get_image_h = getImageWindow.h;
-	int cmd_get_image_center_x_rel = 0, cmd_get_image_center_y_rel = 0;
 	int beaconExposure = 0, spotIndex = 0, calibExposure = 0;
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
@@ -475,6 +468,17 @@ int main() //int argc, char** argv
 	Calibration calibration(camera, fsm, textFileOut, pat_health_port);
 	Tracking track(camera, calibration, textFileOut, pat_status_port, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
+
+	//Load Calib Parameters
+	int calib_big_window = calibration.calibParams[IDX_CALIB_BIG_WINDOW].parameter;
+	int calib_min_brightness = calibration.calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter;
+	//set default get image window
+	getImageWindow.w = calib_big_window;
+	getImageWindow.h = calib_big_window;
+	getImageWindow.x = CAMERA_WIDTH/2 - calib_big_window/2;
+	getImageWindow.y = CAMERA_HEIGHT/2 - calib_big_window/2;
+	int cmd_get_image_w = getImageWindow.w, cmd_get_image_h = getImageWindow.h;
+	int cmd_get_image_center_x_rel = 0, cmd_get_image_center_y_rel = 0;
 
 	//Load Track Parameters
 	int minBcnExposure = track.trackParams[IDX_TRACK_MIN_EXPOSURE].parameter;
@@ -782,7 +786,7 @@ int main() //int argc, char** argv
 						camera.config->expose_us.write(command_exposure);		
 						
 						//set to sufficiently large window size (but not too large)
-						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calib_big_window);
 
 						//ensure FSM is centered
 						fsm.setNormalizedAngles(0,0); 
@@ -820,7 +824,7 @@ int main() //int argc, char** argv
 						camera.config->expose_us.write(command_exposure);		
 
 						//set to sufficiently large window size (but not too large)
-						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);	
+						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calib_big_window);	
 
 						//switch laser on
 						if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
@@ -999,7 +1003,7 @@ int main() //int argc, char** argv
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
 								}
 								camera.config->expose_us.write(calibExposure); //set calib exposure
-								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							 
+								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calib_big_window); //set to sufficiently large window size (but not too large)							 
 								laser_tests_passed = 0;
 								for(int i = 1; i < 3; i++){ //run twice to make sure on/off switching is working
 									if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
@@ -1501,7 +1505,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > CALIB_MIN_BRIGHTNESS)
+							if(frame.histBrightest > calib_min_brightness)
 							{
 								cl_calib_num_groups = frame.performPixelGrouping();
 								if(cl_calib_num_groups > 0)
@@ -1509,7 +1513,7 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS)
+										if(frame.groups[spotIndex].valueMax > calib_min_brightness)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
@@ -1575,7 +1579,7 @@ int main() //int argc, char** argv
 										else
 										{
 											log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
-											"(frame.groups[spotIndex].valueMax = ", frame.groups[spotIndex].valueMax, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");							
+											"(frame.groups[spotIndex].valueMax = ", frame.groups[spotIndex].valueMax, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", calib_min_brightness/4,")");							
 											if(haveCalibKnowledge)
 											{						
 												log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
@@ -1611,7 +1615,7 @@ int main() //int argc, char** argv
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS,")");						
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", calib_min_brightness,")");						
 								if(haveCalibKnowledge)
 								{						
 									log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");

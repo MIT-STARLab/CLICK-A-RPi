@@ -28,6 +28,28 @@
 #define CALIB_FSM_DISPLACEMENT_TOL 100 //tolerance for number of pixels to have moved when changing FSM between max settings (should actually be arround 200)
 
 
+//for loading modifiable constant parameters from external file
+enum calibParamIndex { 
+	IDX_CALIB_BIG_WINDOW,
+	IDX_CALIB_SMALL_WINDOW,
+	IDX_CALIB_MIN_BRIGHTNESS,
+	IDX_CALIB_MAX_EXPOSURE, 
+	IDX_CALIB_MIN_EXPOSURE, 
+	IDX_CALIB_EXP_INCREMENT, 
+	IDX_CALIB_MAX_GAIN, 
+	IDX_CALIB_EXP_DIVIDER, 
+	IDX_CALIB_MAX_SMOOTHING, 
+	IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE, 
+	IDX_CALIB_HAPPY_BRIGHTNESS, 
+	IDX_CALIB_TUNING_TOLERANCE, 
+	IDX_CALIB_FSM_DISPLACEMENT_TOL, 
+    NUM_CALIB_PARAMS
+};
+struct calibParamStruct {
+    string name;
+    int parameter;
+};
+
 // A pair of source and destination points (Detector -> FSM)
 class Pair
 {
@@ -49,12 +71,14 @@ class Calibration
 	bool verifyFrame(Image& frame);
 	bool windowAndTune(Image& frame, bool testLaser);
 public:
+	calibParamStruct calibParams[NUM_CALIB_PARAMS];
 	// Affine transform parameters
 	double a00, a01, a10, a11, t0, t1;
 	// Sensitivity matrix
 	double s00, s01, s10, s11;
 	int preferredExpo, lowestExpo, lowestExpoNoGain, gainMax, centerOffsetX, centerOffsetY; //smoothing
-	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in) : camera(camera), fsm(fsm), fileStream(fileStreamIn), pat_health_port(pat_health_port_in){};
+	Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in);
+	bool getCalibParams();
 	int gainForExposure(int exposure);
 	int determineSmoothing(Image& frame);
 	double transformDx(double x, double y);

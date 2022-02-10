@@ -6,6 +6,94 @@
 #include <thread>
 #include <cmath>
 
+//Constructor
+//-----------------------------------------------------------------------------
+Calibration::Calibration(Camera& camera, FSM& fsm, std::ofstream &fileStreamIn, zmq::socket_t &pat_health_port_in):
+camera(camera), fsm(fsm), fileStream(fileStreamIn), pat_health_port(pat_health_port_in)
+//-----------------------------------------------------------------------------
+{
+	if(!getCalibParams()){
+		//assign default parameters if CSV parameter retrieval fails
+		log(pat_health_port, fileStream, "In calibration.cpp - Calibration: using default parameters:");
+		
+		//Set names
+		calibParams[IDX_CALIB_BIG_WINDOW].name = "CALIB_BIG_WINDOW";
+		calibParams[IDX_CALIB_SMALL_WINDOW].name = "CALIB_SMALL_WINDOW";
+		calibParams[IDX_CALIB_MIN_BRIGHTNESS].name = "CALIB_MIN_BRIGHTNESS";
+		calibParams[IDX_CALIB_MAX_EXPOSURE].name = "CALIB_MAX_EXPOSURE";
+		calibParams[IDX_CALIB_MIN_EXPOSURE].name = "CALIB_MIN_EXPOSURE";
+		calibParams[IDX_CALIB_EXP_INCREMENT].name = "CALIB_EXP_INCREMENT";
+		calibParams[IDX_CALIB_MAX_GAIN].name = "CALIB_MAX_GAIN";
+		calibParams[IDX_CALIB_EXP_DIVIDER].name = "CALIB_EXP_DIVIDER";
+		calibParams[IDX_CALIB_MAX_SMOOTHING].name = "CALIB_MAX_SMOOTHING";
+		calibParams[IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE].name = "CALIB_GOOD_PEAKTOMAX_DISTANCE";
+		calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].name = "CALIB_HAPPY_BRIGHTNESS";
+		calibParams[IDX_CALIB_TUNING_TOLERANCE].name = "CALIB_TUNING_TOLERANCE";
+		calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].name = "CALIB_FSM_DISPLACEMENT_TOL";
+
+		//Set default parameters
+		calibParams[IDX_CALIB_BIG_WINDOW].parameter = CALIB_BIG_WINDOW; //implemented
+		calibParams[IDX_CALIB_SMALL_WINDOW].parameter = CALIB_SMALL_WINDOW; //implemented
+		calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter = CALIB_MIN_BRIGHTNESS; //implemented
+		calibParams[IDX_CALIB_MAX_EXPOSURE].parameter = CALIB_MAX_EXPOSURE; //implemented
+		calibParams[IDX_CALIB_MIN_EXPOSURE].parameter = CALIB_MIN_EXPOSURE; //implemented
+		calibParams[IDX_CALIB_EXP_INCREMENT].parameter = CALIB_EXP_INCREMENT; //implemented
+		calibParams[IDX_CALIB_MAX_GAIN].parameter = CALIB_MAX_GAIN; //implemented
+		calibParams[IDX_CALIB_EXP_DIVIDER].parameter = CALIB_EXP_DIVIDER; //implemented
+		calibParams[IDX_CALIB_MAX_SMOOTHING].parameter = CALIB_MAX_SMOOTHING; //implemented
+		calibParams[IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE].parameter = CALIB_GOOD_PEAKTOMAX_DISTANCE; //implemented
+		calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter = CALIB_HAPPY_BRIGHTNESS; //implemented
+		calibParams[IDX_CALIB_TUNING_TOLERANCE].parameter = CALIB_TUNING_TOLERANCE; //implemented
+		calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter = CALIB_FSM_DISPLACEMENT_TOL; //implemented
+
+		//Display parameters
+		for (size_t i = 0; i < NUM_CALIB_PARAMS; i++)
+		{
+			log(pat_health_port, fileStream, "In calibration.cpp - Calibration: ", calibParams[i].name, ": ", calibParams[i].parameter);
+		}			
+	}
+};
+
+//Load modifiable constant parameters from external CSV file
+//-----------------------------------------------------------------------------
+bool Calibration::getCalibParams()
+//-----------------------------------------------------------------------------
+{
+	calibParamStruct calibParam; //temp offsetParamStruct for use in the while loop
+    ifstream inFile("/root/lib/calibParams.csv"); //our file
+    string line;
+    int linenum = 0;
+	log(pat_health_port, fileStream, "In calibration.cpp - getCalibParams: Retrieving Calibration Parameters from /root/lib/calibParams.csv");
+    if(inFile.is_open()){
+		while (getline (inFile, line))
+		{
+			istringstream linestream(line);
+			string item;
+			//use this to get up to the first comma
+			getline(linestream, item, ',');
+			calibParam.name = item;
+			//convert to a string stream and then put in id.
+			getline(linestream, item, ',');
+			stringstream ss(item);
+			ss >> calibParam.parameter;
+			//report read data
+			log(pat_health_port, fileStream, "In calibration.cpp - getCalibParams: ", calibParam.name, ": ", calibParam.parameter);
+			//add the new data to the list
+			calibParams[linenum] = calibParam;
+			linenum++;
+		}
+		if(linenum != NUM_CALIB_PARAMS){
+			log(pat_health_port, fileStream, "In calibration.cpp - getCalibParams: /root/lib/calibParams.csv is missing data: ", linenum, " lines found out of ", NUM_CALIB_PARAMS);
+            return false;
+        } else{
+			return true;
+		}
+	} else{
+		log(pat_health_port, fileStream, "In calibration.cpp - getCalibParams: /root/lib/calibParams.csv did not open or doesn't exist.");
+		return false;
+	}
+}
+
 // Find range of exposure settings where calibration spot has good parameters
 // Also find the gains (function) associated with this range
 // Also save properties of spot for re-use in main routine
@@ -14,7 +102,7 @@ bool Calibration::findExposureRange(bool testLaser, std::string filePath)
 //-----------------------------------------------------------------------------
 {
 	//int skip = camera.queuedCount;
-	int exposure = CALIB_MIN_EXPOSURE; 
+	int exposure = calibParams[IDX_CALIB_MIN_EXPOSURE].parameter; 
 	int gain = 0;
 	//preferredExpo = CALIB_MAX_EXPOSURE + 1;
 	//lowestExpoNoGain = 0;
@@ -22,7 +110,7 @@ bool Calibration::findExposureRange(bool testLaser, std::string filePath)
 	// Configure camera for big window around center
 	//camera.config->gain_dB.write(gain);
 	//camera.config->binningMode.write(cbmOff);
-	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+	camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calibParams[IDX_CALIB_BIG_WINDOW].parameter);
     
 	//Try with minimum exposure
 	camera.config->expose_us.write(exposure);
@@ -35,7 +123,7 @@ bool Calibration::findExposureRange(bool testLaser, std::string filePath)
 	}
 
 	//Start incrementing upwards
-	for(; exposure <= CALIB_MAX_EXPOSURE; exposure += CALIB_EXP_INCREMENT){
+	for(; exposure <= calibParams[IDX_CALIB_MAX_EXPOSURE].parameter; exposure += calibParams[IDX_CALIB_EXP_INCREMENT].parameter){
 		camera.config->expose_us.write(exposure);
 		camera.requestFrame();	
 		if(camera.waitForFrame())
@@ -52,9 +140,9 @@ bool Calibration::findExposureRange(bool testLaser, std::string filePath)
 bool Calibration::verifyFrame(Image& frame)
 //-----------------------------------------------------------------------------
 {
-	if(frame.histBrightest > CALIB_MIN_BRIGHTNESS &&
+	if(frame.histBrightest > calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter &&
 	   frame.histBrightest > frame.histPeak &&
-	   frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE)
+	   frame.histBrightest - frame.histPeak > calibParams[IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE].parameter)
 	{
 		// All checks passed and we have some good groups!
 		if(frame.performPixelGrouping() > 0)
@@ -67,9 +155,9 @@ bool Calibration::verifyFrame(Image& frame)
 	}
 	else{
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::verifyFrame - Frame property check failed! ",
-			"frame.histBrightest = ", frame.histBrightest, " should be >= CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS,
+			"frame.histBrightest = ", frame.histBrightest, " should be >= CALIB_MIN_BRIGHTNESS = ", calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter,
 			", \n and frame.histBrightest = ", frame.histBrightest, " should be > frame.histPeak = ", frame.histPeak,
-			", \n and (frame.histBrightest - frame.histPeak) = ", frame.histBrightest - frame.histPeak, " should be > CALIB_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE);
+			", \n and (frame.histBrightest - frame.histPeak) = ", frame.histBrightest - frame.histPeak, " should be > CALIB_GOOD_PEAKTOMAX_DISTANCE = ", calibParams[IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE].parameter);
 	}
 	return false;
 }
@@ -89,8 +177,8 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 			if(test.performPixelGrouping(0, false) > 0)
 			{
 				Group& spot = test.groups[0];
-				if(desaturating && (spot.valueMax <= CALIB_HAPPY_BRIGHTNESS)) return true;
-				if(!desaturating && (spot.valueMax >= CALIB_HAPPY_BRIGHTNESS)) return true;
+				if(desaturating && (spot.valueMax <= calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter)) return true;
+				if(!desaturating && (spot.valueMax >= calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter)) return true;
 			}
 		}
 		return false;
@@ -102,12 +190,12 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 	// Set small window on spot location and search for range
 	camera.config->expose_us.write(preferredExpo);
 	if(testLaser){
-		camera.setCenteredWindow(frame.area.x + spot.x, frame.area.y + spot.y, CALIB_SMALL_WINDOW);
+		camera.setCenteredWindow(frame.area.x + spot.x, frame.area.y + spot.y, calibParams[IDX_CALIB_SMALL_WINDOW].parameter);
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Tuning calib exposure, starting with expo = ", preferredExpo, "us at [",
-			frame.area.x + spot.x, ",", frame.area.y + spot.y, ", window size: ", CALIB_SMALL_WINDOW ,"]"); //with smoothing", smoothing);
+			frame.area.x + spot.x, ",", frame.area.y + spot.y, ", window size: ", calibParams[IDX_CALIB_SMALL_WINDOW].parameter ,"]"); //with smoothing", smoothing);
 	} else{
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Tuning calib exposure, starting with expo = ", preferredExpo, "us at [",
-			CAMERA_WIDTH/2, ",", CAMERA_HEIGHT/2, ", window size: ", CALIB_BIG_WINDOW ,"]"); //with smoothing", smoothing);
+			CAMERA_WIDTH/2, ",", CAMERA_HEIGHT/2, ", window size: ", calibParams[IDX_CALIB_BIG_WINDOW].parameter ,"]"); //with smoothing", smoothing);
 	}
 
 	// Grab a frame to determine the next step
@@ -119,20 +207,20 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 		{
 			Group& spot = frame.groups[0];
 			// Check if tuning is necessary
-			if(abs((int)spot.valueMax - CALIB_HAPPY_BRIGHTNESS) < CALIB_TUNING_TOLERANCE){
+			if(abs((int)spot.valueMax - calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter) < calibParams[IDX_CALIB_TUNING_TOLERANCE].parameter){
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Tuning unneccessary. Exiting...");
 				return true;
 			}
 			// Start Tuning
 			bool desaturating;
-			if(spot.valueMax > CALIB_HAPPY_BRIGHTNESS)
+			if(spot.valueMax > calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter)
 			{
 				desaturating = true;
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - ",
-				"(spot.valueMax = ", spot.valueMax, ") > (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS,"). Reducing exposure..."); 
+				"(spot.valueMax = ", spot.valueMax, ") > (CALIB_HAPPY_BRIGHTNESS = ", calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter,"). Reducing exposure..."); 
 				// Start decreasing exposure
 				int exposure = preferredExpo;
-				for(exposure -= exposure/CALIB_EXP_DIVIDER; (exposure >= CALIB_MIN_EXPOSURE) && (exposure/CALIB_EXP_DIVIDER >= 1); exposure -= exposure/CALIB_EXP_DIVIDER)
+				for(exposure -= exposure/calibParams[IDX_CALIB_EXP_DIVIDER].parameter; (exposure >= calibParams[IDX_CALIB_MIN_EXPOSURE].parameter) && (exposure/calibParams[IDX_CALIB_EXP_DIVIDER].parameter >= 1); exposure -= exposure/calibParams[IDX_CALIB_EXP_DIVIDER].parameter)
 				{
 					camera.config->expose_us.write(exposure);
 					if(test(desaturating)){
@@ -155,8 +243,8 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 				// }
 
 				// Camera reached lower limit, too high power
-				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to reduce brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, "). Using minimum parameters: CALIB_MIN_EXPOSURE = ", CALIB_MIN_EXPOSURE, ", gain = 0");
-				preferredExpo = CALIB_MIN_EXPOSURE;
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to reduce brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter, "). Using minimum parameters: CALIB_MIN_EXPOSURE = ", calibParams[IDX_CALIB_MIN_EXPOSURE].parameter, ", gain = 0");
+				preferredExpo = calibParams[IDX_CALIB_MIN_EXPOSURE].parameter;
 				camera.config->expose_us.write(preferredExpo);
 				return true;
 			}
@@ -165,10 +253,10 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 			{
 				desaturating = false; 
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - ",
-				"(spot.valueMax = ", spot.valueMax, ") <= (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS,"). Increasing exposure...");
+				"(spot.valueMax = ", spot.valueMax, ") <= (CALIB_HAPPY_BRIGHTNESS = ", calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter,"). Increasing exposure...");
 				// Start increasing exposure
 				int exposure = preferredExpo;
-				for(exposure += exposure/CALIB_EXP_DIVIDER; (exposure <= CALIB_MAX_EXPOSURE); exposure += exposure/CALIB_EXP_DIVIDER)
+				for(exposure += exposure/calibParams[IDX_CALIB_EXP_DIVIDER].parameter; (exposure <= calibParams[IDX_CALIB_MAX_EXPOSURE].parameter); exposure += exposure/calibParams[IDX_CALIB_EXP_DIVIDER].parameter)
 				{
 					camera.config->expose_us.write(exposure);
 					if(test(desaturating)){
@@ -190,8 +278,8 @@ bool Calibration::windowAndTune(Image& frame, bool testLaser)
 				// }
 
 				// Very high parameters reached
-				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", CALIB_HAPPY_BRIGHTNESS, "). Using maximum parameters: CALIB_MAX_EXPOSURE = ", CALIB_MAX_EXPOSURE, ", gain = 0");
-				preferredExpo = CALIB_MAX_EXPOSURE;
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::windowAndTune - Unable to increase brightness to desired level (CALIB_HAPPY_BRIGHTNESS = ", calibParams[IDX_CALIB_HAPPY_BRIGHTNESS].parameter, "). Using maximum parameters: CALIB_MAX_EXPOSURE = ", calibParams[IDX_CALIB_MAX_EXPOSURE].parameter, ", gain = 0");
+				preferredExpo = calibParams[IDX_CALIB_MAX_EXPOSURE].parameter;
 				camera.config->expose_us.write(preferredExpo);
 				return true;
 			}
@@ -269,7 +357,7 @@ bool Calibration::run(Group& calib, std::string filePath)
 					}
 
 					// Move window to new location
-					camera.setCenteredWindow(frame.area.x + spot.x, frame.area.y + spot.y, CALIB_SMALL_WINDOW);
+					camera.setCenteredWindow(frame.area.x + spot.x, frame.area.y + spot.y, calibParams[IDX_CALIB_SMALL_WINDOW].parameter);
 				}
 				else
 				{
@@ -439,7 +527,7 @@ int Calibration::gainForExposure(int exposure)
 		float factor = -(gainMax - 1.0f) / (float)(lowestExpoNoGain - lowestExpo);
 		gain = factor*(exposure - lowestExpo) + gainMax;
 		if(gain < 0) gain = 0;
-		if(gain > CALIB_MAX_GAIN) gain = CALIB_MAX_GAIN;
+		if(gain > calibParams[IDX_CALIB_MAX_GAIN].parameter) gain = calibParams[IDX_CALIB_MAX_GAIN].parameter;
 	}
 	return gain;
 }
@@ -460,7 +548,7 @@ int Calibration::determineSmoothing(Image &frame)
 	// Determine approximate smoothing based on spot size, tuned on experiments
 	smoothing = sqrt(maxCount) / 6.0f;
 
-	if(smoothing > CALIB_MAX_SMOOTHING) smoothing = CALIB_MAX_SMOOTHING;
+	if(smoothing > calibParams[IDX_CALIB_MAX_SMOOTHING].parameter) smoothing = calibParams[IDX_CALIB_MAX_SMOOTHING].parameter;
 
 	return smoothing;
 }
@@ -474,13 +562,13 @@ bool Calibration::checkLaserOn(Group& calib)
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(frame.histBrightest > CALIB_MIN_BRIGHTNESS){
+		if(frame.histBrightest > calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter){
 			if(frame.histBrightest > frame.histPeak){
-				if(frame.histBrightest - frame.histPeak > CALIB_GOOD_PEAKTOMAX_DISTANCE){
+				if(frame.histBrightest - frame.histPeak > calibParams[IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE].parameter){
 					int numGroups = frame.performPixelGrouping();
 					if(numGroups > 0){
 						Group& spot = frame.groups[0];
-						if(spot.valueMax >= CALIB_MIN_BRIGHTNESS){
+						if(spot.valueMax >= calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter){
 							//copy spot properties to calib
 							calib.x = frame.area.x + spot.x;
 							calib.y = frame.area.y + spot.y;
@@ -489,7 +577,7 @@ bool Calibration::checkLaserOn(Group& calib)
 							calib.pixelCount = spot.pixelCount;
 							return true;
 						} else{
-							log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (spot.valueMax = ", spot.valueMax, ") < (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+							log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (spot.valueMax = ", spot.valueMax, ") < (CALIB_MIN_BRIGHTNESS = ", calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter, ")");
 						}
 					} else{
 						log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (numGroups = ", numGroups, ") = 0");
@@ -497,13 +585,13 @@ bool Calibration::checkLaserOn(Group& calib)
 				} else{
 					log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") - ",
 						"(frame.histPeak = ", frame.histPeak, ") = ", frame.histBrightest - frame.histPeak, 
-						" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", CALIB_GOOD_PEAKTOMAX_DISTANCE, ")");
+						" <= (TRACK_GOOD_PEAKTOMAX_DISTANCE = ", calibParams[IDX_CALIB_GOOD_PEAKTOMAX_DISTANCE].parameter, ")");
 				}
 			} else{
 				log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") <= (frame.histPeak = ", frame.histPeak, ")");
 			}
 		} else{
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: (frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter, ")");
 		}
 	} else{
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOn - Check failed: camera.waitForFrame() failed.");
@@ -520,10 +608,10 @@ bool Calibration::checkLaserOff()
 	if(camera.waitForFrame())
 	{
 		Image frame(camera, fileStream, pat_health_port);
-		if(frame.histBrightest <= CALIB_MIN_BRIGHTNESS){
+		if(frame.histBrightest <= calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter){
 			return true;
 		} else{
-			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: (frame.histBrightest = ", frame.histBrightest, ") > (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS, ")");
+			log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: (frame.histBrightest = ", frame.histBrightest, ") > (CALIB_MIN_BRIGHTNESS = ", calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter, ")");
 		}
 	} else{
 		log(pat_health_port, fileStream, "In calibration.cpp Calibration::checkLaserOff - Check failed: camera.waitForFrame() failed.");
@@ -548,7 +636,7 @@ bool Calibration::testFSM(Group& calib)
 		this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 		if(checkLaserOn(calib)){
 			delta_x = calib.x - prev_x;
-			if(abs(delta_x) > CALIB_FSM_DISPLACEMENT_TOL){
+			if(abs(delta_x) > calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter){
 				prev_y = calib.y; 
 				logImage(string("CMD_SELF_TEST_FSM_X"), camera, fileStream, pat_health_port);
 
@@ -557,7 +645,7 @@ bool Calibration::testFSM(Group& calib)
 				this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 				if(checkLaserOn(calib)){
 					delta_y = calib.y - prev_y; 
-					if(abs(delta_y) > CALIB_FSM_DISPLACEMENT_TOL){
+					if(abs(delta_y) > calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter){
 						prev_x = calib.x; 
 						logImage(string("CMD_SELF_TEST_FSM_XY"), camera, fileStream, pat_health_port);
 
@@ -566,7 +654,7 @@ bool Calibration::testFSM(Group& calib)
 						this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 						if(checkLaserOn(calib)){
 							delta_x = calib.x - prev_x; 
-							if(abs(delta_x) > CALIB_FSM_DISPLACEMENT_TOL){
+							if(abs(delta_x) > calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter){
 								prev_y = calib.y; 
 								logImage(string("CMD_SELF_TEST_FSM_Y"), camera, fileStream, pat_health_port);
 
@@ -575,28 +663,28 @@ bool Calibration::testFSM(Group& calib)
 								this_thread::sleep_for(chrono::milliseconds(CALIB_FSM_RISE_TIME));
 								if(checkLaserOn(calib)){
 									delta_y = calib.y - prev_y;
-									if(abs(delta_y) > CALIB_FSM_DISPLACEMENT_TOL){
+									if(abs(delta_y) > calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter){
 										return true;
 									} else{
-										log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at ending (0,0) - FSM Y displacement check failed: (|delta_y| =", abs(delta_y), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+										log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at ending (0,0) - FSM Y displacement check failed: (|delta_y| =", abs(delta_y), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter, ")");
 									}
 								} else{
 									log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at ending (0,0) - checkLaserOn failed");
 								}
 							} else{
-								log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (0,1) - FSM X displacement check failed: (|delta_x| =", abs(delta_x), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+								log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (0,1) - FSM X displacement check failed: (|delta_x| =", abs(delta_x), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter, ")");
 							}
 						} else{
 							log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (0,1) - checkLaserOn failed");
 						}
 					} else{
-						log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,1) - FSM Y displacement check failed: (|delta_y| =", abs(delta_y), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+						log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,1) - FSM Y displacement check failed: (|delta_y| =", abs(delta_y), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter, ")");
 					}
 				} else{
 					log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,1) - checkLaserOn failed");
 				}
 			} else{
-				log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,0) - FSM X displacement check failed: (|delta_x| =", abs(delta_x), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", CALIB_FSM_DISPLACEMENT_TOL, ")");
+				log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,0) - FSM X displacement check failed: (|delta_x| =", abs(delta_x), ") <= (CALIB_FSM_DISPLACEMENT_TOL = ", calibParams[IDX_CALIB_FSM_DISPLACEMENT_TOL].parameter, ")");
 			}
 		} else{
 			log(pat_health_port, fileStream, "In calibration.cpp Calibration::testFSM at (1,0) - checkLaserOn failed");
