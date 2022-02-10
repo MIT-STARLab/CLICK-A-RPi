@@ -12,6 +12,7 @@ import options
 import dac
 import math
 import hashlib
+import datetime
 
 #For basic testing of calibration laser and seed laser aliveness. Can be upgraded as necessary (e.g. expected parameter values)
 
@@ -22,13 +23,13 @@ power = mmap.Power(fpga) # power sub-interface
 len_pass_string = 100
 def print_test(fo,name): 
     print(name + ' ' + '.'*(len_pass_string - len(name)) + ' ', end='')
-    fo.write('--- Starting %s ---\n' % name)
+    fo.write('--- %s Starting %s ---\n' % ("(" + str(datetime.datetime.now())[0:23] + ")", name))
 def pass_test(fo):
     print('Pass')
-    fo.write('--- Pass ---\n')
+    fo.write('--- %s Pass ---\n' % ("(" + str(datetime.datetime.now())[0:23] + ")"))
 def fail_test(fo):
     print('Fail')
-    fo.write('--- Fail ---\n')
+    fo.write('--- %s Fail ---\n' % ("(" + str(datetime.datetime.now())[0:23] + ")"))
 
 def error_to_file(func):
     def e_to_f(fo):
