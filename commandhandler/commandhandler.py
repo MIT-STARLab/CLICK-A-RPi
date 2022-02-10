@@ -372,12 +372,14 @@ while True:
         elif(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
             ack_to_hk(CMD_PL_REBOOT, CMD_ACK)
+            stop_pat()
             time.sleep(1)
             os.system("shutdown -r now") #reboot the RPi
 
         elif(CMD_ID == CMD_PL_SHUTDOWN):
             log_to_hk('ACK CMD PL_SHUTDOWN')
             ack_to_hk(CMD_PL_SHUTDOWN, CMD_ACK)
+            stop_pat()
             time.sleep(1)
             os.system("shutdown now") #reboot the RPi
 
