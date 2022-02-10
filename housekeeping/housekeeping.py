@@ -12,6 +12,7 @@ import binascii
 import struct
 import subprocess
 import Queue
+import datetime
 
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
@@ -265,15 +266,15 @@ class Housekeeping:
         pkt += struct.pack('B', enables)
 
         # 2: FPGA housekeeping period
-        pkt += struct.pack('B', self.fpga_check_period)
+        pkt += struct.pack('B', (self.fpga_check_period % 256))
         # 3: System housekeeping period
-        pkt += struct.pack('B', self.sys_check_period)
+        pkt += struct.pack('B', (self.sys_check_period % 256))
         # 4: Command handler heartbeat period
-        pkt += struct.pack('B', self.ch_heartbeat_period)
+        pkt += struct.pack('B', (self.ch_heartbeat_period % 256))
         # 5: Loadbalancer heartbeat period
-        pkt += struct.pack('B', self.lb_heartbeat_period)
+        pkt += struct.pack('B', (self.lb_heartbeat_period % 256))
         # 6: PAT health period
-        pkt += struct.pack('B', self.pat_health_period)
+        pkt += struct.pack('B', (self.pat_health_period % 256))
         # 7: Acknowledged command count
         pkt += struct.pack('B', (self.ack_cmd_count % 256))
         # 8: Last acknowledged command ID
@@ -339,6 +340,7 @@ class Housekeeping:
             pat_pkt = PATHealthPacket()
             apid = TLM_HK_PAT
             payload, tx_flag, _, _, _, _ = pat_pkt.decode(data)
+            payload = "(" + str(datetime.datetime.now())[0:23] + ") " + payload
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling PAT pkt w/ payload: ', payload)
 
@@ -357,7 +359,7 @@ class Housekeeping:
             ch_pkt = HKControlPacket()
             origin, _, data = ch_pkt.decode(data)
             # TODO: Maybe format this better
-            payload = str(origin)+": "+data
+            payload = "(" + str(datetime.datetime.now())[0:23] + ") " + str(origin) + ": " + data
             #payload = struct.pack('%ds'%len(payload), payload) #for readability, could have this, though it doesn't do anything (packed string = original string)
             # print('Handling CH pkt w/ payload: ', payload)
 

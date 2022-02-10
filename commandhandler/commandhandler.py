@@ -198,6 +198,7 @@ def get_pat_mode():
 
 def stop_pat():
     send_pat_command(socket_PAT_control, PAT_CMD_END_PROCESS) #this isn't necessary if PAT is running as a service
+    time.sleep(2)
     os.system("systemctl --user stop pat") #stop the pat service
     log_to_hk('PAT STOPPED')
 
@@ -261,7 +262,7 @@ def heat_to_0C(counter_heartbeat):
     counter_heartbeat = send_heartbeat(start_time, counter_heartbeat)    
     #Heat Payload to 0C (if not already there)
     temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
-    temps = sum(temp_block)/6
+    temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
     log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
     success = True #initialize return value
     if (temps<0):
@@ -275,12 +276,14 @@ def heat_to_0C(counter_heartbeat):
         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
         begin_time = time.time()
         while(temps < 0):
-            temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
+            temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
+            temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
             counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
             time.sleep(temp_sleep_time)
             log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
             if ((time.time() - begin_time) > TIMEOUT_HEAT_TO_0C):
-                log_to_hk("Heater time reached 15 minutes and avg temps: %s" % sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                log_to_hk("Heater time reached %s minutes and avg temps: %s" % (TIMEOUT_HEAT_TO_0C/60, temps))
                 success = False
                 break 
         fpga.write_reg(mmap.PO3, 15)
@@ -298,6 +301,7 @@ counter_debug = 0 #used to count the number of repetitive process tasks
 counter_downlink = 0 #used to count the number of repetitive process tasks
 counter_heartbeat = 0 #used to count the number of repetitive process tasks
 pat_init = False 
+print_time_set = False
 
 #start command handling
 while True:
@@ -308,12 +312,17 @@ while True:
     if(elapsed_time >= HK_CH_HEARTBEAT_PD*counter_heartbeat):
         counter_heartbeat = send_heartbeat(curr_time, counter_heartbeat)
 
-    if((elapsed_time >= 10) and (not pat_init)):
-        #initialize PAT status
-        pat_status_flag = init_pat_status()
-        if(pat_status_flag in pat_status_list):
-            pat_init = True
-            log_pat_status()
+    if(elapsed_time >= 10):
+        if(print_time_set):
+            log_to_hk('CH (PID ' + str(pid) + '): ACK TIME AT TONE RECEIVED')
+            print_time_set = False
+
+        if(not pat_init):
+            #initialize PAT status
+            pat_status_flag = init_pat_status()
+            if(pat_status_flag in pat_status_list):
+                pat_init = True
+                log_pat_status()
 
     if(pat_init):
         #update PAT status
@@ -337,10 +346,10 @@ while True:
         #ipc_rxcompacket.decode(message)
         CMD_ID = ipc_rxcompacket.APID
 
-        if(CMD_ID != APID_TIME_AT_TONE):
-            #don't print the time at tone receives
-            print (ipc_rxcompacket)
-            # print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
+        # if(CMD_ID != APID_TIME_AT_TONE):
+        #     #don't print the time at tone receives
+        #     print (ipc_rxcompacket)
+        #     # print ('| got PAYLOAD %s' % (ipc_rxcompacket.payload))
 
         if(CMD_ID == APID_TIME_AT_TONE):
             if (TIME_SET_ENABLE > 0):
@@ -356,18 +365,21 @@ while True:
                                                                                     set_time.tm_min,
                                                                                     set_time.tm_sec))
                 TIME_SET_ENABLE -= 1
+                print_time_set = True
             else:
                 pass
 
         elif(CMD_ID == CMD_PL_REBOOT):
             log_to_hk('ACK CMD PL_REBOOT')
             ack_to_hk(CMD_PL_REBOOT, CMD_ACK)
+            stop_pat()
             time.sleep(1)
             os.system("shutdown -r now") #reboot the RPi
 
         elif(CMD_ID == CMD_PL_SHUTDOWN):
             log_to_hk('ACK CMD PL_SHUTDOWN')
             ack_to_hk(CMD_PL_SHUTDOWN, CMD_ACK)
+            stop_pat()
             time.sleep(1)
             os.system("shutdown now") #reboot the RPi
 
@@ -533,6 +545,8 @@ while True:
                 parse_success, data = parse_cmd_data(data_str)
                 if(parse_success):
                     if(update_options(data, socket_tx_packets)):
+                        updated_options_str = list_options(data, socket_tx_packets)
+                        log_to_hk("Updated Options Parameters:\n" + updated_options_str)
                         log_to_hk('ACK CMD PL_UPDATE_OPTIONS')
                         ack_to_hk(CMD_PL_UPDATE_OPTIONS, CMD_ACK)
                     else:
@@ -553,65 +567,86 @@ while True:
                 ack_to_hk(CMD_PL_SET_PAT_MODE, CMD_ERR)
             get_pat_mode() #print current pat mode to hk telemetry
 
-        elif(CMD_ID == CMD_PL_UPDATE_PAT_OFFSET_PARAMS):
-            len_new_parameter_data = (ipc_rxcompacket.size - 3)//4
+        elif(CMD_ID == CMD_PL_UPDATE_PAT_PARAMS):
+            len_new_parameter_data = (ipc_rxcompacket.size - 6)//4
             if(len_new_parameter_data == 0):
-                packet_data = struct.unpack('!BH', ipc_rxcompacket.payload)
+                packet_data = struct.unpack('!BBL', ipc_rxcompacket.payload)
             else:
-                packet_data = struct.unpack('!BH%df' % len_new_parameter_data, ipc_rxcompacket.payload)
+                packet_data = struct.unpack('!BBL%df' % len_new_parameter_data, ipc_rxcompacket.payload)
             
-            reset_flag = packet_data[0]
-            len_default_csv_data = len(DEFAULT_DATA_OFFSET_PARAMS)
-            if(reset_flag > 0):
-                with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
-                    csv_writer = csv.writer(csvfile_write, delimiter = ',')
-                    for i in range(0,len_default_csv_data):
-                        csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
-                
-                log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
-                ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
+            file_flag = packet_data[0]
+            reset_flag = packet_data[1]
+
+            known_file_flag = True
+            if(file_flag == PAT_PARAM_FILE_FLAG_OFFSET):
+                param_filename = PAT_PARAM_FILENAME_OFFSET
+                default_csv_data = DEFAULT_DATA_OFFSET_PARAMS
+                data_format = DATA_FORMAT_OFFSET
+            elif(file_flag == PAT_PARAM_FILE_FLAG_TRACK):
+                param_filename = PAT_PARAM_FILENAME_TRACK
+                default_csv_data = DEFAULT_DATA_TRACK_PARAMS
+                data_format = DATA_FORMAT_TRACK
+            elif(file_flag == PAT_PARAM_FILE_FLAG_CALIB):
+                param_filename = PAT_PARAM_FILENAME_CALIB
+                default_csv_data = DEFAULT_DATA_CALIB_PARAMS
+                data_format = DATA_FORMAT_CALIB
             else:
-                #update parameter values
-                flag = packet_data[1]
-                new_parameter_data = packet_data[2:]
-                bool_update_row = [0]*len_default_csv_data
-                for i in range(0,len_default_csv_data):
-                    bool_update_row[i] = (flag >> (15-i)) & 1
+                known_file_flag = False
+                log_to_hk('ERROR CMD PL_UPDATE_PAT_PARAMS: Unknown file flag ' + str(file_flag))
+                ack_to_hk(CMD_PL_UPDATE_PAT_PARAMS, CMD_ERR)
 
-                if(len_new_parameter_data == sum(bool_update_row)): 
-                    try:
-                        with open('/root/lib/offsetParams.csv', mode = 'r') as csvfile_read:
-                            csv_reader = csv.reader(csvfile_read, delimiter = ',')
-                            csv_data = list(csv_reader)
-                        len_csv_data = len(csv_data)
-
-                        with open('/root/lib/offsetParams.csv', mode = 'w') as csvfile_write:
-                            csv_writer = csv.writer(csvfile_write, delimiter = ',')
-                            j = 0
-                            for i in range(0,len_default_csv_data):
-                                if(bool_update_row[i]):
-                                    csv_writer.writerow([DEFAULT_DATA_OFFSET_PARAMS[i][0], " %f" % new_parameter_data[j]])
-                                    j += 1
-                                elif(len_csv_data != len_default_csv_data):
-                                    #issue with previous file -> overwrite with defaults
-                                    csv_writer.writerow(DEFAULT_DATA_OFFSET_PARAMS[i])
-                                else:
-                                    #re-use previous file values
-                                    csv_writer.writerow(csv_data[i])
-
-                        log_to_hk('ACK CMD PL_UPDATE_PAT_OFFSET_PARAMS')
-                        ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ACK)
-                    except:
-                        log_to_hk('ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: ' + traceback.format_exc())
-                        ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+            if(known_file_flag):
+                len_default_csv_data = len(default_csv_data)
+                if(reset_flag > 0):
+                    with open(param_filename, mode = 'w') as csvfile_write:
+                        csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                        for i in range(0,len_default_csv_data):
+                            csv_writer.writerow(default_csv_data[i])
+                    
+                    log_to_hk('ACK CMD PL_UPDATE_PAT_PARAMS')
+                    ack_to_hk(CMD_PL_UPDATE_PAT_PARAMS, CMD_ACK)
                 else:
-                    log_to_hk("ERROR CMD PL_UPDATE_PAT_OFFSET_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
-                    ack_to_hk(CMD_PL_UPDATE_PAT_OFFSET_PARAMS, CMD_ERR)
+                    #update parameter values
+                    flag = packet_data[2]
+                    new_parameter_data = packet_data[3:]
+                    bool_update_row = [0]*len_default_csv_data
+                    for i in range(0,len_default_csv_data):
+                        bool_update_row[i] = (flag >> (31-i)) & 1
+
+                    if(len_new_parameter_data == sum(bool_update_row)): 
+                        try:
+                            with open(param_filename, mode = 'r') as csvfile_read:
+                                csv_reader = csv.reader(csvfile_read, delimiter = ',')
+                                csv_data = list(csv_reader)
+                            len_csv_data = len(csv_data)
+
+                            with open(param_filename, mode = 'w') as csvfile_write:
+                                csv_writer = csv.writer(csvfile_write, delimiter = ',')
+                                j = 0
+                                for i in range(0,len_default_csv_data):
+                                    if(bool_update_row[i]):
+                                        csv_writer.writerow([default_csv_data[i][0], data_format % new_parameter_data[j]])
+                                        j += 1
+                                    elif(len_csv_data != len_default_csv_data):
+                                        #issue with previous file -> overwrite with defaults
+                                        csv_writer.writerow(default_csv_data[i])
+                                    else:
+                                        #re-use previous file values
+                                        csv_writer.writerow(csv_data[i])
+
+                            log_to_hk('ACK CMD PL_UPDATE_PAT_PARAMS')
+                            ack_to_hk(CMD_PL_UPDATE_PAT_PARAMS, CMD_ACK)
+                        except:
+                            log_to_hk('ERROR CMD PL_UPDATE_PAT_PARAMS: ' + traceback.format_exc())
+                            ack_to_hk(CMD_PL_UPDATE_PAT_PARAMS, CMD_ERR)
+                    else:
+                        log_to_hk("ERROR CMD PL_UPDATE_PAT_PARAMS: Data Size Mismatch. Float Len (%d) != Flag Sum (%d)" % (len_new_parameter_data, sum(bool_update_row)))
+                        ack_to_hk(CMD_PL_UPDATE_PAT_PARAMS, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_SINGLE_CAPTURE):
             window_ctr_rel_x, window_ctr_rel_y, window_width, window_height, exp_cmd = struct.unpack('!hhHHI', ipc_rxcompacket.payload)
             if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) < CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
+                if((abs(window_ctr_rel_x) <= CAMERA_WIDTH/2 - window_width/2) and (abs(window_ctr_rel_y) <= CAMERA_HEIGHT/2 - window_height/2) and (window_width <= CAMERA_WIDTH) and (window_height <= CAMERA_HEIGHT) and (exp_cmd >= CAMERA_MIN_EXP) and (exp_cmd <= CAMERA_MAX_EXP)):
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_WIDTH, str(window_width))
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_WINDOW_HEIGHT, str(window_height))
                     send_pat_command(socket_PAT_control, PAT_CMD_SET_GET_IMAGE_CENTER_X, str(window_ctr_rel_x))
@@ -857,6 +892,51 @@ while True:
             log_to_hk('ACK CMD PL_NOOP')
             ack_to_hk(CMD_PL_NOOP, CMD_ACK)
 
+        elif(CMD_ID == CMD_PL_EDFA_ON):
+            avg_len = 10
+            try:
+                edfa_ldc_cmd = struct.unpack('!H', ipc_rxcompacket.payload)[0] 
+                #clamp ldc cmd to max limit
+                if(edfa_ldc_cmd > 2200):
+                    log_to_hk('Warning - Rounding commanded LDC BA of %d to maximum of 2200' % edfa_ldc_cmd)
+                    edfa_ldc_cmd = 2200
+
+                log_to_hk("Power EDFA ON")
+                power.edfa_on() #write 85 to reg 34
+                time.sleep(1)
+                standby_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+                log_to_hk('Standby Current: %f A' % standby_curr)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba %d\r' % edfa_ldc_cmd)
+                time.sleep(0.1)
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                time.sleep(4)
+                on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+                log_to_hk('ON Current: %f A' % on_curr)
+
+                log_to_hk('ACK CMD PL_EDFA_ON')
+                ack_to_hk(CMD_PL_EDFA_ON, CMD_ACK)  
+            except:
+                log_to_hk('ERROR CMD PL_EDFA_ON: ' + traceback.format_exc())
+                ack_to_hk(CMD_PL_EDFA_ON, CMD_ERR)  
+
+        elif(CMD_ID == CMD_PL_EDFA_OFF):
+            avg_len = 10
+            try:
+                log_to_hk("Power EDFA OFF")
+                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa off\r')
+                time.sleep(4)
+                off_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
+                log_to_hk('OFF Current: %f A' % off_curr)
+                power.edfa_off() #write 15 to reg 34
+
+                log_to_hk('ACK CMD PL_EDFA_OFF')
+                ack_to_hk(CMD_PL_EDFA_OFF, CMD_ACK)  
+            except:
+                log_to_hk('ERROR CMD PL_EDFA_OFF: ' + traceback.format_exc())
+                ack_to_hk(CMD_PL_EDFA_OFF, CMD_ERR)  
+
         elif(CMD_ID == CMD_PL_SELF_TEST):
             test_id_tuple = struct.unpack('!B', ipc_rxcompacket.payload)
             test_id = test_id_tuple[0]
@@ -870,7 +950,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is GENERAL_SELF_TEST')
                     success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
                     if(success_heating or OVERRIDE_HEAT_TO_0C):
-                        set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                        set_hk_ch_period(HK_CH_CHECK_PD_GENERAL_SELF_TEST) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         #Execute general self test script
                         try:
@@ -883,13 +963,14 @@ while True:
                         set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                     else:
+                        log_to_hk("ERR CMD PL_SELF_TEST - Heat to 0C Unsuccessful")
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ERR)
 
                 elif(test_id == LASER_SELF_TEST):
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is LASER_SELF_TEST')
                     success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
                     if(success_heating or OVERRIDE_HEAT_TO_0C):
-                        set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                        set_hk_ch_period(HK_CH_CHECK_PD_LASER_SELF_TEST) #delay housekeeping heartbeat checking for 30 sec
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         #Execute laser self test script 
                         try:
@@ -931,7 +1012,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: THERMAL_SELF_TEST')    
                     #Heat Payload for up to 3 min or up to a change in temp of 10C
                     temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
-                    temps = sum(temp_block)/6
+                    temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
                     log_to_hk('mmap.TEMPERATURE_BLOCK = ' + str(temp_block))
                     log_to_hk("Start Time = %s, Temp = %s" % (start_time, temps))
                     fpga.write_reg(mmap.PO3, 85)
@@ -944,7 +1025,8 @@ while True:
                     begin_time = time.time()
                     temps_init = temps
                     while((abs(temps - temps_init) < 10) and ((time.time() - begin_time) < 180)):
-                        temps = sum([fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK])/6
+                        temp_block = [fpga.read_reg(reg) for reg in mmap.TEMPERATURE_BLOCK]
+                        temps = sum(temp_block[0:5])/5 #Ignore RACEWAY_TEMP: PD_TEMP, EDFA_TEMP, CAMERA_TEMP, TOSA_TEMP, LENS_TEMP, RACEWAY_TEMP = TEMPERATURE_BLOCK[0:6]
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         time.sleep(temp_sleep_time)
                         log_to_hk("Elapsed Time = %s, Temp = %s" % (time.time() - begin_time, temps))
@@ -959,7 +1041,7 @@ while True:
                     log_to_hk('ACK CMD PL_SELF_TEST: Test is ALL_SELF_TEST')
                     success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) #heat to 0C (if not already there)
                     if(success_heating or OVERRIDE_HEAT_TO_0C):
-                        set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                        set_hk_ch_period(HK_CH_CHECK_PD_GENERAL_SELF_TEST) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         no_test_error = True 
                         #Execute general self test script
@@ -974,7 +1056,7 @@ while True:
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
                         #Execute laser self test script
-                        set_hk_ch_period(30) #delay housekeeping heartbeat checking for 30 sec
+                        set_hk_ch_period(HK_CH_CHECK_PD_LASER_SELF_TEST) #delay housekeeping heartbeat checking for 30 sec
                         counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
                         try:
                             log_to_hk("Running Laser Self Test...")
@@ -1009,132 +1091,159 @@ while True:
                         ack_to_hk(CMD_PL_SELF_TEST, CMD_ACK)
 
         elif(CMD_ID == CMD_PL_DWNLINK_MODE):
-            start_time = time.time()
-            counter_heartbeat = send_heartbeat(start_time, counter_heartbeat)
-            log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
-
-            #heat to 0C (if not already there)
-            success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) 
-            if(success_heating or OVERRIDE_HEAT_TO_0C):
-                #General self test:
-                log_to_hk("Running General Self Test...")
-                set_hk_ch_period(150) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
-                log_to_hk(results_summary)
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-
-                #Laser self test
-                log_to_hk("Running Laser Self Test...")
-                set_hk_ch_period(30) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min) [TBR]
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
-                log_to_hk(results_summary)
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-
-                #PAT self test
-                log_to_hk("Running PAT Self Test...")
-                set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
-                    initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
-                    #execute PAT self test
-                    send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
-                    for i in range(60): #max test time is about 60 sec
-                        #log_to_hk("Waiting for pat self test to finish")
-                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                        time.sleep(1)
-                    log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
-                    pat_mode_id = get_pat_mode()
-                    send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
-                elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
-                    log_pat_status()
-                    log_to_hk("Camera is off - pat self test failed.")
-                    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
-                else:
-                    log_pat_status()
-                    log_to_hk("Pat was not in standby mode, pat self test will not run")
-                    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
-
-                #proceed to transmit
-                end_time = time.time()
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
-
-                #log transmit start time
+            try:
                 start_time = time.time()
+                set_hk_ch_period(HK_CH_CHECK_PD_DOWNLINK_MODE)
+                counter_heartbeat = send_heartbeat(start_time, counter_heartbeat)
+                log_to_hk('ACK CMD PL_DWNLINK_MODE with start time: ' + str(start_time))
 
-                tx_pkt = tx_packet.txPacket(TRANSMIT_PPM, TRANSMIT_MESSAGE)
-                tx_pkt.pack()
+                #heat to 0C (if not already there)
+                success_heating, counter_heartbeat = heat_to_0C(counter_heartbeat) 
+                if(success_heating or OVERRIDE_HEAT_TO_0C):
+                    #General self test:
+                    log_to_hk("Running General Self Test...")
+                    #set_hk_ch_period(HK_CH_CHECK_PD_GENERAL_SELF_TEST) #delay housekeeping heartbeat checking for 2 min 30 sec (test is ~ 2 min)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    results_summary = general_functionality_test.run_all("CH (%s)"%(pid))
+                    log_to_hk(results_summary)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
-                control = fpga.read_reg(mmap.CTL)
-                if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+                    #Laser self test
+                    log_to_hk("Running Laser Self Test...")
+                    #set_hk_ch_period(HK_CH_CHECK_PD_LASER_SELF_TEST) #delay housekeeping heartbeat checking for 30 sec (test is ~ 10 sec)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    results_summary = automated_laser_checks.run_all("CH (%s)"%(pid))
+                    log_to_hk(results_summary)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
 
-                payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
-                flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+                    #PAT self test
+                    log_to_hk("Running PAT Self Test...")
+                    #set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    if(pat_status_is(PAT_STATUS_STANDBY) or pat_status_is(PAT_STATUS_STANDBY_CALIBRATED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_PASSED) or pat_status_is(PAT_STATUS_STANDBY_SELF_TEST_FAILED)):
+                        initialize_cal_laser() #make sure cal laser dac settings are initialized for PAT
+                        #execute PAT self test
+                        send_pat_command(socket_PAT_control, PAT_CMD_SELF_TEST)
+                        for i in range(60): #max test time is about 60 sec
+                            #log_to_hk("Waiting for pat self test to finish")
+                            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                            time.sleep(1)
+                        log_to_hk('PAT self test wait complete. Commanding PAT to enter MAIN mode.')
+                        pat_mode_id = get_pat_mode()
+                        send_pat_command(socket_PAT_control, pat_mode_id, str(PAT_SKIP_CALIB_FLAG))
+                    elif(pat_status_is(PAT_STATUS_CAMERA_INIT)):
+                        log_pat_status()
+                        log_to_hk("Camera is off - pat self test failed.")
+                        ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+                    else:
+                        log_pat_status()
+                        log_to_hk("Pat was not in standby mode, pat self test will not run")
+                        ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
-                # seed = payload_seed
-                if(SEED_SETTING):
-                    seed = payload_seed
-                    ppm_input = [PPM4_THRESHOLDS[0], PPM4_THRESHOLDS[1]]
-                else:
-                    seed = flat_sat_seed
-                    ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
-
-                log_to_hk("seed: " + str(seed) + "; " + "ppm_input: " + str(ppm_input))
-
-                #Align seed to FGBG
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                tx_packet.seed_align(seed)
-                log_to_hk("Turn EDFA On")            
-
-                fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
-                time.sleep(0.1)
-                fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
-                time.sleep(0.1)
-                fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
-                time.sleep(2)
-
-                #set points are dependent on temperature
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
-                log_to_hk("PPM: " + str(ppm_order) + ', EDFA Power: ' + str(fpga.read_reg(34)))
-                while(abs(end_time - start_time) < TRANSMIT_TIME):
-
-                    #Stall Fifo
-                    fpga.write_reg(mmap.CTL, control | 0x8)
-
-                    # # #Write to FIFO
-                    tx_pkt.transmit(fpga, .1)
-
-                    fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
-                    if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
-                        # success = False
-                        log_to_hk("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
-                        # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
-                        # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
-
-                    if(fifo_len < 100): time.sleep(.005)
-
-                    # #Release FIFO
-                    fpga.write_reg(mmap.CTL, 0x7)
+                    #proceed to transmit
                     end_time = time.time()
-                    if((end_time - start_time) >= HK_CH_HEARTBEAT_PD*counter_heartbeat): 
-                        counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
-                
-                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    log_to_hk("Pretransmit Time: %s" %(end_time - start_time))
 
+                    #log transmit start time
+                    start_time = time.time()
+
+                    tx_pkt = tx_packet.txPacket(TRANSMIT_PPM, TRANSMIT_MESSAGE)
+                    tx_pkt.pack()
+
+                    control = fpga.read_reg(mmap.CTL)
+                    if(control & 0x8): fpga.write_reg(mmap.DATA, 0x7) #Turn stall off
+
+                    payload_seed = [DEFAULT_TEC_MSB, DEFAULT_TEC_LSB, DEFAULT_LD_MSB, DEFAULT_LD_LSB]
+                    flat_sat_seed = [DEFAULT_FTEC_MSB, DEFAULT_FTEC_LSB, DEFAULT_FLD_MSB, DEFAULT_FLD_LSB]
+
+                    # seed = payload_seed
+                    if(SEED_SETTING):
+                        seed = payload_seed
+                        ppm_input = [PPM4_THRESHOLDS[0], PPM4_THRESHOLDS[1]]
+                    else:
+                        seed = flat_sat_seed
+                        ppm_input = [PPM4_THRESHOLDS[2], PPM4_THRESHOLDS[3]]
+
+                    log_to_hk("seed: " + str(seed) + "; " + "ppm_input: " + str(ppm_input))
+
+                    #Align seed to FGBG
+                    #set_hk_ch_period(HK_CH_CHECK_PD_SEED_ALIGN)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    _, _, msg_out = tx_packet.seed_align(seed)
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    for i in range(0,len(msg_out)):
+                        log_to_hk(msg_out[i]) 
+                    
+                    log_to_hk("Turn EDFA On")            
+
+                    fpga.write_reg(mmap.EDFA_IN_STR ,'mode acc\r')
+                    time.sleep(0.1)
+                    fpga.write_reg(mmap.EDFA_IN_STR ,'ldc ba 2200\r')
+                    time.sleep(0.1)
+                    fpga.write_reg(mmap.EDFA_IN_STR ,'edfa on\r')
+                    time.sleep(2)
+
+                    #set points are dependent on temperature
+                    #set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                    prev_hb_time = time.time()
+                    ppm_order = (128 + (255 >>(8-int(math.log(TRANSMIT_PPM)/math.log(2)))))
+                    log_to_hk("PPM: " + str(ppm_order) + ', EDFA Power: ' + str(fpga.read_reg(34)))
+                    prev_print_time = start_time
+                    while(abs(end_time - start_time) < TRANSMIT_TIME):
+
+                        #Stall Fifo
+                        fpga.write_reg(mmap.CTL, control | 0x8)
+
+                        # # #Write to FIFO
+                        tx_pkt.transmit(fpga, .1)
+
+                        fifo_len = fpga.read_reg(47)*256+fpga.read_reg(48)
+                        if(len(tx_pkt.symbols) != fifo_len): #Why is the empty fifo length 2
+                            # success = False
+                            log_to_hk("Fifo length %s does not match packet symbol length %s " % (fifo_len, len(tx_pkt.symbols)))
+                            # fo.write("Fifo length %s does not match packet symbol legnth %s " % (fifo_len, tx_pkt1.symbols))
+                            # fo.write("Packet PPM: %s and Data: %s " % (tx_pkt1.ppm_order, tx_pkt1.data))
+
+                        if(fifo_len < 100): time.sleep(.005)
+
+                        # #Release FIFO
+                        fpga.write_reg(mmap.CTL, 0x7)
+                        end_time = time.time()
+                        if((end_time - prev_print_time) >= PERIOD_PRINT_DOWNLINK_TIME): 
+                            log_to_hk("Time Elapsed: %s" % (end_time - start_time))
+                            prev_print_time = end_time
+                            counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        #if((end_time - prev_hb_time) >= 0.9*HK_CH_HEARTBEAT_PD):
+                        #    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                        #    prev_hb_time = end_time
+                    
+                    counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+
+                    power.edfa_off()
+                    power.bias_off()
+                    power.tec_off()
+
+                    #reset PAT:
+                    send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+
+                    log_to_hk("END PL_DWNLINK_MODE - Transmit Session Complete")
+                    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
+                else:
+                    log_to_hk("END PL_DWNLINK_MODE - Heat to 0C Unsuccessful")
+                    ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+            except:
+                log_to_hk('ERROR CMD PL_DWNLINK_MODE: ' + traceback.format_exc())
+                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
+                counter_heartbeat = send_heartbeat(time.time(), counter_heartbeat)
+                set_hk_ch_period(HK_CH_CHECK_PD) #reset housekeeping heartbeat checking to default
                 power.edfa_off()
                 power.bias_off()
                 power.tec_off()
-
-                #reset PAT:
                 send_pat_command(socket_PAT_control, PAT_CMD_END_PAT)
+                log_to_hk("CMD PL_DWNLINK_MODE - Transmit OFF and PAT reset")
 
-                log_to_hk("END PL_DWNLINK_MODE - Transmit Session Complete")
-                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ACK)
-            else:
-                ack_to_hk(CMD_PL_DWNLINK_MODE, CMD_ERR)
 
         elif(CMD_ID == CMD_PL_DEBUG_MODE):
             start_time = time.time()

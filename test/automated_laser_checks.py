@@ -12,6 +12,7 @@ import options
 import dac
 import math
 import hashlib
+import datetime
 
 #For basic testing of calibration laser and seed laser aliveness. Can be upgraded as necessary (e.g. expected parameter values)
 
@@ -22,13 +23,13 @@ power = mmap.Power(fpga) # power sub-interface
 len_pass_string = 100
 def print_test(fo,name): 
     print(name + ' ' + '.'*(len_pass_string - len(name)) + ' ', end='')
-    fo.write('--- Starting %s ---\n' % name)
+    fo.write('--- %s Starting %s ---\n' % ("(" + str(datetime.datetime.now())[0:23] + ")", name))
 def pass_test(fo):
     print('Pass')
-    fo.write('--- Pass ---\n')
+    fo.write('--- %s Pass ---\n' % ("(" + str(datetime.datetime.now())[0:23] + ")"))
 def fail_test(fo):
     print('Fail')
-    fo.write('--- Fail ---\n')
+    fo.write('--- %s Fail ---\n' % ("(" + str(datetime.datetime.now())[0:23] + ")"))
 
 def error_to_file(func):
     def e_to_f(fo):
@@ -54,52 +55,48 @@ def test_calib_laser(fo):
     power.heaters_off()
     power.heater_1_off()
     power.heater_2_off()
-    time.sleep(.25)
+    time.sleep(1)
     heater_off_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('OFF: %f A\n' % heater_off_curr)
     
     power.heaters_on()
-    time.sleep(.1)
+    time.sleep(1)
     heater_only_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('Heater Circuit: %f A\n' % heater_only_curr)
 
     power.calib_diode_on()
     fpga.write_reg(mmap.DAC_SETUP,1)
     fpga.write_reg(mmap.DAC_1_D, options.CAL_LASER_DAC_SETTING)
-    time.sleep(.1)
+    time.sleep(1)
     calib_curr = sum([fpga.read_reg(mmap.HEATER_CURRENT) for i in range(avg_len)])/avg_len
     fo.write('Heater Circuit + Cal Laser: %f A\n' % calib_curr)
         
     tosa_temp = fpga.read_reg(mmap.TOSA_TEMP)  
+    fo.write('TOSA Temp: %f C\n' % tosa_temp)
     power.calib_diode_off()
     power.heaters_off()
 
     success = True
     # Bound Checks (update as needed during ground testing)
-    HEATER_OFF_UB = 0.2 #Reference temp is 26.5C, can be 110mA at 0C
-    HEATER_ONLY_LB = 0.007 #Reference temp is 26.5C
-    HEATER_ONLY_UB = 0.117 #Reference temp is 26.5C
-    CALIB_LB = 0.022 #Reference temp is 26.5C
-    CALB_UB = 0.134 #Reference temp is 26.5C
     add_temp = .007*fpga.read_reg(mmap.TOSA_TEMP) #Temperature variation TBR    
-    if(heater_off_curr > HEATER_OFF_UB):
+    if(heater_off_curr > options.HEATER_OFF_UB):
         success = False
-        fo.write("Heater off current is larger than %f A\n" % (HEATER_OFF_LB))
-        print(1)
-    if(not (HEATER_ONLY_LB < heater_only_curr < HEATER_ONLY_UB+add_temp)):
+        fo.write("Heater off current is larger than %f A\n" % (options.HEATER_OFF_UB))
+        #print(1)
+    if(not (options.HEATER_ONLY_LB < heater_only_curr < options.HEATER_ONLY_UB+add_temp)):
         success = False
-        fo.write("Heater Circuit current is outside of bounds: %f A to %f A: %f\n" % (HEATER_ONLY_LB, HEATER_ONLY_UB+add_temp, heater_only_curr))
-        print(2)
-    if(not (CALIB_LB < calib_curr < CALB_UB+add_temp)):
+        fo.write("Heater Circuit current is outside of bounds: %f A to %f A: %f\n" % (options.HEATER_ONLY_LB, options.HEATER_ONLY_UB+add_temp, heater_only_curr))
+        #print(2)
+    if(not (options.CALIB_LB < calib_curr < options.CALIB_UB+add_temp)):
         success = False
-        fo.write("Heater Circuit + Cal Laser current is outside of bounds: %f A to %f A: %f\n" % (CALIB_LB, CALB_UB+add_temp, calib_curr))
-        print(3)
+        fo.write("Heater Circuit + Cal Laser current is outside of bounds: %f A to %f A: %f\n" % (options.CALIB_LB, options.CALIB_UB+add_temp, calib_curr))
+        #print(3)
 
+    #print("TOSA Temp: %0.03f, OFF: %.03f A, Heater Circuit Only: %.03f A, Heater Circuit + Cal Laser: %.03f A" % (tosa_temp, heater_off_curr, heater_only_curr, calib_curr))  
     if success:
         pass_test(fo)
     else:
         fail_test(fo)
-    print("TOSA Temp: %0.03f, OFF: %.03f A, Heater Circuit Only: %.03f A, Heater Circuit + Cal Laser: %.03f A" % (tosa_temp, heater_off_curr, heater_only_curr, calib_curr))    
 
     return success 
     
@@ -133,12 +130,13 @@ def test_seed(fo):
     fo.write('ON: %f A\n' % on_curr)
 
     tosa_temp = fpga.read_reg(mmap.TOSA_TEMP)  
+    fo.write('TOSA Temp: %f C\n' % tosa_temp)
     success = True
     # Bound Checks (update as needed during ground testing)
     for i in range(10):
         avg_on_curr = sum([fpga.read_reg(mmap.LD_CURRENT) for i in range(avg_len)])/avg_len
         time.sleep(.1)
-        limit = .600 + .01*fpga.read_reg(mmap.TOSA_TEMP) #TBR Temperature Variation (Agrees w/ 26.5C data)
+        limit = .600 + .01*fpga.read_reg(mmap.TOSA_TEMP) #(Agrees w/ 26.5C data)
         if(avg_on_curr > limit or avg_on_curr < 100e-3):
             success = False
             fo.write("LD on current is outside of normal bounds (%s, %s)A: %s A\n" % (str(round(limit,3)), str(100e-3), str(round(avg_on_curr,3))))
@@ -152,8 +150,8 @@ def test_seed(fo):
         pass_test(fo)
     else:
         fail_test(fo)
-        print("LD current is out of nominal bounds: %s" % round(avg_on_curr,3))
-    print("TOSA Temp: %0.03f, OFF: %.03f A, Standby: %.03f A, ON: %.03f A" % (tosa_temp, off_curr, standby_curr, on_curr)) 
+        #print("LD current is out of nominal bounds: %s" % round(avg_on_curr,3))
+    #print("TOSA Temp: %0.03f, OFF: %.03f A, Standby: %.03f A, ON: %.03f A" % (tosa_temp, off_curr, standby_curr, on_curr)) 
 
     return success   
 

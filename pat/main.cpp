@@ -28,10 +28,13 @@
 #define PERIOD_CALIB_LOSS 3.0f //seconds, time to wait after beacon loss before switching to open loop
 #define PERIOD_HEARTBEAT_TLM 0.5f //seconds, time to wait in between heartbeat telemetry messages
 #define PERIOD_TLM_MSG 5.0f //seconds, time to wait in-between periodic telemetry messages
-#define PERIOD_CSV_WRITE 0.1f //seconds, time to wait in between writing csv telemetry data
+#define PERIOD_STATUS_MSG 0.5f //seconds, time to wait in-between status messages
+#define PERIOD_CSV_WRITE 0.5f //seconds, time to wait in between writing csv telemetry data
 #define PERIOD_TX_ADCS 1.0f //seconds, time to wait in between bus adcs feedback messages
 #define PERIOD_CALCULATE_TX_OFFSETS 1000.0f //seconds, time to wait in-between updating tx offsets due to temperature fluctuations
 #define PERIOD_DITHER_TX_OFFSETS 10.0f //seconds, time to wait in-between dithering tx offsets (if dithering is on)
+#define PERIOD_PROPERTY_CHANGE_CAL 0.5f //seconds, time to wait in-between reporting rapid calibration laser property changes
+#define PERIOD_PROPERTY_CHANGE_BCN 0.5f //seconds, time to wait in-between reporting rapid beacon laser property changes
 #define LASER_RISE_TIME 10 //milliseconds, time to wait after switching the cal laser on/off (min rise time = 3 ms)
 #define TX_OFFSET_X_DEFAULT -20 //pixels, from GSE calibration [old: 20] [new = 2*caliboffset + 20]
 #define TX_OFFSET_Y_DEFAULT 120 //pixels, from GSE calibration [old: -50] [new = 2*caliboffset - 50]
@@ -55,6 +58,7 @@
 using namespace std;
 using namespace std::chrono;
 
+/*
 class CSVdata
 {
 public:
@@ -64,7 +68,7 @@ public:
     bcnX(bcnXin), bcnY(bcnYin), bcnExp(bcnExpIn),
     calX(calXin), calY(calYin), calSetX(calSetXin), calSetY(calSetYin), calExp(calExpIn) {}
 };
-
+*/
 //Turn on Calibration Laser
 bool laserOn(zmq::socket_t& pat_health_port, std::ofstream& fileStream, zmq::socket_t& fpga_map_request_port, zmq::socket_t& fpga_map_answer_port, std::vector<zmq::pollitem_t>& poll_fpga_answer,  uint8_t request_number = 0){
 	bool laser_is_on;
@@ -130,6 +134,7 @@ enum offsetParamIndex {
     IDX_TX_OFFSET_DITHER_X_RADIUS,
     IDX_TX_OFFSET_DITHER_Y_RADIUS,
     IDX_DITHER_COUNT_PERIOD,
+	IDX_DITHER_ENABLE,
     NUM_TX_OFFSET_PARAMS
 };
 struct offsetParamStruct {
@@ -295,6 +300,13 @@ int main() //int argc, char** argv
 	//Generate text telemetry file, pg
 	ofstream textFileOut; //stream for text telemetry
 	textFileOut.open(textFileName, ios::app); //create text file and open for writing
+
+	//Generate csv telemetry file
+	ofstream dataFileOut;
+	dataFileOut.open(dataFileName, ios::app); //create data file and open for writing
+	writeHeaderToDataFile(dataFileOut);
+
+	//Log process start and telemetry directory
 	log(pat_health_port, textFileOut, "In main.cpp - Started PAT with PID: ", pat_pid, ". Saving data to: ", pathName);
 
 	// Synchronization
@@ -305,13 +317,6 @@ int main() //int argc, char** argv
 	Phase phase = CALIBRATION;
 	Group beacon, calib;
 	AOI beaconWindow, calibWindow, getImageWindow;
-	//set default get image window
-	getImageWindow.w = CALIB_BIG_WINDOW;
-	getImageWindow.h = CALIB_BIG_WINDOW;
-	getImageWindow.x = CAMERA_WIDTH/2 - CALIB_BIG_WINDOW/2;
-	getImageWindow.y = CAMERA_HEIGHT/2 - CALIB_BIG_WINDOW/2;
-	int cmd_get_image_w = getImageWindow.w, cmd_get_image_h = getImageWindow.h;
-	int cmd_get_image_center_x_rel = 0, cmd_get_image_center_y_rel = 0;
 	int beaconExposure = 0, spotIndex = 0, calibExposure = 0;
 	int beaconGain = 0, calibGain = 0;
 	bool haveBeaconKnowledge = false, haveCalibKnowledge = false;
@@ -327,17 +332,13 @@ int main() //int argc, char** argv
 	uint8_t camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result;
 	int command_offset_x, command_offset_y; 
 	int main_entry_flag;
-	int beaconWindowSize = TRACK_ACQUISITION_WINDOW;
-	beaconWindow.w = beaconWindowSize;
-	beaconWindow.h = beaconWindow.w;
 	int beacon_x_rel = BCN_X_REL_GUESS, beacon_y_rel = BCN_Y_REL_GUESS;
 	beacon.x = CAMERA_WIDTH/2 + beacon_x_rel; beacon.y = CAMERA_HEIGHT/2 + beacon_y_rel;
-	int maxBcnExposure = TRACK_MAX_EXPOSURE; 
 	int laser_tests_passed = 0;
 	bool self_test_passed = false, self_test_failed = false;
 	tx_offsets offsets;
 	offsets.x = TX_OFFSET_X_DEFAULT; offsets.y = TX_OFFSET_Y_DEFAULT;
-	int dither_count = 0; bool dithering_on = false; float offset_x_init, offset_y_init;
+	int dither_count = 0; bool dithering_on = true; float offset_x_init, offset_y_init;
 	float period_calculate_tx_offsets = PERIOD_CALCULATE_TX_OFFSETS;
 	float period_dither_tx_offsets = PERIOD_DITHER_TX_OFFSETS;
 	calculateTxOffsetsParams params_calculateTxOffsets;
@@ -368,13 +369,20 @@ int main() //int argc, char** argv
 		params_ditherOffsets.tx_offset_dither_x_radius = offsetParams[IDX_TX_OFFSET_DITHER_X_RADIUS].parameter;
 		params_ditherOffsets.tx_offset_dither_y_radius = offsetParams[IDX_TX_OFFSET_DITHER_Y_RADIUS].parameter;
 		params_ditherOffsets.dither_count_period = offsetParams[IDX_DITHER_COUNT_PERIOD].parameter;
+		dithering_on = (offsetParams[IDX_DITHER_ENABLE].parameter > 0);
 	} 
 	calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets); 
 	
 	//set up self test error buffer
-	std::stringstream self_test_stream;
-	char self_test_error_buffer[BUFFER_SIZE];	
-	self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
+	//std::stringstream self_test_stream;
+	//char self_test_error_buffer[BUFFER_SIZE];	
+	//self_test_stream.rdbuf()->pubsetbuf(self_test_error_buffer, sizeof(self_test_error_buffer));
+
+	//CH Status Msg Telemetry Timing
+	time_point<steady_clock> time_prev_status;
+	duration<double> period_status(PERIOD_STATUS_MSG); //wait time in between status messages
+	time_point<steady_clock> check_status; // Record current time
+	duration<double> elapsed_time_status; // time since status
 
 	// Killing app handler (Enables graceful Ctrl+C exit)
 	signal(SIGINT, [](int signum) { stop = true; });
@@ -384,9 +392,17 @@ int main() //int argc, char** argv
 	//Catch camera initialization failure state in a re-initialization loop:
 	bool camera_initialized = camera.initialize();	
 	if(!camera_initialized){log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Camera Initialization Failed! Error:", camera.error);}
-	while(!camera_initialized){
-		send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
+	while(!camera_initialized){		
 		send_packet_pat_health(pat_health_port);
+
+		check_status = steady_clock::now(); // Record current time
+		elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+		if(elapsed_time_status > period_status) //pg
+		{
+			send_packet_pat_status(pat_status_port, STATUS_CAMERA_INIT);
+			time_prev_status = steady_clock::now(); // Record time of message						
+		}
+		
 		// Listen for exit command 		
 		zmq::poll(poll_pat_control.data(), 1, period_hb_tlm_ms); // when timeout_ms (the third argument here) is -1, then block until ready to receive (based on: https://ogbe.net/blog/zmq_helloworld.html)
 		if(poll_pat_control[0].revents & ZMQ_POLLIN){
@@ -401,20 +417,20 @@ int main() //int argc, char** argv
 				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_SELF_TEST command.");	
 				camera_test_result = FAIL_SELF_TEST; 
 				//stream error message to buffer
-				self_test_stream << "Camera Initialization Failed! Error:" << camera.error;
+				//self_test_stream << "Camera Initialization Failed! Error:" << camera.error;
 				if(check_fpga_comms(fpga_map_answer_port, poll_fpga_answer, fpga_map_request_port)){
 					fpga_test_result = PASS_SELF_TEST;
 					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test passed.");
 				} else{
 					fpga_test_result = FAIL_SELF_TEST;
 					log(pat_health_port, textFileOut, "In main.cpp - Camera Init - CMD_SELF_TEST - FPGA test failed.");
-					self_test_stream << "FPGA Comms Fault\n"; //stream error message to buffer
+					//self_test_stream << "FPGA Comms Fault\n"; //stream error message to buffer
 				}
 				laser_test_result = NULL_SELF_TEST;
 				fsm_test_result = NULL_SELF_TEST;
 				calibration_test_result = NULL_SELF_TEST;			
 				//send self test results
-				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
+				send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result); //, self_test_error_buffer);
 				
 			} else if(command == CMD_END_PROCESS){
 				log(pat_health_port, textFileOut, "In main.cpp - Camera Init - Received CMD_END_PROCESS command. Saving text file and ending process.");
@@ -453,10 +469,30 @@ int main() //int argc, char** argv
 	Tracking track(camera, calibration, textFileOut, pat_status_port, pat_health_port, pat_control_port, poll_pat_control);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
+	//Load Calib Parameters
+	int calib_big_window = calibration.calibParams[IDX_CALIB_BIG_WINDOW].parameter;
+	int calib_min_brightness = calibration.calibParams[IDX_CALIB_MIN_BRIGHTNESS].parameter;
+	//set default get image window
+	getImageWindow.w = calib_big_window;
+	getImageWindow.h = calib_big_window;
+	getImageWindow.x = CAMERA_WIDTH/2 - calib_big_window/2;
+	getImageWindow.y = CAMERA_HEIGHT/2 - calib_big_window/2;
+	int cmd_get_image_w = getImageWindow.w, cmd_get_image_h = getImageWindow.h;
+	int cmd_get_image_center_x_rel = 0, cmd_get_image_center_y_rel = 0;
+
+	//Load Track Parameters
+	int minBcnExposure = track.trackParams[IDX_TRACK_MIN_EXPOSURE].parameter;
+	int maxBcnExposure = track.trackParams[IDX_TRACK_MAX_EXPOSURE].parameter; 
+	int beaconWindowSize = track.trackParams[IDX_TRACK_ACQUISITION_WINDOW].parameter;
+	int track_acquisition_brightness = track.trackParams[IDX_TRACK_ACQUISITION_BRIGHTNESS].parameter;
+	int track_max_spot_difference = track.trackParams[IDX_TRACK_MAX_SPOT_DIFFERENCE].parameter;
+	beaconWindow.w = beaconWindowSize;
+	beaconWindow.h = beaconWindow.w;
+
 	// CSV data saving for main PAT loop
 	time_point<steady_clock> beginTime;
-	map<double, CSVdata> csvData;
-	bool haveCsvData = false; //don't save csv if there's no data
+	//map<double, CSVdata> csvData;
+	//bool haveCsvData = false; //don't save csv if there's no data
 
 	//Beacon Loss Timing
 	time_point<steady_clock> startBeaconLoss;
@@ -470,19 +506,19 @@ int main() //int argc, char** argv
 	time_point<steady_clock> time_prev_heartbeat;
 	duration<double> period_heartbeat(PERIOD_HEARTBEAT_TLM); //wait time in between heartbeat messages (0.5s = 2 Hz)
 	time_point<steady_clock> check_heartbeat; // Record current time
-	duration<double> elapsed_time_heartbeat; // time since tx adcs tlm
+	duration<double> elapsed_time_heartbeat; // time since heartbeat
 
 	//Main Loop Periodic Telemetry Timing
 	time_point<steady_clock> time_prev_tlm_msg;
 	duration<double> period_tlm_msg(PERIOD_TLM_MSG); //wait time in between heartbeat messages (0.5s = 2 Hz)
 	time_point<steady_clock> check_tlm_msg; // Record current time
-	duration<double> elapsed_time_tlm_msg; // time since tx adcs tlm
+	duration<double> elapsed_time_tlm_msg; // time since tlm
 
 	//CSV Telemetry Timing
 	time_point<steady_clock> time_prev_csv_write; 
 	duration<double> period_csv_write(PERIOD_CSV_WRITE); //wait time in between csv writes (0.1s = 10 Hz)
 	time_point<steady_clock> check_csv_write; // Record current time
-	duration<double> elapsed_time_csv_write; // time since tx adcs tlm
+	duration<double> elapsed_time_csv_write; // time since csv write
 	time_point<steady_clock> now;
 	duration<double> diff;
 
@@ -501,7 +537,19 @@ int main() //int argc, char** argv
 	time_point<steady_clock> time_prev_dither; 
 	time_point<steady_clock> check_dither; // Record current time
 	duration<double> elapsed_time_dither; // time since last tx offset calculation
-	
+
+	//Rapid Property Change Timing for Cal Laser
+	time_point<steady_clock> time_prev_prop_change_cal;
+	duration<double> period_prop_change_cal(PERIOD_PROPERTY_CHANGE_CAL); //wait time in between heartbeat messages (0.5s = 2 Hz)
+	time_point<steady_clock> check_prop_change_cal; // Record current time
+	duration<double> elapsed_time_prop_change_cal; // time since heartbeat
+
+	//Rapid Property Change Timing for Bcn Laser
+	time_point<steady_clock> time_prev_prop_change_bcn;
+	duration<double> period_prop_change_bcn(PERIOD_PROPERTY_CHANGE_BCN); //wait time in between heartbeat messages (0.5s = 2 Hz)
+	time_point<steady_clock> check_prop_change_bcn; // Record current time
+	duration<double> elapsed_time_prop_change_bcn; // time since heartbeat
+
 	// Enter Primary Process Loop: Standby + Main
 	while(OPERATIONAL){
 		// Allow graceful exit with Ctrl-C
@@ -515,15 +563,27 @@ int main() //int argc, char** argv
 				OPERATIONAL = false;
 				break;
 			}
-			if(self_test_passed){
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
-			} else if(self_test_failed){
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
-			} else if(haveCalibKnowledge){
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
-			} else {
-				send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+
+			check_status = steady_clock::now(); // Record current time
+			elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+			if(elapsed_time_status > period_status) //pg
+			{
+				if(self_test_passed){
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_PASSED); //status message
+					//log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY_SELF_TEST_PASSED"); 
+				} else if(self_test_failed){
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY_SELF_TEST_FAILED); //status message
+					//log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY_SELF_TEST_FAILED"); 
+				} else if(haveCalibKnowledge){
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY_CALIBRATED); //status message
+					//log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY_CALIBRATED"); 
+				} else {
+					send_packet_pat_status(pat_status_port, STATUS_STANDBY); //status message
+					//log(pat_health_port, textFileOut, "In main.cpp - Standby - Sending STATUS_STANDBY"); 
+				}
+				time_prev_status = steady_clock::now(); // Record time of message						
 			}
+
 			if(!standby_msg_sent){
 				if(haveCalibKnowledge){
 					log(pat_health_port, textFileOut, "In main.cpp - Standby - Calib is at [", calib.x, ",", calib.y, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
@@ -586,7 +646,12 @@ int main() //int argc, char** argv
 					
 					case CMD_START_PAT_STATIC_POINT:
 						log(pat_health_port, textFileOut, "In main.cpp - Standby - Received CMD_START_PAT_STATIC_POINT command. Proceeding to main PAT loop...");
-						phase = STATIC_POINT;
+						if(haveCalibKnowledge){
+							phase = STATIC_POINT;
+						} else{
+							phase = CALIBRATION;
+						}
+						staticPoint = true;
 						STANDBY = false;
 						calculateTxOffsets(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, offsets, params_calculateTxOffsets);
 						break;
@@ -721,7 +786,7 @@ int main() //int argc, char** argv
 						camera.config->expose_us.write(command_exposure);		
 						
 						//set to sufficiently large window size (but not too large)
-						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);
+						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calib_big_window);
 
 						//ensure FSM is centered
 						fsm.setNormalizedAngles(0,0); 
@@ -759,7 +824,7 @@ int main() //int argc, char** argv
 						camera.config->expose_us.write(command_exposure);		
 
 						//set to sufficiently large window size (but not too large)
-						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW);	
+						camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calib_big_window);	
 
 						//switch laser on
 						if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer)){
@@ -913,7 +978,7 @@ int main() //int argc, char** argv
 						} else{
 							camera_test_result = FAIL_SELF_TEST;
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - Camera test failed!");
-							self_test_stream << "Camera Fault\n"; //stream error message to buffer
+							//self_test_stream << "Camera Fault\n"; //stream error message to buffer
 						}
 
 						//FPGA Comms Test:
@@ -923,7 +988,7 @@ int main() //int argc, char** argv
 						} else{
 							fpga_test_result = FAIL_SELF_TEST;
 							log(pat_health_port, textFileOut, "In main.cpp - Standby - CMD_SELF_TEST - FPGA test failed.");
-							self_test_stream << "FPGA Comms Fault\n"; //stream error message to buffer
+							//self_test_stream << "FPGA Comms Fault\n"; //stream error message to buffer
 						}						
 						
 						//Laser Test:
@@ -938,7 +1003,7 @@ int main() //int argc, char** argv
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) Setting to default calib exposure = ", CALIB_EXPOSURE_SELF_TEST, " us.");
 								}
 								camera.config->expose_us.write(calibExposure); //set calib exposure
-								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, CALIB_BIG_WINDOW); //set to sufficiently large window size (but not too large)							 
+								camera.setCenteredWindow(CAMERA_WIDTH/2, CAMERA_HEIGHT/2, calib_big_window); //set to sufficiently large window size (but not too large)							 
 								laser_tests_passed = 0;
 								for(int i = 1; i < 3; i++){ //run twice to make sure on/off switching is working
 									if(laserOn(pat_health_port, textFileOut, fpga_map_request_port, fpga_map_answer_port, poll_fpga_answer, i)){
@@ -952,26 +1017,26 @@ int main() //int argc, char** argv
 													laser_tests_passed++;
 												} else{
 													log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff check failed!");
-													self_test_stream << "(Laser Test) laserOff check failed!\n";
+													//self_test_stream << "(Laser Test) laserOff check failed!\n";
 													logImage(string("CMD_SELF_TEST_LASER_OFF_") + to_string(i), camera, textFileOut, pat_health_port);
 												}
 											} else{
 												log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOff FPGA command failed!");
-												self_test_stream << "(Laser Test) laserOff FPGA command failed!\n";
+												//self_test_stream << "(Laser Test) laserOff FPGA command failed!\n";
 											}
 										} else{
 											log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn check failed!");
-											self_test_stream << "(Laser Test) laserOn check failed!\n";
+											//self_test_stream << "(Laser Test) laserOn check failed!\n";
 											logImage(string("CMD_SELF_TEST_LASER_ON_") + to_string(i), camera, textFileOut, pat_health_port); //save image
 										}
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
-										self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
+										//self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
 									}	
 								}
 							} else{
 								log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - (Laser Test) laserOn FPGA command failed!");
-								self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
+								//self_test_stream << "(Laser Test) laserOn FPGA command failed!\n";
 							}
 							if(laser_tests_passed == 2){laser_test_result = PASS_SELF_TEST;}
 							else{laser_test_result = FAIL_SELF_TEST;}								
@@ -984,12 +1049,12 @@ int main() //int argc, char** argv
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - FSM test passed.");
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - FSM test failed.");
-										self_test_stream << "(FSM Test) FSM test failed.\n"; //stream error message to buffer
+										//self_test_stream << "(FSM Test) FSM test failed.\n"; //stream error message to buffer
 										fsm_test_result = FAIL_SELF_TEST;
 									}
 								} else{
 									log(pat_health_port, textFileOut,  "In main.cpp - Standby - CMD_SELF_TEST - laserOn FPGA command failed!");
-									self_test_stream << "(FSM Test) laserOn FPGA command failed!\n"; //stream error message to buffer
+									//self_test_stream << "(FSM Test) laserOn FPGA command failed!\n"; //stream error message to buffer
 									fsm_test_result = NULL_SELF_TEST;
 								}
 							
@@ -1007,25 +1072,25 @@ int main() //int argc, char** argv
 													calibration_test_result = PASS_SELF_TEST;
 													self_test_passed = true;
 													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Calibration Test passed.");
-													self_test_stream << "None";
+													//self_test_stream << "None";
 												} else{
 													log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - Sensitivity ratio check failed.");
-													self_test_stream << "(Calibration Test) Sensitivity ratio check failed.\n";
+													//self_test_stream << "(Calibration Test) Sensitivity ratio check failed.\n";
 													calibration_test_result = FAIL_SELF_TEST;
 												}
 											} else{
 												log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test) Y offset check failed: (calibration.centerOffsetY = ", calibration.centerOffsetY, ") > (CALIB_OFFSET_TOLERANCE = ", CALIB_OFFSET_TOLERANCE, ")"); 
-												self_test_stream << "(Calibration Test) Y offset (" << calibration.centerOffsetY << ") check failed.\n";
+												//self_test_stream << "(Calibration Test) Y offset (" << calibration.centerOffsetY << ") check failed.\n";
 												calibration_test_result = FAIL_SELF_TEST;
 											}
 										} else{
 											log(pat_health_port, textFileOut, "In main.cpp CMD_SELF_TEST - (Calibration Test) X offset check failed: (calibration.centerOffsetX = ", calibration.centerOffsetX, ") > (CALIB_OFFSET_TOLERANCE = ", CALIB_OFFSET_TOLERANCE, ")"); 
-											self_test_stream << "(Calibration Test) X offset (" << calibration.centerOffsetX << ") check failed.\n";
+											//self_test_stream << "(Calibration Test) X offset (" << calibration.centerOffsetX << ") check failed.\n";
 											calibration_test_result = FAIL_SELF_TEST;
 										}
 									} else{
 										log(pat_health_port, textFileOut,  "In main.cpp CMD_SELF_TEST - (Calibration Test) Calibration failed.");
-										self_test_stream << "(Calibration Test) Calibration failed.\n"; //stream error message to buffer
+										//self_test_stream << "(Calibration Test) Calibration failed.\n"; //stream error message to buffer
 										calibration_test_result = FAIL_SELF_TEST;
 									}	
 								} else{		
@@ -1042,7 +1107,7 @@ int main() //int argc, char** argv
 						}
 						if(!self_test_passed){self_test_failed = true;}
 						//send self test results
-						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result, self_test_error_buffer);
+						send_packet_self_test(tx_packets_port, camera_test_result, fpga_test_result, laser_test_result, fsm_test_result, calibration_test_result); //, self_test_error_buffer);
 						break;
 
 					case CMD_END_PROCESS:
@@ -1100,9 +1165,17 @@ int main() //int argc, char** argv
 			elapsed_time_heartbeat = check_heartbeat - time_prev_heartbeat; // Calculate time since heartbeat tlm
 			if(elapsed_time_heartbeat > period_heartbeat) //pg
 			{
-				send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
 				send_packet_pat_health(pat_health_port);
 				time_prev_heartbeat = steady_clock::now(); // Record time of message						
+			}
+
+			check_status = steady_clock::now(); // Record current time
+			elapsed_time_status = check_status - time_prev_status; // Calculate time since status msg
+			if(elapsed_time_status > period_status) //pg
+			{ 
+				send_packet_pat_status(pat_status_port, STATUS_MAIN); //send status message
+				time_prev_status = steady_clock::now(); // Record time of message		
+				//log(pat_health_port, textFileOut, "In main.cpp - Main - Sending STATUS_MAIN");				
 			}
 
 			check_tlm_msg = steady_clock::now(); // Record current time
@@ -1116,8 +1189,8 @@ int main() //int argc, char** argv
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - No idea where beacon is.");
 					}
 				} else{
-					if(beaconExposure == TRACK_MIN_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
-					if(beaconExposure == TRACK_MAX_EXPOSURE) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
+					if(beaconExposure == minBcnExposure) log(pat_health_port, textFileOut,  "In main.cpp console update - Minimum beacon exposure reached!"); //notification when exposure limits reached, pg
+					if(beaconExposure == maxBcnExposure) log(pat_health_port, textFileOut,  "In main.cpp console update - Maximum beacon exposure reached!");
 					if(haveBeaconKnowledge){
 						log(pat_health_port, textFileOut, "In main.cpp phase ", phaseNames[phase]," - Beacon is at [", beacon.x - CAMERA_WIDTH/2, ",", beacon.y - CAMERA_HEIGHT/2, " rel-to-center, exp = ", beaconExposure, "valueMax = ", beacon.valueMax, "valueSum = ", beacon.valueSum, "pixelCount = ", beacon.pixelCount, "]");
 					} else{
@@ -1155,7 +1228,11 @@ int main() //int argc, char** argv
 							haveCalibKnowledge = true; 
 							calibExposure = camera.config->expose_us.read(); //save calib exposure, pg
 							log(pat_health_port, textFileOut, "In main.cpp phase CALIBRATION - Calibration complete. Calib is at [", calib.x, ",", calib.y, ", exp = ", calibExposure, ", valueMax = ", calib.valueMax, ", valueSum = ", calib.valueSum, ", pixelCount = ", calib.pixelCount, "]");
-							phase = ACQUISITION;
+							if(staticPoint){
+								phase = STATIC_POINT;
+							} else{
+								phase = ACQUISITION;
+							}
 						}
 						else
 						{
@@ -1163,14 +1240,22 @@ int main() //int argc, char** argv
 							log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - calibration.run failed!");
 							num_calibration_attempts++;
 							log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
-							phase = CALIBRATION;
+							if(staticPoint){
+								phase = STATIC_POINT;
+							} else{
+								phase = CALIBRATION;
+							}
 						}
 					} else{
 						haveCalibKnowledge = false; 
 						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - laserOn FPGA command failed!");
 						num_calibration_attempts++;
 						log(pat_health_port, textFileOut,  "In main.cpp phase CALIBRATION - Calibration attempt ", num_calibration_attempts, " failed!");
-						phase = CALIBRATION;
+						if(staticPoint){
+							phase = STATIC_POINT;
+						} else{
+							phase = CALIBRATION;
+						}
 					}
 					break;
 
@@ -1244,10 +1329,10 @@ int main() //int argc, char** argv
 
 				// Initialize closed-loop double window tracking
 				case CL_INIT:
-					calibWindow.x = calib.x - TRACK_ACQUISITION_WINDOW/2;
-					calibWindow.y = calib.y - TRACK_ACQUISITION_WINDOW/2;
-					calibWindow.w = TRACK_ACQUISITION_WINDOW;
-					calibWindow.h = TRACK_ACQUISITION_WINDOW;
+					calibWindow.x = calib.x - beaconWindowSize/2;
+					calibWindow.y = calib.y - beaconWindowSize/2;
+					calibWindow.w = beaconWindowSize;
+					calibWindow.h = beaconWindowSize;
 					log(pat_health_port, textFileOut,  "In main.cpp phase CL_INIT - ",
 					"calibWindow.x = ", calibWindow.x, "calibWindow.y = ", calibWindow.y,
 					"calibWindow.w = ", calibWindow.w, "calibWindow.h = ", calibWindow.h);
@@ -1273,7 +1358,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
+							if(frame.histBrightest > track_acquisition_brightness)
 							{
 								cl_beacon_num_groups = frame.performPixelGrouping();
 								if(cl_beacon_num_groups > 0)
@@ -1281,11 +1366,11 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+										if(frame.groups[spotIndex].valueMax > track_acquisition_brightness)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
-											if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+											if(propertyDifference < track_max_spot_difference)
 											{
 												haveBeaconKnowledge = true;
 												// Update values if confident
@@ -1313,10 +1398,16 @@ int main() //int argc, char** argv
 											}
 											else
 											{
-												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
-												"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-												"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
-												"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+												check_prop_change_bcn = steady_clock::now(); // Record current time
+												elapsed_time_prop_change_bcn = check_prop_change_bcn - time_prev_prop_change_bcn; // Calculate time since property change report
+												if(elapsed_time_prop_change_bcn > period_prop_change_bcn) //pg
+												{
+													log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Rapid beacon spot property change: ",
+													"(propertyDifference = ", propertyDifference, ") >= (track_max_spot_difference = ",  track_max_spot_difference, "). ",
+													"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+													time_prev_prop_change_bcn = steady_clock::now(); // Record time of message		
+												}
 												if(haveBeaconKnowledge) // Beacon Loss Scenario
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1328,7 +1419,7 @@ int main() //int argc, char** argv
 										else
 										{
 											log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
-											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 											if(haveBeaconKnowledge) // Beacon Loss Scenario
 											{
 												log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1364,7 +1455,7 @@ int main() //int argc, char** argv
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase CL_BEACON - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 								if(haveBeaconKnowledge) // Beacon Loss Scenario
 								{
 									log(pat_health_port, textFileOut,  "In main.cpp phase CL_BEACON - Beacon timeout started...");
@@ -1414,7 +1505,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > CALIB_MIN_BRIGHTNESS)
+							if(frame.histBrightest > calib_min_brightness)
 							{
 								cl_calib_num_groups = frame.performPixelGrouping();
 								if(cl_calib_num_groups > 0)
@@ -1422,11 +1513,11 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, calib, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > CALIB_MIN_BRIGHTNESS)
+										if(frame.groups[spotIndex].valueMax > calib_min_brightness)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
-											if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+											if(propertyDifference < track_max_spot_difference)
 											{
 												haveCalibKnowledge = true;
 												// Update values if confident
@@ -1449,11 +1540,11 @@ int main() //int argc, char** argv
 													// Save for CSV
 													now = steady_clock::now();
 													diff = now - beginTime;
-													csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
-														calib.x, calib.y, setPointX, setPointY, calibExposure)));
+													writeToDataFile(dataFileOut, diff.count(), beacon.x, beacon.y, beaconExposure, calib.x, calib.y, setPointX, setPointY, calibExposure);
+													//csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure, calib.x, calib.y, setPointX, setPointY, calibExposure)));
 													//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 													time_prev_csv_write = now; // Record time of csv write	
-													if(!haveCsvData){haveCsvData = true;}	
+													//if(!haveCsvData){haveCsvData = true;}	
 												}
 
 												if(dithering_on){
@@ -1473,16 +1564,22 @@ int main() //int argc, char** argv
 											}
 											else
 											{
-												log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
-												"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-												"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
-												"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+												check_prop_change_cal = steady_clock::now(); // Record current time
+												elapsed_time_prop_change_cal = check_prop_change_cal - time_prev_prop_change_cal; // Calculate time since heartbeat tlm
+												if(elapsed_time_prop_change_cal > period_prop_change_cal) //pg
+												{
+													log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Rapid calib spot property change: ",
+													"(propertyDifference = ", propertyDifference, ") >= (track_max_spot_difference = ",  track_max_spot_difference, "). ",
+													"Prev: [ x = ", calib.x, ", y = ", calib.y, ", pixelCount = ", calib.pixelCount, ", valueMax = ", calib.valueMax,
+													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+													time_prev_prop_change_cal = steady_clock::now(); // Record time of message		
+												}
 											}
 										}
 										else
 										{
 											log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
-											"(frame.groups[spotIndex].valueMax = ", frame.groups[spotIndex].valueMax, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", CALIB_MIN_BRIGHTNESS/4,")");							
+											"(frame.groups[spotIndex].valueMax = ", frame.groups[spotIndex].valueMax, ") <= (CALIB_MIN_BRIGHTNESS/4 = ", calib_min_brightness/4,")");							
 											if(haveCalibKnowledge)
 											{						
 												log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
@@ -1518,7 +1615,7 @@ int main() //int argc, char** argv
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase CL_CALIB - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", CALIB_MIN_BRIGHTNESS,")");						
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (CALIB_MIN_BRIGHTNESS = ", calib_min_brightness,")");						
 								if(haveCalibKnowledge)
 								{						
 									log(pat_health_port, textFileOut,  "In main.cpp phase CL_CALIB - Calib spot vanished!");
@@ -1575,7 +1672,7 @@ int main() //int argc, char** argv
 							// std::string imageFileName = pathName + timeStamp() + std::string("_") + nameTag + std::string("_exp_") + std::to_string(camera.config->expose_us.read()) + std::string(".png");
 							// log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Saving image telemetry as: ", imageFileName);
 							// frame.savePNG(imageFileName);
-							if(frame.histBrightest > TRACK_ACQUISITION_BRIGHTNESS)
+							if(frame.histBrightest > track_acquisition_brightness)
 							{
 								cl_beacon_num_groups = frame.performPixelGrouping();
 								if(cl_beacon_num_groups > 0)
@@ -1583,11 +1680,11 @@ int main() //int argc, char** argv
 									spotIndex = track.findSpotCandidate(frame, beacon, &propertyDifference);
 									if(spotIndex >= 0)
 									{
-										if(frame.groups[spotIndex].valueMax > TRACK_ACQUISITION_BRIGHTNESS)
+										if(frame.groups[spotIndex].valueMax > track_acquisition_brightness)
 										{
 											Group& spot = frame.groups[spotIndex];
 											// Check spot properties
-											if(propertyDifference < TRACK_MAX_SPOT_DIFFERENCE)
+											if(propertyDifference < track_max_spot_difference)
 											{
 												haveBeaconKnowledge = true;
 												// Update values if confident
@@ -1613,11 +1710,11 @@ int main() //int argc, char** argv
 													// Save for CSV
 													now = steady_clock::now();
 													diff = now - beginTime;
-													csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure,
-														calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
+													writeToDataFile(dataFileOut, diff.count(), beacon.x, beacon.y, beaconExposure, calib.x, calib.y, beacon.x, beacon.y, calibExposure);
+													//csvData.insert(make_pair(diff.count(), CSVdata(beacon.x, beacon.y, beaconExposure, calib.x, calib.y, beacon.x, beacon.y, calibExposure)));
 													//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
 													time_prev_csv_write = now; // Record time of csv write
-													if(!haveCsvData){haveCsvData = true;}			
+													//if(!haveCsvData){haveCsvData = true;}			
 												}
 												// If sending beacon angle errors to the bus adcs
 												//standard sampling frequency is about 1/(40ms) = 25Hz, reduced 25x to 1Hz (TBR - Sychronization)
@@ -1652,10 +1749,16 @@ int main() //int argc, char** argv
 											}
 											else
 											{
-												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Rapid beacon spot property change: ",
-												"(propertyDifference = ", propertyDifference, ") >= (TRACK_MAX_SPOT_DIFFERENCE = ",  TRACK_MAX_SPOT_DIFFERENCE, "). ",
-												"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
-												"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+												check_prop_change_bcn = steady_clock::now(); // Record current time
+												elapsed_time_prop_change_bcn = check_prop_change_bcn - time_prev_prop_change_bcn; // Calculate time since heartbeat tlm
+												if(elapsed_time_prop_change_bcn > period_prop_change_bcn) //pg
+												{
+													log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Rapid beacon spot property change: ",
+													"(propertyDifference = ", propertyDifference, ") >= (track_max_spot_difference = ",  track_max_spot_difference, "). ",
+													"Prev: [ x = ", beacon.x, ", y = ", beacon.y, ", pixelCount = ", beacon.pixelCount, ", valueMax = ", beacon.valueMax,
+													"New: [ x = ", frame.area.x + spot.x, ", y = ", frame.area.y + spot.y, ", pixelCount = ", spot.pixelCount, ", valueMax = ", spot.valueMax);
+													time_prev_prop_change_bcn = steady_clock::now(); // Record time of message		
+												}
 												if(haveBeaconKnowledge) // Beacon Loss Scenario
 												{
 													log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
@@ -1667,7 +1770,7 @@ int main() //int argc, char** argv
 										else
 										{
 											log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Switching Failure: ",
-											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+											"(frame.groups[spotIndex].valueMax =  ", frame.groups[spotIndex].valueMax, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 											if(haveBeaconKnowledge) // Beacon Loss Scenario
 											{
 												log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
@@ -1703,7 +1806,7 @@ int main() //int argc, char** argv
 							else
 							{
 								log(pat_health_port, textFileOut, "In main.cpp phase OPEN_LOOP - Switching Failure: ",
-								"(frame.histBrightest = ", frame.histBrightest, ") <= (TRACK_ACQUISITION_BRIGHTNESS = ", TRACK_ACQUISITION_BRIGHTNESS,")");
+								"(frame.histBrightest = ", frame.histBrightest, ") <= (track_acquisition_brightness = ", track_acquisition_brightness,")");
 								if(haveBeaconKnowledge) // Beacon Loss Scenario
 								{
 									log(pat_health_port, textFileOut,  "In main.cpp phase OPEN_LOOP - Beacon timeout started...");
@@ -1762,13 +1865,6 @@ int main() //int argc, char** argv
 							log(pat_health_port, textFileOut,  "In main.cpp phase STATIC_POINT - Do not have calibration knowledge. Setting FSM to (x_normalized, y_normalized) = (0,0).");
 							fsm.setNormalizedAngles(0,0); 
 						}
-
-						// Save for CSV
-						now = steady_clock::now();
-						diff = now - beginTime;
-						csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
-						//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
-
 						static_pointing_initialized = true; 
 					} else{
 						if(haveCalibKnowledge){
@@ -1797,6 +1893,21 @@ int main() //int argc, char** argv
 							}
 						}
 					}
+					if(haveCalibKnowledge){
+						check_csv_write = steady_clock::now(); // Record current time
+						elapsed_time_csv_write = check_csv_write - time_prev_csv_write; // Calculate time since csv write
+						if(elapsed_time_csv_write > period_csv_write)
+						{
+							// Save for CSV
+							now = steady_clock::now();
+							diff = now - beginTime;
+							writeToDataFile(dataFileOut, diff.count(), 0, 0, 0, calib.x, calib.y, calib.x, calib.y, calibExposure);
+							//csvData.insert(make_pair(diff.count(), CSVdata(0, 0, 0,	calib.x, calib.y, 0, 0, 0)));
+							//CSVdata members: double bcnX, bcnY, bcnExp, calX, calY, calSetX, calSetY, calExp;
+							time_prev_csv_write = now; // Record time of csv write
+							//if(!haveCsvData){haveCsvData = true;}			
+						}
+					}
 					break;
 
 				// Fail-safe
@@ -1819,6 +1930,7 @@ int main() //int argc, char** argv
 	//reset FSM before ending PAT process
 	fsm.resetFSM();
 
+	/*
 	if(haveCsvData){
 		log(pat_health_port, textFileOut,  "In main.cpp - Saving csv file.");
 		ofstream out(dataFileName);
@@ -1832,9 +1944,11 @@ int main() //int argc, char** argv
 		out.close(); //close data file
 		//std::cout << "CSV File Saved." << std::endl;
 	}
+	*/
 	
-	log(pat_health_port, textFileOut,  "In main.cpp - Saving text file and ending process.");
+	log(pat_health_port, textFileOut,  "In main.cpp - Ending process.");
 	textFileOut.close(); //close telemetry text file
+	dataFileOut.close(); //close telemetry data file
     //std::cout << "TXT File Saved." << std::endl;
 	pat_status_port.close();
 	pat_health_port.close();

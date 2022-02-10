@@ -26,6 +26,10 @@ DEFAULT_CW_TEC_LSB = 151
 DEFAULT_CW_FTEC_MSB = 5
 DEFAULT_CW_FTEC_LSB = 107
 
+#Seed Align Window
+SEED_ALIGN_WINDOW_LOWER = 4
+SEED_ALIGN_WINDOW_UPPER = 8
+
 #HIGH/LOW for Payload/flatsat
 PPM4_THRESHOLDS = [-2.1, -3.0, -5,-7]
 
@@ -97,7 +101,7 @@ CMD_PL_UNZIP_FILE = 0x43
 CMD_PL_AUTO_ASSEMBLE_FILE = 0xCC
 CMD_PL_UPDATE_OPTIONS = 0x2A
 CMD_PL_SET_PAT_MODE = 0xB3
-CMD_PL_UPDATE_PAT_OFFSET_PARAMS = 0xB4
+CMD_PL_UPDATE_PAT_PARAMS = 0xB4
 CMD_PL_SINGLE_CAPTURE = 0xF1
 CMD_PL_CALIB_LASER_TEST = 0x4C
 CMD_PL_FSM_TEST = 0x28
@@ -115,8 +119,9 @@ CMD_PL_GET_FPGA = 0x0E
 CMD_PL_SET_HK = 0x97
 CMD_PL_ECHO = 0x3D
 CMD_PL_NOOP = 0x5B
+CMD_PL_EDFA_ON = 0x70
+CMD_PL_EDFA_OFF = 0x7F
 CMD_PL_SELF_TEST = 0x80
-CMD_PL_UPDATE_SEED_PARAMS = 0x18
 CMD_PL_DWNLINK_MODE = 0xE0 #Do not change - BCT
 CMD_PL_DEBUG_MODE = 0xD0 #Do not change - BCT
 
@@ -187,11 +192,30 @@ CAMERA_WIDTH = 2592
 CAMERA_HEIGHT = 1944
 CAMERA_MAX_EXP = 10000000
 CAMERA_MIN_EXP = 10
-#Default Data in offsetParams.csv
-DEFAULT_DATA_OFFSET_PARAMS = [['PERIOD_CALCULATE_TX_OFFSETS', ' 1000.0'], ['PERIOD_DITHER_TX_OFFSETS', ' 10.0'], ['TX_OFFSET_X_DEFAULT', ' -20'], ['TX_OFFSET_Y_DEFAULT', ' 120'], ['TX_OFFSET_SLOPE_X', ' 0.34619'], ['TX_OFFSET_BIAS_X', ' -29.464'], ['TX_OFFSET_QUADRATIC_Y', ' 0.0084797'], ['TX_OFFSET_SLOPE_Y', ' -0.34707'], ['TX_OFFSET_BIAS_Y', ' 123.46'], ['TX_OFFSET_DITHER_X_RADIUS', ' 4.0'], ['TX_OFFSET_DITHER_Y_RADIUS', ' 1.0'], ['DITHER_COUNT_PERIOD', ' 10']]  
+
+#PAT parameter file update info
+PAT_PARAM_FILE_FLAG_OFFSET = 0xA0
+PAT_PARAM_FILE_FLAG_TRACK = 0xB0
+PAT_PARAM_FILE_FLAG_CALIB = 0xC0
+PAT_PARAM_FILENAME_OFFSET = '/root/lib/offsetParams.csv'
+PAT_PARAM_FILENAME_TRACK = '/root/lib/trackParams.csv'
+PAT_PARAM_FILENAME_CALIB = '/root/lib/calibParams.csv'
+DEFAULT_DATA_OFFSET_PARAMS = [['PERIOD_CALCULATE_TX_OFFSETS', ' 1000.0'], ['PERIOD_DITHER_TX_OFFSETS', ' 10.0'], ['TX_OFFSET_X_DEFAULT', ' -20'], ['TX_OFFSET_Y_DEFAULT', ' 120'], ['TX_OFFSET_SLOPE_X', ' 0.34619'], ['TX_OFFSET_BIAS_X', ' -29.464'], ['TX_OFFSET_QUADRATIC_Y', ' 0.0084797'], ['TX_OFFSET_SLOPE_Y', ' -0.34707'], ['TX_OFFSET_BIAS_Y', ' 123.46'], ['TX_OFFSET_DITHER_X_RADIUS', ' 4.0'], ['TX_OFFSET_DITHER_Y_RADIUS', ' 1.0'], ['DITHER_COUNT_PERIOD', ' 10'], ['DITHER_ENABLE', '1']]  
+DEFAULT_DATA_TRACK_PARAMS = [['TRACK_GUESS_EXPOSURE', ' 100'], ['TRACK_MIN_EXPOSURE', ' 10'], ['TRACK_MAX_EXPOSURE', ' 1000000'], ['TRACK_ACQUISITION_EXP_INCREMENT', ' 300'], ['TRACK_ACQUISITION_BRIGHTNESS', ' 200'], ['TRACK_ACQUISITION_WINDOW', ' 500'], ['TRACK_GOOD_PEAKTOMAX_DISTANCE', ' 100'], ['TRACK_HAPPY_BRIGHTNESS', ' 700'], ['TRACK_TUNING_TOLERANCE', ' 150'], ['TRACK_TUNING_EXP_DIVIDER', ' 10'], ['TRACK_EXP_CONTROL_TOLERANCE', ' 150'], ['TRACK_EXP_CONTROL_DIVIDER', ' 10'], ['TRACK_WINDOW_SIZE_TOLERANCE', ' 10'], ['TRACK_MAX_SPOT_DIFFERENCE', ' 500'], ['TRACK_MIN_SPOT_LIMIT', ' 25'], ['TRACK_CONTROL_I', ' 8'], ['TRACK_CONTROL_MAX_TS_MS', ' 50'], ['TRACK_SAFE_DISTANCE_ALLOW', ' 200'], ['TRACK_SAFE_DISTANCE_PANIC', ' 100']]  
+DEFAULT_DATA_CALIB_PARAMS = [['CALIB_BIG_WINDOW', ' 600'], ['CALIB_SMALL_WINDOW', ' 300'], ['CALIB_MIN_BRIGHTNESS', ' 100'], ['CALIB_MAX_EXPOSURE', ' 1000'], ['CALIB_MIN_EXPOSURE', ' 10'], ['CALIB_EXP_INCREMENT', ' 50'], ['CALIB_MAX_GAIN', ' 20'], ['CALIB_EXP_DIVIDER', ' 15'], ['CALIB_MAX_SMOOTHING', ' 3'], ['CALIB_GOOD_PEAKTOMAX_DISTANCE', ' 100'], ['CALIB_HAPPY_BRIGHTNESS', ' 300'], ['CALIB_TUNING_TOLERANCE', ' 200'], ['CALIB_FSM_DISPLACEMENT_TOL', ' 100']]  
+DATA_FORMAT_OFFSET = " %f"
+DATA_FORMAT_TRACK = " %d"
+DATA_FORMAT_CALIB = " %d"
 
 #Calibration Laser DAC setting
 CAL_LASER_DAC_SETTING = 6700
+
+#Calibration Laser Self Test Parameters
+HEATER_OFF_UB = 0.2 #Reference temp is 26.5C, can be 110mA at 0C
+HEATER_ONLY_LB = 0.007 #Reference temp is 26.5C
+HEATER_ONLY_UB = 0.117 #Reference temp is 26.5C
+CALIB_LB = 0.022 #Reference temp is 26.5C
+CALIB_UB = 0.134 #Reference temp is 26.5C
 
 #Timout Heat to 0C
 TIMEOUT_HEAT_TO_0C = 1200 #seconds
@@ -212,7 +236,7 @@ HK_FPGA_CHECK_PD = 5 #seconds, default period of hb checking
 HK_SYS_CHECK_PD = 1 #seconds, default period of hb checking
 HK_CH_CHECK_PD = 10 #seconds, default period of hb checking
 HK_LB_CHECK_PD = 10 #seconds, default period of hb checking
-HK_PAT_CHECK_PD = 10 #seconds, default period of hb checking
+HK_PAT_CHECK_PD = 30 #seconds, default period of hb checking
 HK_FPGA_CHECK_PD_MIN = 1 #seconds, minimum period of hb checking
 HK_SYS_CHECK_PD_MIN = 1 #seconds, minimum period of hb checking
 HK_CH_CHECK_PD_MIN = 2 #seconds, minimum period of hb checking
@@ -220,6 +244,11 @@ HK_LB_CHECK_PD_MIN = 2 #seconds, minimum period of hb checking
 HK_PAT_CHECK_PD_MIN = 2 #seconds, minimum period of hb checking
 HK_CH_HEARTBEAT_PD = 0.5 #seconds, period of hb sending
 HK_LB_HEARTBEAT_PD = 0.5 #seconds, period of hb sending
+
+HK_CH_CHECK_PD_GENERAL_SELF_TEST = 200 #delay CH check period by this much during general self test
+HK_CH_CHECK_PD_LASER_SELF_TEST = 30 #delay CH check period by this much during general self test
+HK_CH_CHECK_PD_DOWNLINK_MODE = 1800 #disable CH check during downlink experiment (which is about 20 min long)
+PERIOD_PRINT_DOWNLINK_TIME = 60 #period to print elapsed time at during downlink
 
 # File Handling Options Settings
 FL_ERR_EMPTY_DIR = 0x01
@@ -230,7 +259,7 @@ FL_ERR_OUT_OF_BOUNDS = 0x05
 FL_SUCCESS = 0xFF
 
 # Set Time Flag
-TIME_SET_ENABLE = 0
+TIME_SET_ENABLE = 1
 
 FPGA_TELEM_REGS = sum([range(0,5), range(32,39), range(47,49), range(53,55), [57], range(60,64), range(96,98), range(200,206), range(300,304), range(602,612), range(502,510)],[])
 #FPGA_TELEM_REGS = sum([range(602,612)],[])
