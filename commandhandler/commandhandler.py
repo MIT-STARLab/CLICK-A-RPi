@@ -575,16 +575,19 @@ while True:
             file_flag = packet_data[0]
             reset_flag = packet_data[1]
 
+            known_file_flag = True
             if(file_flag == PAT_PARAM_FILE_FLAG_OFFSET):
                 param_filename = PAT_PARAM_FILENAME_OFFSET
                 default_csv_data = DEFAULT_DATA_OFFSET_PARAMS
                 data_format = DATA_FORMAT_OFFSET
-                known_file_flag = True
             elif(file_flag == PAT_PARAM_FILE_FLAG_TRACK):
                 param_filename = PAT_PARAM_FILENAME_TRACK
                 default_csv_data = DEFAULT_DATA_TRACK_PARAMS
                 data_format = DATA_FORMAT_TRACK
-                known_file_flag = True
+            elif(file_flag == PAT_PARAM_FILE_FLAG_CALIB):
+                param_filename = PAT_PARAM_FILENAME_CALIB
+                default_csv_data = DEFAULT_DATA_CALIB_PARAMS
+                data_format = DATA_FORMAT_CALIB
             else:
                 known_file_flag = False
                 log_to_hk('ERROR CMD PL_UPDATE_PAT_PARAMS: Unknown file flag ' + str(file_flag))
