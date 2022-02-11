@@ -245,7 +245,7 @@ class Housekeeping:
             pkt += struct.pack('!'+FPGA_TELEM_TYPE[i], answer_pkt[i])
 
         #245-248: Unix Timestamp
-        pkt += struct.pack('!L', math.floor(datetime.datetime.now().timestamp()))
+        pkt += struct.pack('!L', int(time.mktime(datetime.datetime.now().timetuple())))
 
         self.fpga_hk_count += 1
         return pkt
@@ -320,7 +320,7 @@ class Housekeeping:
         pkt += struct.pack('!L', (vmem.used % 2**32))
 
         # 35-38: Unix Timestamp
-        pkt += struct.pack('!L', math.floor(datetime.datetime.now().timestamp()))
+        pkt += struct.pack('!L', int(time.mktime(datetime.datetime.now().timetuple())))
 
         # 39-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
