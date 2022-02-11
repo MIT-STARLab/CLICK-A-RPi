@@ -13,6 +13,7 @@ import struct
 import subprocess
 import Queue
 import datetime
+import math
 
 sys.path.append('/root/lib/')
 sys.path.append('../lib/')
@@ -243,6 +244,9 @@ class Housekeeping:
         for i in range(0, len(answer_pkt)):
             pkt += struct.pack('!'+FPGA_TELEM_TYPE[i], answer_pkt[i])
 
+        #245-248: Unix Timestamp
+        pkt += struct.pack('!L', math.floor(datetime.datetime.now().timestamp()))
+
         self.fpga_hk_count += 1
         return pkt
 
@@ -315,7 +319,10 @@ class Housekeeping:
         # 31-34: Used virtual memory
         pkt += struct.pack('!L', (vmem.used % 2**32))
 
-        # 35-N: Process info
+        # 35-38: Unix Timestamp
+        pkt += struct.pack('!L', math.floor(datetime.datetime.now().timestamp()))
+
+        # 39-N: Process info
         for p in psutil.process_iter(['name','cmdline','cpu_percent','memory_percent']):
             p_name = ''
             if (p.info['name'] == 'python' and len(p.info['cmdline']) == 3):
